@@ -1918,7 +1918,7 @@ function saveGbData(d) {
 
 // ── Sync (whole-app) ─────────────────────
 // Keys never synced (device-specific or ephemeral)
-const _SYNC_SKIP = new Set(['mca-sync-url','mca-sheets-backup-url','mca-todo-height','mca-last-push-ts']);
+const _SYNC_SKIP = new Set(['mca-sync-url','mca-sheets-backup-url','mca-gist-token','mca-gist-id','mca-todo-height','mca-last-push-ts']);
 
 function getSyncUrl() { return localStorage.getItem('mca-sync-url') || ''; }
 function setSyncUrl(url) {
@@ -1930,6 +1930,34 @@ function setSheetsBackupUrl(url) {
   if (url) localStorage.setItem('mca-sheets-backup-url', url.trim());
   else localStorage.removeItem('mca-sheets-backup-url');
 }
+function getGistToken() { return localStorage.getItem('mca-gist-token') || ''; }
+function setGistToken(t) { if (t) localStorage.setItem('mca-gist-token', t.trim()); else localStorage.removeItem('mca-gist-token'); }
+function getGistId() { return localStorage.getItem('mca-gist-id') || ''; }
+function setGistId(id) { if (id) localStorage.setItem('mca-gist-id', id.trim()); else localStorage.removeItem('mca-gist-id'); }
+
+async function _gistPush(bundle) {
+  const token = getGistToken(), gistId = getGistId();
+  if (!token || !gistId) throw new Error('GitHub Gist not configured');
+  const resp = await fetch(`https://api.github.com/gists/${gistId}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ files: { 'gradebook.json': { content: JSON.stringify(bundle) } } })
+  });
+  if (!resp.ok) throw new Error('GitHub push failed: ' + resp.status);
+}
+async function _gistPull() {
+  const token = getGistToken(), gistId = getGistId();
+  if (!token || !gistId) throw new Error('GitHub Gist not configured');
+  const resp = await fetch(`https://api.github.com/gists/${gistId}?t=${Date.now()}`, {
+    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
+  });
+  if (!resp.ok) throw new Error('GitHub pull failed: ' + resp.status);
+  const data = await resp.json();
+  const content = data.files?.['gradebook.json']?.content;
+  if (!content) throw new Error('No gradebook.json in gist');
+  return JSON.parse(content);
+}
+
 // Suggest the local server sync URL based on current page origin
 function _localSyncUrl() { return window.location.origin + '/api/sync'; }
 
@@ -1971,7 +1999,7 @@ let _syncDebounceTimer = null;
 
 function _scheduleSync() {
   // Debounce: wait 1.5s after last change before auto-saving
-  if (!getSyncUrl() && !getSheetsBackupUrl()) return;
+  if (!getSyncUrl() && !getSheetsBackupUrl() && !getGistToken()) return;
   clearTimeout(_syncDebounceTimer);
   // Show "unsaved" indicator immediately so user sees a save is coming
   _showGlobalBadge('unsaved');
@@ -2000,26 +2028,12 @@ function _setSyncUI(state, msg) {
   const el = document.getElementById('gb-sync-status');
   if (el) {
     if (state==='syncing') { el.innerHTML='<span style="animation:spin 1s linear infinite;display:inline-block">↻</span> Saving…'; el.style.color='var(--c-light)'; }
-    else if (state==='ok')    { el.textContent='☁ Saved'; el.style.color='#16a34a'; setTimeout(()=>{ if(el.textContent==='☁ Saved'){ el.textContent=getSyncUrl()?'☁ On':''; el.style.color='var(--c-light)'; }},3000); }
+    else if (state==='ok')    { el.textContent='☁ Saved'; el.style.color='#16a34a'; setTimeout(()=>{ if(el.textContent==='☁ Saved'){ el.textContent=(getSyncUrl()||getGistToken())?'☁ On':''; el.style.color='var(--c-light)'; }},3000); }
     else if (state==='error') { el.textContent='⚠ Sync failed'; el.style.color='#dc2626'; el.title=msg||''; }
-    else { el.textContent=getSyncUrl()?'☁ On':''; el.style.color='var(--c-light)'; }
+    else { el.textContent=(getSyncUrl()||getGistToken())?'☁ On':''; el.style.color='var(--c-light)'; }
   }
   // Update global floating badge
-  if (getSyncUrl() || getSheetsBackupUrl()) _showGlobalBadge(state);
-}
-
-// Try local server first; if unreachable, fall back to Google Sheets backup URL
-async function _getActiveUrl() {
-  const local = getSyncUrl();
-  const backup = getSheetsBackupUrl();
-  if (local) {
-    try {
-      const r = await fetch(local + '?t=' + Date.now(), { signal: AbortSignal.timeout(2500) });
-      if (r.ok) return { url: local, isLocal: true };
-    } catch(e) { /* unreachable — fall through to backup */ }
-  }
-  if (backup) return { url: backup, isLocal: false };
-  return null;
+  if (getSyncUrl() || getSheetsBackupUrl() || getGistToken()) _showGlobalBadge(state);
 }
 
 async function _syncToSheets(silent=true) {
@@ -2029,16 +2043,35 @@ async function _syncToSheets(silent=true) {
     const bundle = _buildSyncBundle();
     localStorage.setItem('mca-last-push-ts', String(bundle._syncTs));
     const body = JSON.stringify(bundle);
-    const active = await _getActiveUrl();
-    if (!active) throw new Error('No sync URL configured');
-    await fetch(active.url, { method:'POST', headers:{'Content-Type':'text/plain'}, body });
-    // If we pushed to local server, also push to Google Sheets backup silently
-    if (active.isLocal) {
-      const backupUrl = getSheetsBackupUrl();
-      if (backupUrl) fetch(backupUrl, { method:'POST', headers:{'Content-Type':'text/plain'}, body }).catch(()=>{});
+    let pushedTo = null;
+
+    // Try local server first (fast, school network)
+    const local = getSyncUrl();
+    if (local) {
+      try {
+        const r = await fetch(local, { method:'POST', headers:{'Content-Type':'text/plain'}, body, signal: AbortSignal.timeout(2500) });
+        if (r.ok) pushedTo = 'local';
+      } catch(e) { /* unreachable — fall through */ }
     }
+
+    // Push to GitHub Gist (always push if configured — works as backup and primary at home)
+    if (getGistToken()) {
+      await _gistPush(bundle);
+      if (!pushedTo) pushedTo = 'github';
+    }
+
+    // Legacy: fall back to Google Sheets if no Gist configured
+    if (!pushedTo && getSheetsBackupUrl()) {
+      await fetch(getSheetsBackupUrl(), { method:'POST', headers:{'Content-Type':'text/plain'}, body });
+      pushedTo = 'sheets';
+    }
+
+    if (!pushedTo) throw new Error('No sync destination reachable');
     _setSyncUI('ok');
-    if (!silent) _showSyncToast(active.isLocal ? '✓ Saved to local server' : '✓ Saved to Google Sheets');
+    if (!silent) {
+      const label = pushedTo === 'local' ? '✓ Saved to local server + GitHub' : pushedTo === 'github' ? '✓ Saved to GitHub' : '✓ Saved to Google Sheets';
+      _showSyncToast(label);
+    }
   } catch(e) {
     _setSyncUI('error', e.message);
     if (!silent) alert('Sync failed:\n'+e.message);
@@ -2046,17 +2079,35 @@ async function _syncToSheets(silent=true) {
 }
 
 async function _syncFromSheets(silent=false) {
-  const hasAny = getSyncUrl() || getSheetsBackupUrl();
+  const hasAny = getSyncUrl() || getSheetsBackupUrl() || getGistToken();
   if (!hasAny) return;
   if (!silent) _setSyncUI('syncing');
   try {
-    const active = await _getActiveUrl();
-    if (!active) throw new Error('No sync URL reachable');
-    const resp = await fetch(active.url + '?t=' + Date.now());
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const text = await resp.text();
-    let bundle;
-    try { bundle = JSON.parse(text); } catch { throw new Error('Returned invalid data'); }
+    let bundle = null, src = null;
+
+    // Try local server first
+    const local = getSyncUrl();
+    if (local) {
+      try {
+        const resp = await fetch(local + '?t=' + Date.now(), { signal: AbortSignal.timeout(2500) });
+        if (resp.ok) { bundle = JSON.parse(await resp.text()); src = 'local server'; }
+      } catch(e) { /* fall through */ }
+    }
+
+    // Fall back to GitHub Gist
+    if (!bundle && getGistToken()) {
+      try { bundle = await _gistPull(); src = 'GitHub'; } catch(e) { /* fall through */ }
+    }
+
+    // Legacy: fall back to Google Sheets
+    if (!bundle && getSheetsBackupUrl()) {
+      try {
+        const resp = await fetch(getSheetsBackupUrl() + '?t=' + Date.now());
+        if (resp.ok) { bundle = JSON.parse(await resp.text()); src = 'Google Sheets'; }
+      } catch(e) { /* fall through */ }
+    }
+
+    if (!bundle) throw new Error('No sync source reachable');
 
     // Detect empty — push local data instead of wiping it
     const isLegacy = bundle && Array.isArray(bundle.classes);
@@ -2082,7 +2133,6 @@ async function _syncFromSheets(silent=false) {
     }
     if (sheetTs > 0) localStorage.setItem('mca-last-push-ts', String(sheetTs));
     _setSyncUI('ok');
-    const src = active.isLocal ? 'local server' : 'Google Sheets';
     if (!silent) _showSyncToast(`✓ Loaded from ${src} — reloading…`);
     else _showSyncToast(`☁ Synced from another device — reloading…`);
     setTimeout(() => location.reload(), 900);
@@ -2094,20 +2144,24 @@ async function _syncFromSheets(silent=false) {
 // Check if remote has newer data — if so, show a banner asking user to pull
 let _checkTimer = null;
 async function _checkForRemoteUpdates() {
-  const hasAny = getSyncUrl() || getSheetsBackupUrl();
+  const hasAny = getSyncUrl() || getSheetsBackupUrl() || getGistToken();
   if (!hasAny) return;
   try {
-    const active = await _getActiveUrl();
-    if (!active) return;
-    const resp = await fetch(active.url + '?t=' + Date.now(), { signal: AbortSignal.timeout(3000) });
-    if (!resp.ok) return;
-    const text = await resp.text();
-    let bundle; try { bundle = JSON.parse(text); } catch { return; }
+    let bundle = null;
+    const local = getSyncUrl();
+    if (local) {
+      try {
+        const resp = await fetch(local + '?t=' + Date.now(), { signal: AbortSignal.timeout(3000) });
+        if (resp.ok) bundle = JSON.parse(await resp.text());
+      } catch(e) { /* ignore */ }
+    }
+    if (!bundle && getGistToken()) {
+      try { bundle = await _gistPull(); } catch(e) { /* ignore */ }
+    }
+    if (!bundle) return;
     const sheetTs = bundle._syncTs || 0;
     const myLastPush = parseInt(localStorage.getItem('mca-last-push-ts') || '0', 10);
-    if (sheetTs > 0 && sheetTs !== myLastPush) {
-      _showPullBanner();
-    }
+    if (sheetTs > 0 && sheetTs !== myLastPush) _showPullBanner();
   } catch(e) { /* ignore network errors */ }
 }
 
@@ -2127,14 +2181,14 @@ async function _pullAndDismiss() {
 
 // Check for remote updates when tab becomes visible
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && getSyncUrl()) {
+  if (!document.hidden && (getSyncUrl() || getGistToken())) {
     clearTimeout(_checkTimer);
     _checkTimer = setTimeout(_checkForRemoteUpdates, 1500);
   }
 });
 
 // Also poll every 30 seconds in case visibilitychange doesn't fire (e.g. iPad with tab always open)
-setInterval(() => { if (getSyncUrl() && !document.hidden) _checkForRemoteUpdates(); }, 30000);
+setInterval(() => { if ((getSyncUrl() || getGistToken()) && !document.hidden) _checkForRemoteUpdates(); }, 30000);
 
 function _showSyncToast(msg) {
   let t = document.getElementById('_sync-toast');
@@ -2296,63 +2350,61 @@ function writeGradebookSheets(ss, gb, exams) {
 
 function openSyncSettings() {
   const url = getSyncUrl();
-  const backupUrl = getSheetsBackupUrl();
   const localUrl = _localSyncUrl();
-  const isLocal = url === localUrl;
+  const gistToken = getGistToken();
+  const gistId = getGistId();
+  const hasSyncActive = url || gistToken;
   openGbModal(`
     <div style="padding:24px;max-width:480px">
       <h3 style="font-size:16px;font-weight:800;color:var(--c-brown);margin-bottom:4px">☁ Sync Settings</h3>
 
       <div style="background:var(--c-cream);border:1.5px solid var(--c-pale);border-radius:12px;padding:14px;margin-bottom:16px">
-        <div style="font-size:12px;font-weight:800;color:var(--c-brown);margin-bottom:4px">📡 Local Network Sync <span style="font-weight:500;color:#16a34a;font-size:11px">(Recommended — iPad ↔ Computer)</span></div>
-        <div style="font-size:11px;color:var(--c-light);margin-bottom:10px">Both devices on the same WiFi? This is instant and always works.</div>
+        <div style="font-size:12px;font-weight:800;color:var(--c-brown);margin-bottom:4px">🐙 GitHub Sync <span style="font-weight:500;color:#16a34a;font-size:11px">(Works everywhere — home & school)</span></div>
+        <div style="font-size:11px;color:var(--c-light);margin-bottom:10px">Your data is safely stored in a private GitHub Gist. Works on any network.</div>
+        <div style="margin-bottom:8px">
+          <label style="font-size:11px;font-weight:700;color:var(--c-brown);display:block;margin-bottom:4px">Personal Access Token</label>
+          <input id="_gist-token-in" type="password" value="${escHtml(gistToken)}" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+            style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--c-pale);background:white;font-size:11px;font-family:monospace;box-sizing:border-box">
+        </div>
+        <div style="margin-bottom:8px">
+          <label style="font-size:11px;font-weight:700;color:var(--c-brown);display:block;margin-bottom:4px">Gist ID</label>
+          <input id="_gist-id-in" type="text" value="${escHtml(gistId)}" placeholder="11b8d1cc60b01ae936ff1f6e29ad3465"
+            style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--c-pale);background:white;font-size:11px;font-family:monospace;box-sizing:border-box">
+        </div>
+      </div>
+
+      <div style="background:var(--c-cream);border:1.5px solid var(--c-pale);border-radius:12px;padding:14px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:800;color:var(--c-brown);margin-bottom:4px">📡 Local Network Sync <span style="font-weight:500;color:var(--c-light);font-size:11px">(Optional — faster on school WiFi)</span></div>
+        <div style="font-size:11px;color:var(--c-light);margin-bottom:10px">Only needed if running the Python server on your computer. Leave blank if using GitHub Pages.</div>
         <div style="display:flex;gap:8px;align-items:center">
           <input id="_sync-url-in" type="url" value="${escHtml(url)}" placeholder="${escHtml(localUrl)}"
             style="flex:1;padding:8px 10px;border-radius:8px;border:1.5px solid var(--c-pale);background:white;font-size:11px;font-family:monospace;box-sizing:border-box">
           <button onclick="document.getElementById('_sync-url-in').value='${escHtml(localUrl)}'" style="padding:7px 12px;border-radius:8px;background:var(--c-brown);color:white;font-size:11px;font-weight:700;border:none;cursor:pointer;white-space:nowrap">Use This Computer</button>
         </div>
-        ${url?`<div style="display:flex;gap:8px;margin-top:10px">
-          <button onclick="closeGbModal();_syncFromSheets(false)" style="flex:1;padding:8px;border-radius:8px;background:white;border:1.5px solid var(--c-pale);color:var(--c-brown);font-size:11px;font-weight:700;cursor:pointer">⬇ Pull Now</button>
-          <button onclick="closeGbModal();_syncToSheets(false)" style="flex:1;padding:8px;border-radius:8px;background:white;border:1.5px solid var(--c-pale);color:var(--c-brown);font-size:11px;font-weight:700;cursor:pointer">⬆ Push Now</button>
-        </div>`:''}
       </div>
 
-      <div style="background:var(--c-cream);border:1.5px solid var(--c-pale);border-radius:12px;padding:14px;margin-bottom:16px">
-        <div style="font-size:12px;font-weight:800;color:var(--c-brown);margin-bottom:4px">🛡 Google Sheets Backup <span style="font-weight:500;color:var(--c-light);font-size:11px">(Saves automatically with every change)</span></div>
-        <div style="font-size:11px;color:var(--c-light);margin-bottom:10px">Protects your data if the computer is lost or reset. Paste your Apps Script URL below.</div>
-        <input id="_backup-url-in" type="url" value="${escHtml(backupUrl)}" placeholder="https://script.google.com/macros/s/…/exec"
-          style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--c-pale);background:white;font-size:11px;font-family:monospace;box-sizing:border-box;margin-bottom:8px">
-        <details style="margin-top:4px">
-          <summary style="font-size:11px;font-weight:700;color:var(--c-brown);cursor:pointer">📋 How to set up Google Sheets backup</summary>
-          <ol style="font-size:11px;color:var(--c-text-secondary);margin-top:8px;padding-left:18px;line-height:2">
-            <li>Go to <strong>sheets.google.com</strong> → create a new spreadsheet</li>
-            <li>Click <strong>Extensions → Apps Script</strong></li>
-            <li>Delete existing code, paste the code below, click Save</li>
-            <li>Click <strong>Deploy → New deployment → Web app</strong></li>
-            <li>Execute as: <strong>Me</strong> | Who has access: <strong>Anyone</strong></li>
-            <li>Copy the Web app URL and paste it above</li>
-          </ol>
-          <pre style="font-size:10px;background:#1e1e1e;color:#d4d4d4;padding:10px;border-radius:8px;overflow-x:auto;white-space:pre;line-height:1.6;margin:8px 0 0">${escHtml(_SYNC_SCRIPT)}</pre>
-          <button onclick="navigator.clipboard.writeText(_SYNC_SCRIPT).then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy Code',2000)}).catch(()=>{})"
-            style="margin-top:6px;padding:5px 14px;border-radius:8px;background:var(--c-brown);color:white;font-size:11px;font-weight:700;border:none;cursor:pointer">Copy Code</button>
-        </details>
-      </div>
+      ${hasSyncActive?`<div style="display:flex;gap:8px;margin-bottom:16px">
+        <button onclick="closeGbModal();_syncFromSheets(false)" style="flex:1;padding:8px;border-radius:8px;background:white;border:1.5px solid var(--c-pale);color:var(--c-brown);font-size:11px;font-weight:700;cursor:pointer">⬇ Pull Now</button>
+        <button onclick="closeGbModal();_syncToSheets(false)" style="flex:1;padding:8px;border-radius:8px;background:white;border:1.5px solid var(--c-pale);color:var(--c-brown);font-size:11px;font-weight:700;cursor:pointer">⬆ Push Now</button>
+      </div>`:''}
 
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button onclick="closeGbModal()" style="padding:8px 14px;border-radius:10px;border:1.5px solid var(--c-pale);background:transparent;color:var(--c-medium);font-size:12px;font-weight:700;cursor:pointer">Cancel</button>
         <button onclick="_gbSaveSyncUrl()" style="padding:8px 18px;border-radius:10px;background:var(--c-brown);color:white;font-size:13px;font-weight:700;border:none;cursor:pointer">Save</button>
       </div>
     </div>`);
-  setTimeout(()=>document.getElementById('_sync-url-in')?.focus(),80);
+  setTimeout(()=>document.getElementById('_gist-token-in')?.focus(),80);
 }
 
 function _gbSaveSyncUrl() {
   const url = document.getElementById('_sync-url-in')?.value?.trim()||'';
-  const backupUrl = document.getElementById('_backup-url-in')?.value?.trim()||'';
+  const token = document.getElementById('_gist-token-in')?.value?.trim()||'';
+  const gistId = document.getElementById('_gist-id-in')?.value?.trim()||'';
   setSyncUrl(url);
-  setSheetsBackupUrl(backupUrl);
+  setGistToken(token);
+  setGistId(gistId);
   closeGbModal(); renderGradebook();
-  if (url) {
+  if (token || url) {
     _showSyncToast('Saved — connecting…');
     setTimeout(()=>_syncFromSheets(false), 600);
   }
@@ -2516,8 +2568,9 @@ function renderGradebook() {
   }
   html += `</div><div class="flex items-center gap-2">`;
   if (cls) {
-    html += `<button onclick="openSyncSettings()" class="px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1" style="background:var(--c-surface);color:${getSyncUrl()?'#16a34a':'var(--c-text-secondary)'};border-color:var(--c-pale)" title="${getSyncUrl()?'Google Sheets sync is active':'Connect to Google Sheets'}">☁ Sync</button>`;
-    html += `<span id="gb-sync-status" style="font-size:10px;color:var(--c-light);min-width:48px">${getSyncUrl()?'☁ On':''}</span>`;
+    const _syncActive = getSyncUrl() || getGistToken();
+    html += `<button onclick="openSyncSettings()" class="px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1" style="background:var(--c-surface);color:${_syncActive?'#16a34a':'var(--c-text-secondary)'};border-color:var(--c-pale)" title="${_syncActive?'GitHub sync is active':'Set up GitHub sync'}">☁ Sync</button>`;
+    html += `<span id="gb-sync-status" style="font-size:10px;color:var(--c-light);min-width:48px">${_syncActive?'☁ On':''}</span>`;
     html += `<button onclick="openGbSettings()" class="px-3 py-1.5 rounded-xl text-xs font-bold border" style="background:var(--c-surface);color:var(--c-text-secondary);border-color:var(--c-pale)">⚙ Settings</button>`;
     if (gbEditMode) {
       html += `<button onclick="openAddStudent()" class="px-3 py-1.5 rounded-xl text-xs font-bold border" style="background:var(--c-surface);color:var(--c-text-secondary);border-color:var(--c-pale)">+ Student</button>`;
