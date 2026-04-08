@@ -1732,19 +1732,32 @@ function renderCalendarTab() {
   const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-  let html = `<div class="fade-in" style="display:grid;grid-template-columns:1fr 290px;gap:14px;height:calc(100vh - 175px)">`;
+  const isMobileView = window.innerWidth <= 640;
+
+  // Month/year dropdowns for mobile
+  const monthOpts = MONTHS.map((m,i) => `<option value="${i}" ${i===month?'selected':''}>${m}</option>`).join('');
+  const yearOpts = [-2,-1,0,1,2].map(o => `<option value="${year+o}" ${o===0?'selected':''}>${year+o}</option>`).join('');
+  const monthYearPicker = `
+    <div style="display:flex;align-items:center;gap:6px;flex:1;justify-content:center">
+      <select onchange="calTabMonth.setMonth(parseInt(this.value));renderCalendarTab()" style="font-size:13px;font-weight:800;color:var(--c-brown);border:1.5px solid var(--c-pale);border-radius:8px;padding:4px 6px;background:var(--c-surface);cursor:pointer;appearance:auto">${monthOpts}</select>
+      <select onchange="calTabMonth.setFullYear(parseInt(this.value));renderCalendarTab()" style="font-size:13px;font-weight:800;color:var(--c-brown);border:1.5px solid var(--c-pale);border-radius:8px;padding:4px 6px;background:var(--c-surface);cursor:pointer;appearance:auto">${yearOpts}</select>
+    </div>`;
+
+  let html = isMobileView
+    ? `<div class="fade-in" style="display:flex;flex-direction:column;gap:10px;height:calc(100vh - 120px);overflow-y:auto">`
+    : `<div class="fade-in" style="display:grid;grid-template-columns:1fr 290px;gap:14px;height:calc(100vh - 175px)">`;
 
   // ── Left: calendar grid
-  html += `<div style="display:flex;flex-direction:column;min-height:0;overflow:hidden">
+  html += `<div style="display:flex;flex-direction:column;${isMobileView?'':'min-height:0;overflow:hidden'}">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-shrink:0">
-      <button onclick="calTabPrevMonth()" style="width:24px;height:24px;border-radius:6px;border:1.5px solid var(--c-pale);background:var(--c-surface);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--c-medium);font-size:13px;line-height:1">‹</button>
-      <h2 style="font-size:14px;font-weight:800;color:var(--c-brown);flex:1;text-align:center">${MONTHS[month]} ${year}</h2>
-      <button onclick="calTabNextMonth()" style="width:24px;height:24px;border-radius:6px;border:1.5px solid var(--c-pale);background:var(--c-surface);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--c-medium);font-size:13px;line-height:1">›</button>
+      <button onclick="calTabPrevMonth()" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--c-pale);background:var(--c-surface);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--c-medium);font-size:16px;line-height:1">‹</button>
+      ${isMobileView ? monthYearPicker : `<h2 style="font-size:14px;font-weight:800;color:var(--c-brown);flex:1;text-align:center">${MONTHS[month]} ${year}</h2>`}
+      <button onclick="calTabNextMonth()" style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--c-pale);background:var(--c-surface);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--c-medium);font-size:16px;line-height:1">›</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px;flex-shrink:0">
-      ${DAYS.map(d=>`<div style="text-align:center;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:2px 0;color:var(--c-light)">${d}</div>`).join('')}
+      ${DAYS.map(d=>`<div style="text-align:center;font-size:${isMobileView?'10':'9'}px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:${isMobileView?'4':'2'}px 0;color:var(--c-light)">${d}</div>`).join('')}
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr;gap:2px;flex:1;min-height:0">`;
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);${isMobileView?'grid-auto-rows:44px':'grid-auto-rows:1fr;flex:1;min-height:0'};gap:3px">`;
 
   // Empty cells
   for (let i = 0; i < firstDow; i++) {
@@ -1775,16 +1788,16 @@ function renderCalendarTab() {
       : '';
 
     html += `<div onclick="calTabSelectDate(${year},${month},${day})"
-      style="border-radius:5px;border:1px solid ${cellBorder};background:${cellBg};cursor:pointer;padding:3px 2px 2px;display:flex;flex-direction:column;overflow:hidden;transition:filter .1s"
+      style="border-radius:${isMobileView?'8':'5'}px;border:${isMobileView?'1.5':'1'}px solid ${cellBorder};background:${cellBg};cursor:pointer;padding:${isMobileView?'6px 2px 4px':'3px 2px 2px'};display:flex;flex-direction:column;align-items:center;overflow:hidden;transition:filter .1s"
       onmouseover="this.style.filter='brightness(0.95)'" onmouseout="this.style.filter=''">
-      <div style="font-size:10px;font-weight:${isToday||isSel?'900':'500'};color:${cellColor};line-height:1.2;text-align:center">${day}</div>
-      ${rotation ? `<div style="font-size:6px;font-weight:700;padding:0 2px;border-radius:2px;background:${isSel?'rgba(255,255,255,.25)':'var(--c-pale)'};color:${isSel?'white':'var(--c-brown)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.7;text-align:center">${escHtml(rotation.title.replace(/^classes:\s*/i,''))}</div>` : ''}
-      <div style="display:flex;gap:2px;flex-wrap:wrap;padding:0 1px">${dots}${schoolDot}</div>
+      <div style="font-size:${isMobileView?'13':'10'}px;font-weight:${isToday||isSel?'900':'500'};color:${cellColor};line-height:1.2;text-align:center">${day}</div>
+      ${!isMobileView && rotation ? `<div style="font-size:6px;font-weight:700;padding:0 2px;border-radius:2px;background:${isSel?'rgba(255,255,255,.25)':'var(--c-pale)'};color:${isSel?'white':'var(--c-brown)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.7;text-align:center">${escHtml(rotation.title.replace(/^classes:\s*/i,''))}</div>` : ''}
+      <div style="display:flex;gap:2px;flex-wrap:wrap;padding:0 1px;justify-content:center">${dots}${schoolDot}</div>
     </div>`;
   }
   html += `</div></div>`;
 
-  // ── Right: detail panel
+  // ── Detail panel (right on desktop, below on mobile)
   const selDate = calTabSelectedDate;
   const selLabel = selDate
     ? selDate.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})
@@ -1793,13 +1806,13 @@ function renderCalendarTab() {
   const selSE = selDate ? (schoolMap[selKey]||[]).filter(e => !/^classes:/i.test(e.title)) : [];
   const selRot = selDate ? (schoolMap[selKey]||[]).find(e => /^classes:/i.test(e.title)) : null;
 
-  html += `<div style="display:flex;flex-direction:column;border-radius:16px;border:1.5px solid var(--c-pale);background:var(--c-surface);overflow:hidden">
-    <div style="padding:16px 18px 14px;border-bottom:1.5px solid var(--c-pale);background:var(--c-cream)">
+  html += `<div style="display:flex;flex-direction:column;border-radius:16px;border:1.5px solid var(--c-pale);background:var(--c-surface);overflow:hidden;${isMobileView?'flex-shrink:0':''}">
+    <div style="padding:${isMobileView?'12px 14px 10px':'16px 18px 14px'};border-bottom:1.5px solid var(--c-pale);background:var(--c-cream)">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--c-light);margin-bottom:4px">Selected Day</div>
-      <div style="font-size:14px;font-weight:800;color:var(--c-brown);line-height:1.3">${selLabel}</div>
+      <div style="font-size:${isMobileView?'13':'14'}px;font-weight:800;color:var(--c-brown);line-height:1.3">${selLabel}</div>
       ${selRot ? `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:var(--c-brown);color:white;font-size:11px;font-weight:700">${escHtml(selRot.title)}</div>` : ''}
     </div>
-    <div style="flex:1;overflow-y:auto;padding:14px 18px">`;
+    <div style="${isMobileView?'':'flex:1;overflow-y:auto;'}padding:${isMobileView?'10px 14px':'14px 18px'}">`;
 
   if (!selDate) {
     html += `<p style="color:var(--c-text-muted);font-size:12px;text-align:center;margin-top:32px">Click any day to see its events</p>`;
