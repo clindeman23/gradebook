@@ -1231,12 +1231,39 @@ function palette(course) {
 //  DATA
 // ════════════════════════════════════════════════════════
 async function loadData() {
+  // Always render immediately so the app isn't stuck on "Loading…"
+  allAssignments = [];
+  courseList = [];
+  enabledCourses = new Set();
+  schoolEvents = [];
+  render();
+  renderTodoList();
+
+  const st = document.getElementById('status-text');
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+  // No calendar URL configured — just show empty state
+  const canvasUrl = getCanvasIcsUrl();
+  const schoolUrl = getSchoolIcsUrl();
+  if (!isLocal && !canvasUrl && !schoolUrl) {
+    st.textContent = 'No calendar linked';
+    st.classList.remove('pulse');
+    st.style.color = 'var(--c-text-muted)';
+    if (getSyncUrl()) {
+      setTimeout(()=>_showGlobalBadge('idle'), 500);
+      setTimeout(()=>_checkForRemoteUpdates(), 2000);
+    }
+    return;
+  }
+
+  st.textContent = 'Loading calendar…';
+  st.classList.add('pulse');
+  st.style.color = 'var(--c-medium)';
+
   try {
     let canvasData = [], schoolData = [];
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
     if (isLocal) {
-      // Use Python server proxy when running locally
       const [canvasRes, schoolRes] = await Promise.all([
         fetch('/api/calendar'),
         fetch('/api/school-calendar').catch(() => null),
@@ -1249,11 +1276,8 @@ async function loadData() {
         schoolData = Array.isArray(s) ? s : [];
       }
     } else {
-      // Fetch ICS directly (GitHub Pages / any hosted version)
-      const canvasUrl = getCanvasIcsUrl();
-      const schoolUrl = getSchoolIcsUrl();
       const [cd, sd] = await Promise.all([
-        canvasUrl ? _fetchIcs(canvasUrl) : Promise.resolve([]),
+        canvasUrl ? _fetchIcs(canvasUrl).catch(() => []) : Promise.resolve([]),
         schoolUrl ? _fetchIcs(schoolUrl).catch(() => []) : Promise.resolve([]),
       ]);
       canvasData = cd;
@@ -1265,27 +1289,21 @@ async function loadData() {
     enabledCourses = new Set(courseList);
     schoolEvents = schoolData;
 
-    const st = document.getElementById('status-text');
     st.textContent = canvasData.length + ' events';
     st.classList.remove('pulse');
     st.style.color = 'var(--c-text-muted)';
     render();
     renderTodoList();
-    // Init global sync badge on startup, then check if sheet has newer data
-    if (getSyncUrl()) {
-      setTimeout(()=>_showGlobalBadge('idle'), 500);
-      setTimeout(()=>_checkForRemoteUpdates(), 2000);
-    }
+    renderCalendar();
   } catch(e) {
-    const st = document.getElementById('status-text');
-    st.textContent = 'Error loading';
+    st.textContent = 'Calendar error';
     st.classList.remove('pulse');
     st.style.color = '#ef4444';
-    document.getElementById('main-content').innerHTML = `
-      <div class="rounded-2xl p-5 text-sm max-w-md mx-auto mt-10" style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626">
-        <p class="font-bold mb-1">Failed to load calendar</p>
-        <p style="color:#f87171">${e.message}</p>
-      </div>`;
+  }
+
+  if (getSyncUrl()) {
+    setTimeout(()=>_showGlobalBadge('idle'), 500);
+    setTimeout(()=>_checkForRemoteUpdates(), 2000);
   }
 }
 
