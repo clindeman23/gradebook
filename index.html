@@ -2060,7 +2060,7 @@ function renderClassPlan() {
 // ════════════════════════════════════════════════════════
 let gradebookMode = false;
 let gbClassIdx = 0;
-let gbQuarter = 'Q1';
+let gbQuarter = localStorage.getItem('mca-last-quarter') || 'Q1';
 let gbEditMode = false;
 
 function getGbData() {
@@ -2073,7 +2073,7 @@ function saveGbData(d) {
 }
 
 // ── Calendar ICS URLs ─────────────────────
-const _DEFAULT_CANVAS_ICS = 'https://mcacubs.instructure.com/feeds/calendars/user_uP2ICkK8UNpIqIFiQ336NwKng8jkI3yn4YkaB7fi.ics';
+const _DEFAULT_CANVAS_ICS = '';
 const _DEFAULT_SCHOOL_ICS = 'https://www.mcacubs.com/calendar/calendar_323.ics';
 function getCanvasIcsUrl() { return localStorage.getItem('mca-canvas-ics-url') || _DEFAULT_CANVAS_ICS; }
 function setCanvasIcsUrl(u) { if(u) localStorage.setItem('mca-canvas-ics-url', u.trim()); else localStorage.removeItem('mca-canvas-ics-url'); }
@@ -2730,7 +2730,7 @@ function toggleGradebook() {
 }
 
 function gbSelectClass(idx) { gbClassIdx = idx; gbEditMode = false; renderGradebook(); }
-function gbSelectQuarter(q) { gbQuarter = q; renderGradebook(); }
+function gbSelectQuarter(q) { gbQuarter = q; localStorage.setItem('mca-last-quarter', q); renderGradebook(); }
 function toggleGbEditMode() { gbEditMode = !gbEditMode; renderGradebook(); }
 
 // ── Column resize ──────────────────────────────────────
