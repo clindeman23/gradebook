@@ -1801,7 +1801,7 @@ function renderCustomRow(t, done) {
     onmouseover="this.style.background='var(--c-cream)'"
     onmouseout="this.style.background='transparent'">
     ${toggleBtn}
-    <span class="flex-1 text-xs font-medium" style="color:${done?'var(--c-text-muted)':'var(--c-text-primary)'};${done?'text-decoration:line-through':'';word-break:break-word}">${escHtml(t.text)}</span>
+    <span class="flex-1 text-xs font-medium" style="color:${done?'var(--c-text-muted)':'var(--c-text-primary)'};${done?'text-decoration:line-through;':''}word-break:break-word">${escHtml(t.text)}</span>
     ${age?`<span style="font-size:9px;color:var(--c-text-muted);opacity:0.6;flex-shrink:0;white-space:nowrap">${age}</span>`:''}
     <button onclick="deleteCustomTodo('${t.id}')" class="${done?'':'todo-delete'} flex-shrink-0 transition-colors" style="color:${done?'#fca5a5':'#d1d5db'}" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='${done?'#fca5a5':'#d1d5db'}'">
       <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
