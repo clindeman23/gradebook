@@ -490,7 +490,11 @@
 <div id="main-layout" class="flex" style="height:calc(100vh - 65px)">
 
   <!-- ── Left Sidebar: Calendar + To-Do lists ── -->
-  <aside id="todo-sidebar" class="flex-shrink-0 flex flex-col border-r-2 overflow-y-auto scrollbar-hide" style="width:280px;background:var(--c-surface-80);border-color:var(--c-pale)">
+  <aside id="todo-sidebar" class="flex-shrink-0 flex flex-col border-r-2 overflow-y-auto scrollbar-hide" style="width:280px;min-width:180px;max-width:520px;background:var(--c-surface-80);border-color:var(--c-pale);position:relative">
+  <!-- Resize handle -->
+  <div id="sidebar-resize-handle" style="position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:20;display:flex;align-items:center;justify-content:center" title="Drag to resize">
+    <div style="width:3px;height:40px;border-radius:2px;background:var(--c-pale);transition:background .15s" onmouseover="this.style.background='var(--c-light)'" onmouseout="this.style.background='var(--c-pale)'"></div>
+  </div>
 
     <!-- Mini Calendar -->
     <div class="px-4 pt-4 pb-2 flex-shrink-0">
@@ -1797,7 +1801,7 @@ function renderCustomRow(t, done) {
     onmouseover="this.style.background='var(--c-cream)'"
     onmouseout="this.style.background='transparent'">
     ${toggleBtn}
-    <span class="flex-1 text-xs font-medium truncate" style="color:${done?'var(--c-text-muted)':'var(--c-text-primary)'};${done?'text-decoration:line-through':''}">${escHtml(t.text)}</span>
+    <span class="flex-1 text-xs font-medium" style="color:${done?'var(--c-text-muted)':'var(--c-text-primary)'};${done?'text-decoration:line-through':'';word-break:break-word}">${escHtml(t.text)}</span>
     ${age?`<span style="font-size:9px;color:var(--c-text-muted);opacity:0.6;flex-shrink:0;white-space:nowrap">${age}</span>`:''}
     <button onclick="deleteCustomTodo('${t.id}')" class="${done?'':'todo-delete'} flex-shrink-0 transition-colors" style="color:${done?'#fca5a5':'#d1d5db'}" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='${done?'#fca5a5':'#d1d5db'}'">
       <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -1822,7 +1826,7 @@ function renderAssignRow(a,rank,done){
     ${!done?`<div class="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-extrabold flex-shrink-0" style="background:${rankBg}">${rank+1}</div>`:''}
     ${a.eng&&!done?'<span class="flex-shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wide" style="background:#fef2f2;color:#dc2626">English ★</span>':''}
     ${!a.eng&&a.pts>0&&!done?`<span class="flex-shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full" style="background:var(--c-pale);color:var(--c-brown)">${a.pts} pts</span>`:''}
-    <span class="flex-1 text-xs truncate font-medium ${done?'line-through-done':''}" style="color:${done?'var(--c-text-muted)':'var(--c-text-primary)'}">
+    <span class="flex-1 text-xs font-medium ${done?'line-through-done':''}" style="color:${done?'var(--c-text-muted)':'var(--c-text-primary)'};word-break:break-word">
       ${a.url&&!done?`<a ${href} style="color:inherit" onmouseover="this.style.color='var(--c-brown)'" onmouseout="this.style.color='var(--c-text-primary)'" onclick="event.stopPropagation()">${escHtml(a.title)}</a>`:escHtml(a.title)}
     </span>
     ${a.course&&!done?`<span class="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full truncate max-w-[85px]" style="background:var(--c-chip-bg);color:var(--c-chip-text)">${escHtml(a.course)}</span>`:''}
@@ -4162,6 +4166,65 @@ loadData();
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
     localStorage.setItem(STORAGE_KEY, topPanel.offsetHeight);
+  });
+})();
+
+// ── Sidebar horizontal resize ────────────────────────────────────────────────
+(function(){
+  const STORAGE_KEY = 'mca-sidebar-width';
+  const MIN_W = 180, MAX_W = 520;
+  const sidebar = document.getElementById('todo-sidebar');
+  const handle  = document.getElementById('sidebar-resize-handle');
+  if (!sidebar || !handle) return;
+
+  // Restore saved width
+  const saved = parseInt(localStorage.getItem(STORAGE_KEY));
+  if (saved && saved >= MIN_W && saved <= MAX_W) sidebar.style.width = saved + 'px';
+
+  let startX = 0, startW = 0;
+  window._sidebarResizing = false;
+
+  handle.addEventListener('mousedown', function(e){
+    e.preventDefault();
+    window._sidebarResizing = true;
+    startX = e.clientX;
+    startW = sidebar.offsetWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', function(e){
+    if (!window._sidebarResizing) return;
+    const newW = Math.min(MAX_W, Math.max(MIN_W, startW + (e.clientX - startX)));
+    sidebar.style.width = newW + 'px';
+  });
+
+  document.addEventListener('mouseup', function(){
+    if (!window._sidebarResizing) return;
+    window._sidebarResizing = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    localStorage.setItem(STORAGE_KEY, sidebar.offsetWidth);
+  });
+
+  // Touch support for iPad
+  handle.addEventListener('touchstart', function(e){
+    e.preventDefault();
+    window._sidebarResizing = true;
+    startX = e.touches[0].clientX;
+    startW = sidebar.offsetWidth;
+  }, {passive:false});
+
+  document.addEventListener('touchmove', function(e){
+    if (!window._sidebarResizing) return;
+    const newW = Math.min(MAX_W, Math.max(MIN_W, startW + (e.touches[0].clientX - startX)));
+    sidebar.style.width = newW + 'px';
+  }, {passive:true});
+
+  document.addEventListener('touchend', function(){
+    if (!window._sidebarResizing) return;
+    window._sidebarResizing = false;
+    localStorage.setItem(STORAGE_KEY, sidebar.offsetWidth);
   });
 })();
 
