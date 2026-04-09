@@ -2293,7 +2293,7 @@ function saveGbData(d) {
 
 // ── Calendar ICS URLs ─────────────────────
 const _DEFAULT_CANVAS_ICS = '';
-const _DEFAULT_SCHOOL_ICS = 'https://www.mcacubs.com/calendar/calendar_323.ics';
+const _DEFAULT_SCHOOL_ICS = '';
 function getCanvasIcsUrl() { return localStorage.getItem('mca-canvas-ics-url') || _DEFAULT_CANVAS_ICS; }
 function setCanvasIcsUrl(u) { if(u) localStorage.setItem('mca-canvas-ics-url', u.trim()); else localStorage.removeItem('mca-canvas-ics-url'); }
 function getSchoolIcsUrl() { return localStorage.getItem('mca-school-ics-url') || _DEFAULT_SCHOOL_ICS; }
