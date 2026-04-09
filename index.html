@@ -3070,7 +3070,20 @@ function gbSaveGradeQuiet(stuId, asgnId, value) {
 let _gbNavMoving = false; // true while keyboard-navigating between cells
 function gbSaveGradeAndRefresh(stuId, asgnId, value) {
   gbSaveGradeQuiet(stuId, asgnId, value);
-  if (!_gbNavMoving) renderGradebook(); // skip re-render when navigating (keeps focus)
+  if (!_gbNavMoving) {
+    // Save scroll positions so Apple Pencil / blur doesn't jump the table
+    const mc = document.getElementById('main-content');
+    const scrollY = mc ? mc.scrollTop : 0;
+    const tblWrap = mc ? mc.querySelector('[style*="overflow-x:auto"]') : null;
+    const scrollX = tblWrap ? tblWrap.scrollLeft : 0;
+    renderGradebook();
+    // Restore after re-render
+    requestAnimationFrame(() => {
+      if (mc) mc.scrollTop = scrollY;
+      const tblWrap2 = mc ? mc.querySelector('[style*="overflow-x:auto"]') : null;
+      if (tblWrap2) tblWrap2.scrollLeft = scrollX;
+    });
+  }
 }
 
 /// Keyboard nav: Enter/↓ = next student, ↑ = prev student, Tab/→ = next assignment, Shift+Tab/← = prev assignment
@@ -3434,7 +3447,7 @@ function openAddAssignment() {
           <input type="checkbox" id="gb-also-${oc.id}" value="${oc.id}"
             style="width:15px;height:15px;accent-color:var(--c-brown);cursor:pointer">
           <span style="font-size:13px;font-weight:600;color:var(--c-text-secondary)">${escHtml(oc.name)}</span>
-          ${oc.type==='weighted'?`<span style="font-size:10px;color:var(--c-light)">(category assigned later)</span>`:''}
+          ${oc.type==='weighted'?`<span style="font-size:10px;color:var(--c-light)">(category matched by name)</span>`:''}
         </label>`).join('')}
     </div>` : '';
   openGbModal(`
@@ -3473,14 +3486,21 @@ function gbConfirmAddAssignment() {
   if (!cls.quarters[qSel]) cls.quarters[qSel] = {assignments:[],grades:{}};
   cls.quarters[qSel].assignments.push({id:'asgn_'+Date.now(), name, points:pts, categoryId});
   if (qSel !== gbQuarter) gbQuarter = qSel;
-  // Add to any checked classes (no category — teacher fills in later)
+  // Add to any checked classes — match category by name if possible
   const now = Date.now();
+  const srcCat = categoryId ? (cls.categories||[]).find(c => c.id === categoryId) : null;
   data.classes.forEach((oc, i) => {
     if (i === gbClassIdx) return;
     const cb = document.getElementById('gb-also-'+oc.id);
     if (!cb || !cb.checked) return;
     if (!oc.quarters[qSel]) oc.quarters[qSel] = {assignments:[],grades:{}};
-    oc.quarters[qSel].assignments.push({id:'asgn_'+(now+i), name, points:pts, categoryId:''});
+    // Try to find matching category by name in the target class
+    let matchedCatId = '';
+    if (srcCat && oc.type === 'weighted') {
+      const match = (oc.categories||[]).find(c => c.name.toLowerCase() === srcCat.name.toLowerCase());
+      if (match) matchedCatId = match.id;
+    }
+    oc.quarters[qSel].assignments.push({id:'asgn_'+(now+i), name, points:pts, categoryId: matchedCatId});
   });
   saveGbData(data); closeGbModal(); renderGradebook();
 }
