@@ -75,7 +75,7 @@
     .cp-table tbody tr:hover td { background:var(--c-cream) !important; }
     .cp-table tbody tr:hover .cp-cell-inner { background:transparent !important; }
     .cp-cell-inner { padding:8px 14px;height:100%; }
-    .cp-textarea { width:100%;resize:none;background:transparent;border:none;outline:none;font-family:inherit;font-size:12px;color:var(--c-text-primary);line-height:1.6;padding:8px 14px;min-height:56px; }
+    .cp-textarea { width:100%;resize:none;overflow:hidden;background:transparent;border:none;outline:none;font-family:inherit;font-size:12px;color:var(--c-text-primary);line-height:1.6;padding:8px 14px;min-height:56px;box-sizing:border-box; }
     .cp-textarea:focus { background:rgba(255,255,255,0.7); }
 
     /* Settings modal */
@@ -1160,6 +1160,8 @@ document.getElementById('settings-modal').addEventListener('click', function(e) 
 let allAssignments = [];
 let schoolEvents = [];       // MCA school calendar — shown only on date click
 let enabledCourses = new Set();
+// Persist which courses are toggled OFF across reloads
+let _savedDisabledCourses = new Set(JSON.parse(localStorage.getItem('mca-disabled-courses') || '[]'));
 let selectedDate = null;
 let currentMonth = new Date();
 currentMonth.setDate(1);
@@ -1239,7 +1241,8 @@ async function loadData() {
 
     allAssignments = canvasData;
     courseList = [...new Set(canvasData.map(a => a.course))].sort();
-    enabledCourses = new Set(courseList);
+    // Restore any previously-toggled-off courses
+    enabledCourses = new Set(courseList.filter(c => !_savedDisabledCourses.has(c)));
     schoolEvents = schoolData;
 
     st.textContent = canvasData.length + ' events';
@@ -1488,7 +1491,14 @@ function renderCourseFilter() {
 
 function toggleCourse(course) {
   const actual = courseList.find(c=>CSS.escape(c)===course)??course;
-  if (enabledCourses.has(actual)) enabledCourses.delete(actual); else enabledCourses.add(actual);
+  if (enabledCourses.has(actual)) {
+    enabledCourses.delete(actual);
+    _savedDisabledCourses.add(actual);
+  } else {
+    enabledCourses.add(actual);
+    _savedDisabledCourses.delete(actual);
+  }
+  localStorage.setItem('mca-disabled-courses', JSON.stringify([..._savedDisabledCourses]));
   render();
 }
 
@@ -1796,14 +1806,16 @@ function renderCustomRow(t, done) {
         style="border-color:${done?'var(--c-brown)':'var(--c-light)'};background:${done?'var(--c-brown)':'transparent'}">
         ${done?'<svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>':''}
       </button>`;
-  return `<div class="todo-row flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all"
+  return `<div class="todo-row flex items-start gap-2 px-3 py-2 rounded-xl transition-all"
     style="${done?'opacity:0.55':''}"
     onmouseover="this.style.background='var(--c-cream)'"
     onmouseout="this.style.background='transparent'">
-    ${toggleBtn}
-    <span class="flex-1 text-xs font-medium" style="color:${done?'var(--c-text-muted)':'var(--c-text-primary)'};${done?'text-decoration:line-through;':''}word-break:break-word">${escHtml(t.text)}</span>
-    ${age?`<span style="font-size:9px;color:var(--c-text-muted);opacity:0.6;flex-shrink:0;white-space:nowrap">${age}</span>`:''}
-    <button onclick="deleteCustomTodo('${t.id}')" class="${done?'':'todo-delete'} flex-shrink-0 transition-colors" style="color:${done?'#fca5a5':'#d1d5db'}" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='${done?'#fca5a5':'#d1d5db'}'">
+    <div style="flex-shrink:0;padding-top:1px">${toggleBtn}</div>
+    <div style="flex:1;min-width:0">
+      <div class="text-xs font-medium" style="color:${done?'var(--c-text-muted)':'var(--c-text-primary)'};${done?'text-decoration:line-through;':''}word-break:break-word;line-height:1.45">${escHtml(t.text)}</div>
+      ${age?`<div style="font-size:9px;color:var(--c-text-muted);opacity:0.6;margin-top:2px">${age}</div>`:''}
+    </div>
+    <button onclick="deleteCustomTodo('${t.id}')" class="${done?'':'todo-delete'} flex-shrink-0 transition-colors" style="color:${done?'#fca5a5':'#d1d5db'};padding-top:1px" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='${done?'#fca5a5':'#d1d5db'}'">
       <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
   </div>`;
@@ -1815,22 +1827,28 @@ function renderAssignRow(a,rank,done){
   const rankColors=['#ef4444','#f97316','#f59e0b','#6b7280'];
   const rankBg=done?'#d1d5db':(rankColors[Math.min(rank,3)]||'#6b7280');
   const href=a.url?`href="${escHtml(a.url)}" target="_blank" rel="noopener"`:'';
-  return `<div class="todo-row flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all"
+  return `<div class="todo-row flex items-start gap-2 px-3 py-2 rounded-xl transition-all"
     style="${done?'opacity:0.5':''}"
     onmouseover="if(!${done})this.style.background='var(--c-cream)'"
     onmouseout="if(!${done})this.style.background='transparent'">
-    <button onclick="toggleAssignmentDone('${escHtml(a.id)}')" class="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all"
-      style="border-color:${done?'var(--c-brown)':'var(--c-light)'};background:${done?'var(--c-brown)':'transparent'}">
-      ${done?'<svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>':''}
-    </button>
-    ${!done?`<div class="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-extrabold flex-shrink-0" style="background:${rankBg}">${rank+1}</div>`:''}
-    ${a.eng&&!done?'<span class="flex-shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wide" style="background:#fef2f2;color:#dc2626">English ★</span>':''}
-    ${!a.eng&&a.pts>0&&!done?`<span class="flex-shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full" style="background:var(--c-pale);color:var(--c-brown)">${a.pts} pts</span>`:''}
-    <span class="flex-1 text-xs font-medium ${done?'line-through-done':''}" style="color:${done?'var(--c-text-muted)':'var(--c-text-primary)'};word-break:break-word">
-      ${a.url&&!done?`<a ${href} style="color:inherit" onmouseover="this.style.color='var(--c-brown)'" onmouseout="this.style.color='var(--c-text-primary)'" onclick="event.stopPropagation()">${escHtml(a.title)}</a>`:escHtml(a.title)}
-    </span>
-    ${a.course&&!done?`<span class="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full truncate max-w-[85px]" style="background:var(--c-chip-bg);color:var(--c-chip-text)">${escHtml(a.course)}</span>`:''}
-    ${!done?`<span class="flex-shrink-0 text-[9px] font-extrabold whitespace-nowrap" style="color:${dueColor}">${dueLabel}</span>`:''}
+    <div style="display:flex;align-items:center;gap:3px;flex-shrink:0;padding-top:1px">
+      <button onclick="toggleAssignmentDone('${escHtml(a.id)}')" class="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all"
+        style="border-color:${done?'var(--c-brown)':'var(--c-light)'};background:${done?'var(--c-brown)':'transparent'}">
+        ${done?'<svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>':''}
+      </button>
+      ${!done?`<div style="width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:9px;font-weight:800;flex-shrink:0;background:${rankBg}">${rank+1}</div>`:''}
+    </div>
+    <div style="flex:1;min-width:0">
+      <div class="${done?'line-through-done':''}" style="font-size:11px;font-weight:600;color:${done?'var(--c-text-muted)':'var(--c-text-primary)'};word-break:break-word;line-height:1.4">
+        ${a.url&&!done?`<a ${href} style="color:inherit" onmouseover="this.style.color='var(--c-brown)'" onmouseout="this.style.color='inherit'" onclick="event.stopPropagation()">${escHtml(a.title)}</a>`:escHtml(a.title)}
+      </div>
+      ${!done?`<div style="display:flex;gap:3px;margin-top:3px;flex-wrap:wrap;align-items:center">
+        ${a.eng?'<span style="font-size:9px;font-weight:800;padding:1px 5px;border-radius:999px;background:#fef2f2;color:#dc2626;text-transform:uppercase;letter-spacing:.04em">English ★</span>':''}
+        ${!a.eng&&a.pts>0?`<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:999px;background:var(--c-pale);color:var(--c-brown)">${a.pts} pts</span>`:''}
+        ${a.course?`<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:999px;background:var(--c-chip-bg);color:var(--c-chip-text);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(a.course)}</span>`:''}
+        <span style="font-size:9px;font-weight:700;color:${dueColor};white-space:nowrap">${dueLabel}</span>
+      </div>`:''}
+    </div>
   </div>`;
 }
 
@@ -2053,6 +2071,16 @@ function _deactivateAllTabs(except) {
   }
 }
 
+// Auto-grow a textarea to fit its content (call on oninput and after render)
+function autoGrowTextarea(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.max(56, el.scrollHeight) + 'px';
+}
+// Grow all class-plan textareas (called after rendering the table)
+function autoGrowAllTextareas() {
+  document.querySelectorAll('.cp-textarea').forEach(autoGrowTextarea);
+}
+
 function toggleClassPlan() {
   _deactivateAllTabs('classPlan');
   classPlanMode = !classPlanMode;
@@ -2166,7 +2194,7 @@ function renderClassPlan() {
         <td style="background:${rowBg};border-right:1px solid var(--c-pale)">
           <textarea class="cp-textarea"
             placeholder="Topics, activities, agenda…"
-            oninput="saveClassPlanNote('${dateKey}','${period}',this.value)"
+            oninput="saveClassPlanNote('${dateKey}','${period}',this.value);autoGrowTextarea(this)"
           >${escHtml(noteText)}</textarea>
         </td>
         <td style="background:${rowBg}">
@@ -2201,7 +2229,7 @@ function renderClassPlan() {
       <td style="background:var(--c-surface);border-right:1px solid var(--c-pale)" colspan="1">
         <textarea class="cp-textarea" style="min-height:80px"
           placeholder="No class rotation found. Enter general notes for the day…"
-          oninput="saveClassPlanNote('${dateKey}','general',this.value)"
+          oninput="saveClassPlanNote('${dateKey}','general',this.value);autoGrowTextarea(this)"
         >${escHtml(noteText)}</textarea>
       </td>
       <td style="background:var(--c-surface)">
@@ -2225,6 +2253,8 @@ function renderClassPlan() {
   html += `</tbody></table></div>`;
   html += '</div>';
   document.getElementById('main-content').innerHTML = html;
+  // Grow textareas to fit any pre-existing saved text
+  requestAnimationFrame(autoGrowAllTextareas);
 }
 
 // ════════════════════════════════════════════════════════
