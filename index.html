@@ -174,6 +174,24 @@
     <!-- ── TAB: Calendar ── -->
     <div id="stab-content-calendar" class="px-7 py-6 space-y-6">
 
+      <!-- App Name -->
+      <div>
+        <h3 class="text-xs font-extrabold uppercase tracking-widest mb-3" style="color:var(--c-light)">App Name</h3>
+        <div class="space-y-3">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--c-text-secondary);display:block;margin-bottom:4px">Title</label>
+            <input id="app-title-in" type="text" placeholder="MCA Assignment Tracker"
+              style="width:100%;padding:8px 10px;border-radius:10px;border:1.5px solid var(--c-pale);font-size:13px;color:var(--c-text-primary);background:var(--c-cream);outline:none;box-sizing:border-box;font-weight:700"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--c-text-secondary);display:block;margin-bottom:4px">Subtitle</label>
+            <input id="app-subtitle-in" type="text" placeholder="Mount Carmel Academy · Go Cubs! 🐾"
+              style="width:100%;padding:8px 10px;border-radius:10px;border:1.5px solid var(--c-pale);font-size:12px;color:var(--c-text-primary);background:var(--c-cream);outline:none;box-sizing:border-box"/>
+          </div>
+          <button onclick="saveAppName()" style="padding:8px 18px;border-radius:10px;background:var(--c-brown);color:white;font-size:12px;font-weight:700;border:none;cursor:pointer">💾 Save Name</button>
+        </div>
+      </div>
+
       <!-- Linked Calendars -->
       <div>
         <h3 class="text-xs font-extrabold uppercase tracking-widest mb-3" style="color:var(--c-light)">Linked Calendars</h3>
@@ -315,8 +333,8 @@
     </svg>
   </div>
   <div>
-    <h1 class="text-lg font-extrabold leading-none tracking-tight" style="color:var(--c-brown)">MCA Assignment Tracker</h1>
-    <p class="text-xs mt-0.5 font-medium" style="color:var(--c-light)">Mount Carmel Academy &nbsp;·&nbsp; Go Cubs! 🐾</p>
+    <h1 id="app-title" class="text-lg font-extrabold leading-none tracking-tight" style="color:var(--c-brown)">MCA Assignment Tracker</h1>
+    <p id="app-subtitle" class="text-xs mt-0.5 font-medium" style="color:var(--c-light)">Mount Carmel Academy &nbsp;·&nbsp; Go Cubs! 🐾</p>
   </div>
   <div class="ml-auto flex items-center gap-2">
     <span id="status-text" class="text-xs font-semibold pulse" style="color:var(--c-medium)">Loading…</span>
@@ -994,6 +1012,11 @@ function setSettingsTab(tab) {
 }
 
 function buildCalendarTabUI() {
+  // App name fields
+  const tin = document.getElementById('app-title-in');
+  const sin = document.getElementById('app-subtitle-in');
+  if (tin) tin.value = localStorage.getItem('mca-app-title')    || '';
+  if (sin) sin.value = localStorage.getItem('mca-app-subtitle') || '';
   // Linked calendar toggles
   const togglesEl = document.getElementById('settings-cal-toggles');
   if (togglesEl) {
@@ -1125,6 +1148,26 @@ function saveSyncSettings() {
 
 function buildSettingsUI() {
   setSettingsTab(_activeSettingsTab);
+}
+
+function applyAppName() {
+  const title    = localStorage.getItem('mca-app-title')    || 'MCA Assignment Tracker';
+  const subtitle = localStorage.getItem('mca-app-subtitle') || 'Mount Carmel Academy \u00a0·\u00a0 Go Cubs! 🐾';
+  const t = document.getElementById('app-title');
+  const s = document.getElementById('app-subtitle');
+  if (t) t.textContent = title;
+  if (s) s.innerHTML  = subtitle;
+  document.title = title;
+}
+
+function saveAppName() {
+  const title    = document.getElementById('app-title-in')?.value?.trim()    || '';
+  const subtitle = document.getElementById('app-subtitle-in')?.value?.trim() || '';
+  if (title)    localStorage.setItem('mca-app-title',    title);
+  else          localStorage.removeItem('mca-app-title');
+  if (subtitle) localStorage.setItem('mca-app-subtitle', subtitle);
+  else          localStorage.removeItem('mca-app-subtitle');
+  applyAppName();
 }
 
 function saveCalendarLinks() {
@@ -4105,6 +4148,7 @@ if (currentThemeId === '__custom__') {
   applyTheme(currentThemeId);
 }
 applyFont(currentFontId);
+applyAppName();
 renderTodoList();
 renderCalendarSection();
 applySidebarSections();
