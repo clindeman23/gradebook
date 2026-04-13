@@ -2966,6 +2966,22 @@ function mbSaveToggleWeek(stuId, asgnId, weekNum) {
   const sumEl = document.getElementById('mb-sum-' + stuId);
   if (sumEl) sumEl.innerHTML = _mbMakeSummaryHtml(done, missed, totalWeeks);
 }
+function mbSaveWeekLabel(asgnId, weekIndex, label) {
+  const data = getGbData(); const cls = data.classes[gbClassIdx]; if (!cls) return;
+  for (const qKey of ['Q1','Q2','Q3','Q4']) {
+    const asgn = (cls.quarters[qKey]?.assignments || []).find(a => a.id === asgnId);
+    if (asgn) {
+      if (!asgn.weekLabels) asgn.weekLabels = [];
+      asgn.weekLabels[weekIndex] = label.trim();
+      saveGbData(data); _scheduleSync();
+      break;
+    }
+  }
+}
+function mbGetWeekLabel(asgn, weekIndex) {
+  const custom = (asgn.weekLabels || [])[weekIndex];
+  return (custom && custom.trim()) ? custom.trim() : `Wk ${weekIndex + 1}`;
+}
 function openMembeanModal(asgnId) {
   const data = getGbData(); const cls = data.classes[gbClassIdx]; if (!cls) return;
   const q = cls.quarters[gbQuarter];
@@ -2973,9 +2989,26 @@ function openMembeanModal(asgnId) {
   if (!asgn) return;
   const students = cls.students || [];
   const weeks = asgn.weeks || 8;
-  const weekHeaders = Array.from({length: weeks}, (_, i) =>
-    `<th style="min-width:44px;padding:6px 3px;text-align:center;font-size:10px;font-weight:800;color:var(--c-brown)">Wk ${i+1}</th>`
-  ).join('');
+  const weekHeaders = Array.from({length: weeks}, (_, i) => {
+    const label = mbGetWeekLabel(asgn, i);
+    const isDefault = !(asgn.weekLabels?.[i]?.trim());
+    return `<th style="min-width:64px;padding:4px 3px;text-align:center;vertical-align:top">
+      <div style="font-size:9px;font-weight:700;color:var(--c-light);margin-bottom:3px">Wk ${i+1}</div>
+      <input
+        id="mb-lbl-${i}"
+        type="text"
+        value="${escHtml(isDefault ? '' : label)}"
+        placeholder="Wk ${i+1}"
+        maxlength="20"
+        title="Click to rename this week (e.g. Oct 7-11)"
+        onblur="mbSaveWeekLabel('${asgnId}',${i},this.value)"
+        onkeydown="if(event.key==='Enter')this.blur()"
+        style="width:58px;padding:3px 5px;border-radius:6px;border:1.5px solid var(--c-pale);background:var(--c-surface);font-size:10px;font-weight:700;color:var(--c-brown);text-align:center;font-family:inherit;box-sizing:border-box"
+        onfocus="this.style.borderColor='var(--c-brown)';this.style.background='white'"
+        onblurfocus="this.style.borderColor='var(--c-pale)';this.style.background='var(--c-surface)'"
+      >
+    </th>`;
+  }).join('');
   const rows = students.map(stu => {
     const gradeVal = q.grades?.[stu.id]?.[asgnId] || 'mb:';
     const {done, missed} = mbParseWeeks(gradeVal) || {done: new Set(), missed: new Set()};
@@ -3012,9 +3045,9 @@ function openMembeanModal(asgnId) {
         <table style="border-collapse:collapse;width:100%">
           <thead>
             <tr style="background:var(--c-cream);border-bottom:2px solid var(--c-medium)">
-              <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--c-light);position:sticky;left:0;background:var(--c-cream)">Student</th>
+              <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--c-light);position:sticky;left:0;background:var(--c-cream);vertical-align:bottom">Student</th>
               ${weekHeaders}
-              <th style="padding:8px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--c-light);min-width:80px">Grade</th>
+              <th style="padding:8px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--c-light);min-width:80px;vertical-align:bottom">Grade</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
