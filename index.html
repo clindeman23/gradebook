@@ -195,13 +195,13 @@
         <div class="space-y-3">
           <div>
             <label style="font-size:11px;font-weight:700;color:var(--c-text-secondary);display:block;margin-bottom:4px">Canvas Calendar ICS URL</label>
-            <input id="cal-canvas-url-in" type="url" placeholder="https://yourschool.instructure.com/feeds/calendars/…"
+            <input id="cal-canvas-url-in" type="text" inputmode="url" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="https://yourschool.instructure.com/feeds/calendars/…"
               style="width:100%;padding:8px 10px;border-radius:10px;border:1.5px solid var(--c-pale);font-size:12px;color:var(--c-text-primary);background:var(--c-cream);outline:none;box-sizing:border-box"/>
             <p style="font-size:10px;color:var(--c-text-muted);margin-top:3px">In Canvas: Account → Calendar → Calendar Feed → copy the link</p>
           </div>
           <div>
             <label style="font-size:11px;font-weight:700;color:var(--c-text-secondary);display:block;margin-bottom:4px">School Calendar ICS URL</label>
-            <input id="cal-school-url-in" type="url" placeholder="https://yourschool.com/calendar/…"
+            <input id="cal-school-url-in" type="text" inputmode="url" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="https://yourschool.com/calendar/…"
               style="width:100%;padding:8px 10px;border-radius:10px;border:1.5px solid var(--c-pale);font-size:12px;color:var(--c-text-primary);background:var(--c-cream);outline:none;box-sizing:border-box"/>
           </div>
           <button onclick="saveCalendarLinks()" style="padding:8px 18px;border-radius:10px;background:var(--c-brown);color:white;font-size:12px;font-weight:700;border:none;cursor:pointer">💾 Save & Reload Calendars</button>
@@ -1132,10 +1132,12 @@ function buildSettingsUI() {
 }
 
 function saveCalendarLinks() {
-  const canvasUrl = document.getElementById('cal-canvas-url-in')?.value?.trim() || '';
-  const schoolUrl = document.getElementById('cal-school-url-in')?.value?.trim() || '';
-  setCanvasIcsUrl(canvasUrl);
-  setSchoolIcsUrl(schoolUrl);
+  const canvasRaw = document.getElementById('cal-canvas-url-in')?.value?.trim() ?? '';
+  const schoolRaw = document.getElementById('cal-school-url-in')?.value?.trim() ?? '';
+  // Only overwrite if the field has a value — never delete an existing saved URL
+  // because an empty field might just mean the browser cleared it (iOS url-type bug)
+  if (canvasRaw) setCanvasIcsUrl(canvasRaw);
+  if (schoolRaw) setSchoolIcsUrl(schoolRaw);
   closeSettings();
   loadData();
 }
@@ -2883,15 +2885,113 @@ function gradeBg(pct) {
   return _autoLighten(gc.F);
 }
 
+// ════════════════════════════════════════════════════════
+//  MEMBEAN — weekly completion tracking
+// ════════════════════════════════════════════════════════
+// Grades for Membean are stored as "mb:1,3,5" — comma-separated completed week numbers
+function mbParseWeeks(gradeVal) {
+  if (!gradeVal || typeof gradeVal !== 'string' || !gradeVal.startsWith('mb:')) return null;
+  const str = gradeVal.slice(3);
+  if (!str) return new Set();
+  return new Set(str.split(',').filter(Boolean).map(Number).filter(n => n > 0 && n === Math.floor(n)));
+}
+function mbGetEarned(asgn, gradeVal) {
+  const done = mbParseWeeks(gradeVal);
+  if (done === null) return null;
+  return (done.size / (asgn.weeks || 1)) * (asgn.points || 0);
+}
+function mbSaveToggleWeek(stuId, asgnId, weekNum) {
+  const data = getGbData(); const cls = data.classes[gbClassIdx]; if (!cls) return;
+  const q = cls.quarters[gbQuarter];
+  if (!q.grades) q.grades = {};
+  if (!q.grades[stuId]) q.grades[stuId] = {};
+  const cur = q.grades[stuId][asgnId] || 'mb:';
+  const done = mbParseWeeks(cur) || new Set();
+  if (done.has(weekNum)) done.delete(weekNum); else done.add(weekNum);
+  const arr = [...done].sort((a, b) => a - b);
+  q.grades[stuId][asgnId] = 'mb:' + arr.join(',');
+  saveGbData(data); _scheduleSync();
+  // Update checkbox state
+  const chk = document.getElementById('mb-chk-' + stuId + '-' + weekNum);
+  if (chk) chk.checked = done.has(weekNum);
+  // Update summary cell
+  const asgn = (q.assignments || []).find(a => a.id === asgnId);
+  const totalWeeks = asgn ? (asgn.weeks || 1) : 1;
+  const sumEl = document.getElementById('mb-sum-' + stuId);
+  if (sumEl) sumEl.innerHTML = `<span style="font-weight:700;color:${done.size===totalWeeks?'#16a34a':'var(--c-brown)'}">${done.size}/${totalWeeks}</span><br><span style="font-size:9px;color:var(--c-text-muted)">${Math.round(done.size/totalWeeks*100)}%</span>`;
+}
+function openMembeanModal(asgnId) {
+  const data = getGbData(); const cls = data.classes[gbClassIdx]; if (!cls) return;
+  const q = cls.quarters[gbQuarter];
+  const asgn = (q.assignments || []).find(a => a.id === asgnId);
+  if (!asgn) return;
+  const students = cls.students || [];
+  const weeks = asgn.weeks || 8;
+  const weekHeaders = Array.from({length: weeks}, (_, i) =>
+    `<th style="min-width:40px;padding:6px 3px;text-align:center;font-size:10px;font-weight:800;color:var(--c-brown)">W${i+1}</th>`
+  ).join('');
+  const rows = students.map(stu => {
+    const gradeVal = q.grades?.[stu.id]?.[asgnId] || 'mb:';
+    const done = mbParseWeeks(gradeVal) || new Set();
+    const pct = Math.round(done.size / weeks * 100);
+    const cells = Array.from({length: weeks}, (_, i) => {
+      const w = i + 1;
+      return `<td style="text-align:center;padding:3px 2px">
+        <input type="checkbox" id="mb-chk-${stu.id}-${w}" ${done.has(w) ? 'checked' : ''}
+          style="width:18px;height:18px;accent-color:var(--c-brown);cursor:pointer"
+          onchange="mbSaveToggleWeek('${stu.id}','${asgnId}',${w})">
+      </td>`;
+    }).join('');
+    return `<tr style="border-bottom:1px solid var(--c-pale)" onmouseover="this.style.background='var(--c-cream)'" onmouseout="this.style.background=''">
+      <td style="padding:7px 12px;font-size:12px;font-weight:600;color:var(--c-text-primary);min-width:140px;position:sticky;left:0;background:var(--c-surface);white-space:nowrap">${escHtml(stu.name)}</td>
+      ${cells}
+      <td style="padding:7px 8px;text-align:center" id="mb-sum-${stu.id}">
+        <span style="font-weight:700;color:${done.size===weeks?'#16a34a':'var(--c-brown)'}">${done.size}/${weeks}</span><br>
+        <span style="font-size:9px;color:var(--c-text-muted)">${pct}%</span>
+      </td>
+    </tr>`;
+  }).join('');
+  openGbModal(`
+    <div style="padding:20px;max-width:min(92vw,900px)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#92400e;margin-bottom:3px">📗 Membean Tracker</div>
+          <h3 style="font-size:16px;font-weight:800;color:var(--c-brown);margin:0">${escHtml(asgn.name)}</h3>
+          <p style="font-size:11px;color:var(--c-text-muted);margin:3px 0 0">${weeks} weeks · ${asgn.points} pts · ${gbQuarter} · Check each week a student completes Membean</p>
+        </div>
+        <button onclick="closeGbModal();renderGradebook()" style="padding:7px 16px;border-radius:9px;background:var(--c-brown);color:white;font-size:13px;font-weight:700;border:none;cursor:pointer;flex-shrink:0">✓ Done</button>
+      </div>
+      <div style="overflow-x:auto;border:1.5px solid var(--c-pale);border-radius:10px">
+        <table style="border-collapse:collapse;width:100%">
+          <thead>
+            <tr style="background:var(--c-cream);border-bottom:2px solid var(--c-medium)">
+              <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--c-light);position:sticky;left:0;background:var(--c-cream)">Student</th>
+              ${weekHeaders}
+              <th style="padding:8px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--c-light);min-width:72px">Score</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`);
+}
+
 function calcStudentGrade(cls, quarter, studentId) {
   const q = cls.quarters?.[quarter] || {assignments:[],grades:{}};
   const grades = q.grades?.[studentId] || {};
   const assignments = q.assignments || [];
+  // Returns numeric earned points (or null if not graded) for any assignment type
+  function _earn(a) {
+    const g = grades[a.id];
+    if (a.type === 'membean') return mbGetEarned(a, g);
+    if (g === undefined || g === '' || g === null) return null;
+    return parseFloat(g) || 0;
+  }
   if (cls.type === 'points') {
     let earned = 0, total = 0;
     for (const a of assignments) {
-      const g = grades[a.id];
-      if (g !== undefined && g !== '' && g !== null) { earned += parseFloat(g)||0; total += a.points||0; }
+      const e = _earn(a);
+      if (e !== null) { earned += e; total += a.points || 0; }
     }
     const pct = total > 0 ? Math.round((earned/total)*1000)/10 : null;
     return {pct, letter: getLetterGrade(pct), earned, total};
@@ -2903,12 +3003,10 @@ function calcStudentGrade(cls, quarter, studentId) {
       const catAsgns = assignments.filter(a => a.categoryId === cat.id);
       let earned = 0, total = 0;
       for (const a of catAsgns) {
-        const g = grades[a.id];
-        if (g !== undefined && g !== '' && g !== null) {
-          const raw = parseFloat(g)||0;
-          const pts = a.points||0;
-          // Apply 60% floor: if enabled and score < 60%, count as 60% for calculation
-          const effective = (cat.floor60 && pts > 0 && raw/pts < 0.6) ? 0.6*pts : raw;
+        const e = _earn(a);
+        if (e !== null) {
+          const pts = a.points || 0;
+          const effective = (cat.floor60 && pts > 0 && e/pts < 0.6) ? 0.6*pts : e;
           earned += effective; total += pts;
         }
       }
@@ -3105,22 +3203,38 @@ function gbRenderTable(cls, data) {
   }
   for (const col of cols) {
     if (col.type === 'asgn') {
-      const colW = gbColWidths[col.a.id] ? `width:${gbColWidths[col.a.id]}px;min-width:${gbColWidths[col.a.id]}px` : 'min-width:80px';
-      const _colCat = categories.find(c=>c.id===col.a.categoryId);
-      const _colCatBg = _colCat?.color ? _autoLighten(_colCat.color, 0.92) : '';
-      const _colCatBorder = _colCat?.color ? `border-left:1px solid ${_colCat.color}` : 'border-left:1px solid var(--c-pale)';
-      t += `<th id="gb-th-${col.a.id}" style="${thBase};text-align:center;${colW};${_colCatBorder};${_colCatBg?`background:${_colCatBg};`:''}position:relative;white-space:normal;vertical-align:top">
-        <div style="word-break:break-word;line-height:1.3;margin:0 8px 2px 8px;font-size:11px" title="${escHtml(col.a.name)}">${escHtml(col.a.name)}</div>
-        <div style="display:inline-block;margin-top:3px;font-weight:700;font-size:9px;padding:1px 6px;border-radius:999px;background:var(--c-brown);color:#fff;opacity:0.85">/${col.a.points}pts</div>
-        ${gbEditMode?`<div style="display:flex;gap:4px;justify-content:center;margin-top:2px">
-          <button onclick="openEditAssignment('${col.a.id}')" style="color:var(--c-brown);font-size:9px;border:none;background:none;cursor:pointer">✎ edit</button>
-          <button onclick="gbDeleteAssignment('${col.a.id}')" style="color:#dc2626;font-size:9px;border:none;background:none;cursor:pointer">✕ remove</button>
-        </div>`:''}
-        <div onmousedown="gbStartColResize(event,'${col.a.id}')"
-          style="position:absolute;right:0;top:0;bottom:0;width:5px;cursor:col-resize;background:transparent;z-index:2"
-          onmouseover="this.style.background='var(--c-brown)';this.style.opacity='0.4'"
-          onmouseout="this.style.background='transparent'"></div>
-      </th>`;
+      if (col.a.type === 'membean') {
+        // ── Membean column — compact, click to open tracker modal
+        const mbWks = col.a.weeks || 8;
+        t += `<th id="gb-th-${col.a.id}" style="${thBase};text-align:center;min-width:90px;border-left:1px solid #d97706;background:#fef3c7;cursor:pointer;white-space:normal;vertical-align:top;position:relative"
+            onclick="openMembeanModal('${col.a.id}')" title="Click to open Membean tracker">
+          <div style="font-size:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#92400e;margin-bottom:2px">📗 Membean</div>
+          <div style="word-break:break-word;line-height:1.3;font-size:11px;color:#92400e;margin:0 4px 2px" title="${escHtml(col.a.name)}">${escHtml(col.a.name)}</div>
+          <div style="font-size:9px;color:#b45309;margin-bottom:2px">${mbWks} wks · ${col.a.points}pts</div>
+          <div style="font-size:9px;font-weight:700;color:var(--c-brown)">▼ tap to grade</div>
+          ${gbEditMode ? `<div style="display:flex;gap:4px;justify-content:center;margin-top:3px" onclick="event.stopPropagation()">
+            <button onclick="openEditAssignment('${col.a.id}')" style="color:var(--c-brown);font-size:9px;border:none;background:none;cursor:pointer">✎ edit</button>
+            <button onclick="gbDeleteAssignment('${col.a.id}')" style="color:#dc2626;font-size:9px;border:none;background:none;cursor:pointer">✕</button>
+          </div>` : ''}
+        </th>`;
+      } else {
+        const colW = gbColWidths[col.a.id] ? `width:${gbColWidths[col.a.id]}px;min-width:${gbColWidths[col.a.id]}px` : 'min-width:80px';
+        const _colCat = categories.find(c=>c.id===col.a.categoryId);
+        const _colCatBg = _colCat?.color ? _autoLighten(_colCat.color, 0.92) : '';
+        const _colCatBorder = _colCat?.color ? `border-left:1px solid ${_colCat.color}` : 'border-left:1px solid var(--c-pale)';
+        t += `<th id="gb-th-${col.a.id}" style="${thBase};text-align:center;${colW};${_colCatBorder};${_colCatBg?`background:${_colCatBg};`:''}position:relative;white-space:normal;vertical-align:top">
+          <div style="word-break:break-word;line-height:1.3;margin:0 8px 2px 8px;font-size:11px" title="${escHtml(col.a.name)}">${escHtml(col.a.name)}</div>
+          <div style="display:inline-block;margin-top:3px;font-weight:700;font-size:9px;padding:1px 6px;border-radius:999px;background:var(--c-brown);color:#fff;opacity:0.85">/${col.a.points}pts</div>
+          ${gbEditMode?`<div style="display:flex;gap:4px;justify-content:center;margin-top:2px">
+            <button onclick="openEditAssignment('${col.a.id}')" style="color:var(--c-brown);font-size:9px;border:none;background:none;cursor:pointer">✎ edit</button>
+            <button onclick="gbDeleteAssignment('${col.a.id}')" style="color:#dc2626;font-size:9px;border:none;background:none;cursor:pointer">✕ remove</button>
+          </div>`:''}
+          <div onmousedown="gbStartColResize(event,'${col.a.id}')"
+            style="position:absolute;right:0;top:0;bottom:0;width:5px;cursor:col-resize;background:transparent;z-index:2"
+            onmouseover="this.style.background='var(--c-brown)';this.style.opacity='0.4'"
+            onmouseout="this.style.background='transparent'"></div>
+        </th>`;
+      }
     } else if (col.type === 'cat') {
       t += `<th style="${thBase};text-align:center;background:var(--c-cream);border-left:1px solid var(--c-medium);min-width:65px">%</th>`;
     } else if (col.type === 'total') {
@@ -3150,6 +3264,22 @@ function gbRenderTable(cls, data) {
     let _ai = 0; // assignment column index (for keyboard nav)
     for (const col of cols) {
       if (col.type === 'asgn') {
+        if (col.a.type === 'membean') {
+          // ── Membean cell — shows completion summary, click opens tracker
+          const gradeVal = grades[col.a.id] || 'mb:';
+          const done = mbParseWeeks(gradeVal) || new Set();
+          const mbWks = col.a.weeks || 8;
+          const mbPct = Math.round(done.size / mbWks * 100);
+          const hasSome = done.size > 0;
+          const allDone = done.size === mbWks;
+          t += `<td style="${tdBase};text-align:center;border-left:1px solid #d97706;background:#fef9ee;cursor:pointer"
+              onclick="openMembeanModal('${col.a.id}')" title="Tap to open Membean tracker">
+            <div style="font-weight:${hasSome?'800':'400'};font-size:12px;color:${allDone?'#16a34a':hasSome?'#92400e':'var(--c-text-muted)'}">
+              ${hasSome ? `${done.size}/${mbWks}` : '—'}
+            </div>
+            ${hasSome ? `<div style="font-size:9px;color:var(--c-text-muted)">${mbPct}%</div>` : ''}
+          </td>`;
+        } else {
         const val = grades[col.a.id];
         const pts = col.a.points || 0;
         const numVal = (val !== undefined && val !== '' && val !== null) ? parseFloat(val) : null;
@@ -3186,6 +3316,7 @@ function gbRenderTable(cls, data) {
             ${floorApplied?`<div style="font-size:8px;font-weight:800;color:#92400e">↑60%</div>`:''}
           </td>`;
         }
+        } // end non-membean
       } else if (col.type === 'cat') {
         const cr = result.catResults?.[col.cat.id];
         const p = cr?.pct;
@@ -3214,9 +3345,17 @@ function gbRenderTable(cls, data) {
     </td>`;
     for (const col of cols) {
       if (col.type === 'asgn') {
+        if (col.a.type === 'membean') {
+          // Average weeks completed across students
+          const mbWks = col.a.weeks || 8;
+          const counts = students.map(s => { const v=(q.grades?.[s.id]||{})[col.a.id]; const d=mbParseWeeks(v||'mb:'); return d?d.size:null; }).filter(v=>v!==null);
+          const avgWks = counts.length ? Math.round(counts.reduce((a,b)=>a+b,0)/counts.length*10)/10 : null;
+          t += `<td style="${tdBase};text-align:center;border-left:1px solid #d97706;background:#fef9ee;font-weight:700;color:#92400e">${avgWks!==null?`${avgWks}/${mbWks}`:'—'}</td>`;
+        } else {
         const vals = students.map(s => { const v=(q.grades?.[s.id]||{})[col.a.id]; return v!==undefined&&v!==''&&v!==null?parseFloat(v):null; }).filter(v=>v!==null);
         const avg = vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*10)/10 : null;
         t += `<td style="${tdBase};text-align:center;border-left:1px solid var(--c-pale);font-weight:600;color:var(--c-text-secondary)">${avg!==null?avg:'—'}</td>`;
+        }
       } else if (col.type === 'cat') {
         const pcts = students.map(s=>calcStudentGrade(cls,gbQuarter,s.id).catResults?.[col.cat.id]?.pct).filter(p=>p!==null&&p!==undefined);
         const avg = pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length*10)/10 : null;
@@ -3660,12 +3799,25 @@ function openAddAssignment() {
   openGbModal(`
     <div style="padding:24px">
       <h3 style="font-size:16px;font-weight:800;color:var(--c-brown);margin-bottom:16px">Add Assignment</h3>
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--c-light);margin-bottom:6px">Assignment Type</label>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button id="gb-type-regular" onclick="gbSetAsgnType('regular')"
+          style="flex:1;padding:8px 12px;border-radius:10px;border:2px solid var(--c-brown);background:var(--c-brown);color:white;font-size:13px;font-weight:700;cursor:pointer">Regular</button>
+        <button id="gb-type-membean" onclick="gbSetAsgnType('membean')"
+          style="flex:1;padding:8px 12px;border-radius:10px;border:2px solid var(--c-pale);background:transparent;color:var(--c-medium);font-size:13px;font-weight:700;cursor:pointer">📗 Membean</button>
+      </div>
       <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--c-light);margin-bottom:6px">Assignment Name</label>
-      <input id="gb-asgn-name" type="text" placeholder="e.g. Essay 1"
+      <input id="gb-asgn-name" type="text" placeholder="e.g. Membean Q1"
         style="width:100%;padding:8px 12px;border-radius:10px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:14px;font-family:inherit;box-sizing:border-box;margin-bottom:14px">
-      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--c-light);margin-bottom:6px">Points Possible</label>
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--c-light);margin-bottom:6px">Total Points</label>
       <input id="gb-asgn-pts" type="number" min="1" placeholder="100"
         style="width:100%;padding:8px 12px;border-radius:10px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:14px;font-family:inherit;box-sizing:border-box;margin-bottom:14px">
+      <div id="gb-membean-weeks-row" style="display:none">
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--c-light);margin-bottom:6px">Number of Weeks</label>
+        <input id="gb-asgn-weeks" type="number" min="1" max="52" placeholder="8"
+          style="width:100%;padding:8px 12px;border-radius:10px;border:1.5px solid #d97706;background:#fef9ee;font-size:14px;font-family:inherit;box-sizing:border-box;margin-bottom:14px">
+        <p style="font-size:11px;color:var(--c-text-muted);margin:-8px 0 14px">Each week you'll tap ✓ or ✗ per student in the Membean tracker.</p>
+      </div>
       ${isW ? `<label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--c-light);margin-bottom:6px">Category</label>
         <select id="gb-asgn-cat" style="width:100%;padding:8px 12px;border-radius:10px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:14px;font-family:inherit;margin-bottom:14px">
           <option value="">— Uncategorized —</option>${catOpts}
@@ -3682,16 +3834,39 @@ function openAddAssignment() {
     </div>`);
   setTimeout(()=>document.getElementById('gb-asgn-name')?.focus(),80);
 }
+let _gbAsgnType = 'regular'; // tracks selected type in Add Assignment modal
+function gbSetAsgnType(type) {
+  _gbAsgnType = type;
+  const btnR = document.getElementById('gb-type-regular');
+  const btnM = document.getElementById('gb-type-membean');
+  const weeksRow = document.getElementById('gb-membean-weeks-row');
+  if (btnR) { btnR.style.background = type==='regular'?'var(--c-brown)':'transparent'; btnR.style.color = type==='regular'?'white':'var(--c-medium)'; btnR.style.borderColor = type==='regular'?'var(--c-brown)':'var(--c-pale)'; }
+  if (btnM) { btnM.style.background = type==='membean'?'#d97706':'transparent'; btnM.style.color = type==='membean'?'white':'var(--c-medium)'; btnM.style.borderColor = type==='membean'?'#d97706':'var(--c-pale)'; }
+  if (weeksRow) weeksRow.style.display = type==='membean' ? 'block' : 'none';
+  if (type === 'membean') {
+    const nameEl = document.getElementById('gb-asgn-name');
+    if (nameEl && !nameEl.value) nameEl.placeholder = 'e.g. Membean Q1';
+    const ptsEl = document.getElementById('gb-asgn-pts');
+    if (ptsEl && !ptsEl.value) ptsEl.placeholder = '100';
+    const wksEl = document.getElementById('gb-asgn-weeks');
+    if (wksEl && !wksEl.value) wksEl.value = '8';
+  }
+}
 function gbConfirmAddAssignment() {
   const name = document.getElementById('gb-asgn-name')?.value?.trim(); if (!name) return;
   const pts = parseFloat(document.getElementById('gb-asgn-pts')?.value)||0;
   const catEl = document.getElementById('gb-asgn-cat');
   const categoryId = catEl ? catEl.value : '';
   const qSel = document.getElementById('gb-asgn-q')?.value || gbQuarter;
+  const isMembean = _gbAsgnType === 'membean';
+  const weeks = isMembean ? (parseInt(document.getElementById('gb-asgn-weeks')?.value)||8) : undefined;
+  _gbAsgnType = 'regular'; // reset
   const data = getGbData(); const cls = data.classes[gbClassIdx]; if (!cls) return;
   // Add to current class
   if (!cls.quarters[qSel]) cls.quarters[qSel] = {assignments:[],grades:{}};
-  cls.quarters[qSel].assignments.push({id:'asgn_'+Date.now(), name, points:pts, categoryId});
+  const newAsgn = {id:'asgn_'+Date.now(), name, points:pts, categoryId};
+  if (isMembean) { newAsgn.type = 'membean'; newAsgn.weeks = weeks; }
+  cls.quarters[qSel].assignments.push(newAsgn);
   if (qSel !== gbQuarter) gbQuarter = qSel;
   // Add to any checked classes — match category by name if possible
   const now = Date.now();
@@ -3701,13 +3876,14 @@ function gbConfirmAddAssignment() {
     const cb = document.getElementById('gb-also-'+oc.id);
     if (!cb || !cb.checked) return;
     if (!oc.quarters[qSel]) oc.quarters[qSel] = {assignments:[],grades:{}};
-    // Try to find matching category by name in the target class
     let matchedCatId = '';
     if (srcCat && oc.type === 'weighted') {
       const match = (oc.categories||[]).find(c => c.name.toLowerCase() === srcCat.name.toLowerCase());
       if (match) matchedCatId = match.id;
     }
-    oc.quarters[qSel].assignments.push({id:'asgn_'+(now+i), name, points:pts, categoryId: matchedCatId});
+    const ocAsgn = {id:'asgn_'+(now+i), name, points:pts, categoryId: matchedCatId};
+    if (isMembean) { ocAsgn.type = 'membean'; ocAsgn.weeks = weeks; }
+    oc.quarters[qSel].assignments.push(ocAsgn);
   });
   saveGbData(data); closeGbModal(); renderGradebook();
 }
@@ -3715,24 +3891,30 @@ function gbConfirmAddAssignment() {
 // ── Edit Assignment
 function openEditAssignment(asgnId) {
   const data = getGbData(); const cls = data.classes[gbClassIdx]; if (!cls) return;
-  // Find assignment across all quarters
-  let foundAsgn = null, foundQ = null;
+  let foundAsgn = null;
   for (const q of ['Q1','Q2','Q3','Q4']) {
     const a = (cls.quarters[q]?.assignments||[]).find(a=>a.id===asgnId);
-    if (a) { foundAsgn = a; foundQ = q; break; }
+    if (a) { foundAsgn = a; break; }
   }
   if (!foundAsgn) return;
   const isW = cls.type === 'weighted';
+  const isMembean = foundAsgn.type === 'membean';
   const catOpts = (cls.categories||[]).map(c=>`<option value="${c.id}" ${c.id===foundAsgn.categoryId?'selected':''}>${escHtml(c.name)}</option>`).join('');
   openGbModal(`
     <div style="padding:24px">
-      <h3 style="font-size:16px;font-weight:800;color:var(--c-brown);margin-bottom:16px">Edit Assignment</h3>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        ${isMembean ? '<span style="font-size:18px">📗</span>' : ''}
+        <h3 style="font-size:16px;font-weight:800;color:var(--c-brown);margin:0">${isMembean ? 'Edit Membean Assignment' : 'Edit Assignment'}</h3>
+      </div>
       <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--c-light);margin-bottom:6px">Assignment Name</label>
       <input id="gb-edit-name" type="text" value="${escHtml(foundAsgn.name)}"
         style="width:100%;padding:8px 12px;border-radius:10px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:14px;font-family:inherit;box-sizing:border-box;margin-bottom:14px">
-      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--c-light);margin-bottom:6px">Points Possible</label>
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--c-light);margin-bottom:6px">Total Points</label>
       <input id="gb-edit-pts" type="number" min="1" value="${foundAsgn.points}"
         style="width:100%;padding:8px 12px;border-radius:10px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:14px;font-family:inherit;box-sizing:border-box;margin-bottom:14px">
+      ${isMembean ? `<label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--c-light);margin-bottom:6px">Number of Weeks</label>
+        <input id="gb-edit-weeks" type="number" min="1" max="52" value="${foundAsgn.weeks||8}"
+          style="width:100%;padding:8px 12px;border-radius:10px;border:1.5px solid #d97706;background:#fef9ee;font-size:14px;font-family:inherit;box-sizing:border-box;margin-bottom:14px">` : ''}
       ${isW ? `<label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--c-light);margin-bottom:6px">Category</label>
         <select id="gb-edit-cat" style="width:100%;padding:8px 12px;border-radius:10px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:14px;font-family:inherit;margin-bottom:14px">
           <option value="" ${!foundAsgn.categoryId?'selected':''}>— Uncategorized —</option>${catOpts}
@@ -3749,6 +3931,7 @@ function gbConfirmEditAssignment(asgnId) {
   const pts = parseFloat(document.getElementById('gb-edit-pts')?.value)||0;
   const catEl = document.getElementById('gb-edit-cat');
   const categoryId = catEl ? catEl.value : '';
+  const weeksEl = document.getElementById('gb-edit-weeks');
   const data = getGbData(); const cls = data.classes[gbClassIdx]; if (!cls) return;
   for (const q of ['Q1','Q2','Q3','Q4']) {
     const asgns = cls.quarters[q]?.assignments||[];
@@ -3757,6 +3940,7 @@ function gbConfirmEditAssignment(asgnId) {
       asgns[idx].name = name;
       asgns[idx].points = pts;
       asgns[idx].categoryId = categoryId;
+      if (weeksEl) asgns[idx].weeks = parseInt(weeksEl.value)||8;
       break;
     }
   }
