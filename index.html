@@ -4386,6 +4386,245 @@ function saveExamGrade(classId, stuId, examType, grade) {
   renderCharts();
 }
 
+// ════════════════════════════════════════════════════════
+//  FINAL EXAM CALCULATOR
+// ════════════════════════════════════════════════════════
+const FE_DEFAULT_PARTS = [
+  {id:'essay',   name:'Essay',          points:50,  extra:false},
+  {id:'membean', name:'Membean',        points:30,  extra:false},
+  {id:'canvas',  name:'Canvas Portion', points:30,  extra:false},
+  {id:'ec',      name:'Extra Credit',   points:10,  extra:true },
+];
+
+function getFinalExamConfig(classId) {
+  try { return JSON.parse(localStorage.getItem('mca-fe-config-'+classId)||'null') || JSON.parse(JSON.stringify(FE_DEFAULT_PARTS)); }
+  catch(e) { return JSON.parse(JSON.stringify(FE_DEFAULT_PARTS)); }
+}
+function saveFinalExamConfig(classId, parts) {
+  localStorage.setItem('mca-fe-config-'+classId, JSON.stringify(parts));
+  _scheduleSync();
+}
+function getFinalExamScores(classId) {
+  try { return JSON.parse(localStorage.getItem('mca-fe-scores-'+classId)||'{}'); }
+  catch(e) { return {}; }
+}
+function _feGetPct(parts, scores, stuId) {
+  const stuScores = scores[stuId] || {};
+  const basePts = parts.filter(p => !p.extra).reduce((s,p) => s + (parseFloat(p.points)||0), 0);
+  if (basePts === 0) return null;
+  let hasAny = false;
+  let earned = 0;
+  for (const p of parts) {
+    const v = parseFloat(stuScores[p.id]);
+    if (!isNaN(v)) { hasAny = true; earned += v; }
+  }
+  if (!hasAny) return null;
+  return Math.min(100, Math.max(0, (earned / basePts) * 100));
+}
+function saveFinalExamScore(classId, stuId, partId, rawVal) {
+  const d = getFinalExamScores(classId);
+  if (!d[stuId]) d[stuId] = {};
+  const v = rawVal === '' || rawVal === null ? null : parseFloat(rawVal);
+  if (v === null || isNaN(v)) delete d[stuId][partId];
+  else d[stuId][partId] = v;
+  localStorage.setItem('mca-fe-scores-'+classId, JSON.stringify(d));
+  _scheduleSync();
+  // Auto-sync calculated letter grade to the Charts "final" column
+  const parts = getFinalExamConfig(classId);
+  const pct = _feGetPct(parts, d, stuId);
+  if (pct !== null) {
+    const letter = getLetterGrade(pct);
+    const exams = getExamGrades(classId);
+    if (!exams[stuId]) exams[stuId] = {};
+    exams[stuId]['final'] = letter;
+    localStorage.setItem('mca-exams-'+classId, JSON.stringify(exams));
+    _scheduleSync();
+  }
+  // Update just this student's grade cell in the modal (no full re-render)
+  _feRefreshRow(classId, stuId, parts, d);
+}
+function _feRefreshRow(classId, stuId, parts, scores) {
+  const pct = _feGetPct(parts, scores, stuId);
+  const el = document.getElementById('fe-grade-'+stuId);
+  if (!el) return;
+  if (pct === null) { el.innerHTML = '<span style="color:#9ca3af;font-size:11px">—</span>'; return; }
+  const letter = getLetterGrade(pct);
+  el.innerHTML = `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(letter)};background:${gradeLetterBg(letter)};padding:2px 8px;border-radius:6px">${letter}</span><br><span style="font-size:10px;color:var(--c-text-muted)">${pct.toFixed(1)}%</span>`;
+  // Also update total cell
+  const totEl = document.getElementById('fe-total-'+stuId);
+  if (totEl) {
+    const basePts = parts.filter(p=>!p.extra).reduce((s,p)=>s+(parseFloat(p.points)||0),0);
+    let earned=0; const stuScores = scores[stuId]||{};
+    for (const p of parts) { const v=parseFloat(stuScores[p.id]); if(!isNaN(v)) earned+=v; }
+    totEl.textContent = earned.toFixed(earned%1===0?0:1) + '/' + basePts;
+  }
+}
+
+function openFinalExamModal(classId) {
+  const data = getGbData();
+  const cls = data.classes.find(c => c.id === classId);
+  if (!cls) return;
+  const parts = getFinalExamConfig(classId);
+  const scores = getFinalExamScores(classId);
+  const students = cls.students || [];
+  const basePts = parts.filter(p=>!p.extra).reduce((s,p)=>s+(parseFloat(p.points)||0),0);
+
+  const partHeaders = parts.map(p => `
+    <th style="padding:6px 8px;text-align:center;font-size:10px;font-weight:700;min-width:80px;white-space:nowrap;color:${p.extra?'#15803d':'var(--c-light)'}">
+      ${escHtml(p.name)}<br>
+      <span style="font-weight:400;color:var(--c-text-muted)">${p.extra?'EC ':''}/${p.points}pts</span>
+    </th>`).join('');
+
+  const rows = students.map(stu => {
+    const stuScores = scores[stu.id] || {};
+    const cells = parts.map(p => {
+      const val = stuScores[p.id] !== undefined ? stuScores[p.id] : '';
+      return `<td style="padding:4px 5px;text-align:center">
+        <input type="number" min="0" max="${p.extra ? 999 : p.points}" step="0.5" value="${val}" placeholder="—"
+          oninput="saveFinalExamScore('${classId}','${stu.id}','${p.id}',this.value)"
+          style="width:68px;padding:5px 4px;border-radius:7px;border:1.5px solid var(--c-pale);text-align:center;font-size:12px;font-family:inherit;font-weight:600;color:var(--c-text-primary);background:${p.extra?'#f0fdf4':'var(--c-cream)'};box-sizing:border-box"
+          onfocus="this.style.borderColor='var(--c-brown)'" onblur="this.style.borderColor='var(--c-pale)'">
+      </td>`;
+    }).join('');
+    const pct = _feGetPct(parts, scores, stu.id);
+    const letter = pct !== null ? getLetterGrade(pct) : null;
+    let earned = 0; for (const p of parts) { const v=parseFloat(stuScores[p.id]); if(!isNaN(v)) earned+=v; }
+    const gradeHtml = letter
+      ? `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(letter)};background:${gradeLetterBg(letter)};padding:2px 8px;border-radius:6px">${letter}</span><br><span style="font-size:10px;color:var(--c-text-muted)">${pct.toFixed(1)}%</span>`
+      : '<span style="color:#9ca3af;font-size:11px">—</span>';
+    return `<tr style="border-bottom:1px solid var(--c-pale)" onmouseover="this.style.background='var(--c-cream)'" onmouseout="this.style.background=''">
+      <td style="padding:7px 14px;font-size:12px;font-weight:700;color:var(--c-text-primary);position:sticky;left:0;background:var(--c-surface);white-space:nowrap;min-width:140px">${escHtml(stu.name)}</td>
+      ${cells}
+      <td style="padding:4px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--c-text-muted)" id="fe-total-${stu.id}">${pct!==null ? earned.toFixed(earned%1===0?0:1)+'/'+basePts : '—'}</td>
+      <td style="padding:4px 10px;text-align:center;min-width:80px" id="fe-grade-${stu.id}">${gradeHtml}</td>
+    </tr>`;
+  }).join('');
+
+  openGbModal(`
+    <div style="padding:20px;max-width:min(96vw,960px)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9f1239;margin-bottom:4px">📝 Final Exam Calculator</div>
+          <h3 style="font-size:18px;font-weight:800;color:var(--c-brown);margin:0">${escHtml(cls.name)}</h3>
+          <p style="font-size:11px;color:var(--c-text-muted);margin:4px 0 0">${parts.filter(p=>!p.extra).length} graded parts · ${basePts} total points · Letter grades auto-save to Charts</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="openFinalExamSetup('${classId}')" style="padding:7px 14px;border-radius:9px;background:var(--c-pale);color:var(--c-brown);font-size:12px;font-weight:700;border:1.5px solid var(--c-light);cursor:pointer">⚙ Edit Parts</button>
+          <button onclick="closeGbModal()" style="padding:7px 16px;border-radius:9px;background:var(--c-brown);color:white;font-size:13px;font-weight:700;border:none;cursor:pointer">✓ Done</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;border:1.5px solid var(--c-pale);border-radius:12px">
+        <table style="border-collapse:collapse;width:100%">
+          <thead>
+            <tr style="background:var(--c-cream);border-bottom:2px solid var(--c-medium)">
+              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--c-light);position:sticky;left:0;background:var(--c-cream)">Student</th>
+              ${partHeaders}
+              <th style="padding:6px 8px;text-align:center;font-size:10px;font-weight:700;color:var(--c-light);min-width:60px">Total</th>
+              <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#9f1239;min-width:80px">Final Grade →<br>Charts</th>
+            </tr>
+          </thead>
+          <tbody>${rows || '<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--c-text-muted);font-style:italic">No students — add in Gradebook first</td></tr>'}</tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px;padding:10px 14px;background:#fef3c7;border-radius:8px;font-size:11px;color:#92400e">
+        ✨ Scores auto-calculate the letter grade and push it to the Final column in Charts. Extra credit (green) can only help the grade, not lower it.
+      </div>
+    </div>`);
+}
+
+function openFinalExamSetup(classId) {
+  function renderSetup() {
+    const parts = getFinalExamConfig(classId);
+    const basePts = parts.filter(p=>!p.extra).reduce((s,p)=>s+(parseFloat(p.points)||0),0);
+    const rows = parts.map((p, i) => `
+      <tr style="border-bottom:1px solid var(--c-pale)">
+        <td style="padding:6px 8px">
+          <input type="text" value="${escHtml(p.name)}" maxlength="30" placeholder="Part name"
+            onchange="_feUpdatePart('${classId}',${i},'name',this.value)"
+            style="width:160px;padding:6px 8px;border-radius:7px;border:1.5px solid var(--c-pale);font-size:12px;font-family:inherit;box-sizing:border-box"/>
+        </td>
+        <td style="padding:6px 8px;text-align:center">
+          <input type="number" min="1" max="1000" step="1" value="${p.points}"
+            onchange="_feUpdatePart('${classId}',${i},'points',parseFloat(this.value)||0)"
+            style="width:70px;padding:6px 8px;border-radius:7px;border:1.5px solid var(--c-pale);font-size:12px;font-family:inherit;text-align:center;box-sizing:border-box"/>
+        </td>
+        <td style="padding:6px 8px;text-align:center">
+          <label style="display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer">
+            <input type="checkbox" ${p.extra?'checked':''} onchange="_feUpdatePart('${classId}',${i},'extra',this.checked)"
+              style="width:16px;height:16px;cursor:pointer;accent-color:#15803d"/>
+            <span style="font-size:11px;color:${p.extra?'#15803d':'var(--c-text-muted)'}">EC</span>
+          </label>
+        </td>
+        <td style="padding:6px 8px;text-align:center">
+          <button onclick="_feRemovePart('${classId}',${i})"
+            style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:12px;font-weight:700">✕</button>
+        </td>
+      </tr>`).join('');
+    return `
+      <div style="border:1.5px solid var(--c-pale);border-radius:10px;overflow:hidden">
+        <table style="border-collapse:collapse;width:100%">
+          <thead><tr style="background:var(--c-cream)">
+            <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--c-light)">Part Name</th>
+            <th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;color:var(--c-light)">Max Points</th>
+            <th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;color:#15803d">Extra Credit?</th>
+            <th style="padding:8px 10px"></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <p style="margin-top:8px;font-size:11px;color:var(--c-text-muted)">Total graded points: <strong>${basePts}</strong> &nbsp;·&nbsp; Extra credit doesn't count against total — it can only help the grade.</p>`;
+  }
+
+  openGbModal(`
+    <div style="padding:20px;min-width:min(90vw,480px)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px">
+        <div>
+          <div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9f1239;margin-bottom:3px">⚙ Exam Setup</div>
+          <h3 style="font-size:16px;font-weight:800;color:var(--c-brown);margin:0">Configure Exam Parts</h3>
+        </div>
+        <button onclick="closeGbModal();openFinalExamModal('${classId}')"
+          style="padding:7px 14px;border-radius:9px;background:var(--c-brown);color:white;font-size:12px;font-weight:700;border:none;cursor:pointer;flex-shrink:0">← Back to Scores</button>
+      </div>
+      <div id="fe-setup-inner">${renderSetup()}</div>
+      <button onclick="_feAddPart('${classId}')"
+        style="margin-top:12px;padding:7px 16px;border-radius:9px;background:var(--c-pale);color:var(--c-brown);font-size:12px;font-weight:700;border:1.5px solid var(--c-light);cursor:pointer">+ Add Part</button>
+    </div>`);
+}
+
+function _feUpdatePart(classId, idx, field, value) {
+  const parts = getFinalExamConfig(classId);
+  if (!parts[idx]) return;
+  if (field === 'points') parts[idx][field] = parseFloat(value)||0;
+  else if (field === 'extra') parts[idx][field] = !!value;
+  else parts[idx][field] = value;
+  saveFinalExamConfig(classId, parts);
+  // Refresh setup table in-place
+  const inner = document.getElementById('fe-setup-inner');
+  if (inner) {
+    const basePts = parts.filter(p=>!p.extra).reduce((s,p)=>s+(parseFloat(p.points)||0),0);
+    const rows = parts.map((p, i) => `
+      <tr style="border-bottom:1px solid var(--c-pale)">
+        <td style="padding:6px 8px"><input type="text" value="${escHtml(p.name)}" maxlength="30" placeholder="Part name" onchange="_feUpdatePart('${classId}',${i},'name',this.value)" style="width:160px;padding:6px 8px;border-radius:7px;border:1.5px solid var(--c-pale);font-size:12px;font-family:inherit;box-sizing:border-box"/></td>
+        <td style="padding:6px 8px;text-align:center"><input type="number" min="1" max="1000" step="1" value="${p.points}" onchange="_feUpdatePart('${classId}',${i},'points',parseFloat(this.value)||0)" style="width:70px;padding:6px 8px;border-radius:7px;border:1.5px solid var(--c-pale);font-size:12px;font-family:inherit;text-align:center;box-sizing:border-box"/></td>
+        <td style="padding:6px 8px;text-align:center"><label style="display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer"><input type="checkbox" ${p.extra?'checked':''} onchange="_feUpdatePart('${classId}',${i},'extra',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#15803d"/><span style="font-size:11px;color:${p.extra?'#15803d':'var(--c-text-muted)'}">EC</span></label></td>
+        <td style="padding:6px 8px;text-align:center"><button onclick="_feRemovePart('${classId}',${i})" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:12px;font-weight:700">✕</button></td>
+      </tr>`).join('');
+    inner.innerHTML = `<div style="border:1.5px solid var(--c-pale);border-radius:10px;overflow:hidden"><table style="border-collapse:collapse;width:100%"><thead><tr style="background:var(--c-cream)"><th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--c-light)">Part Name</th><th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;color:var(--c-light)">Max Points</th><th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;color:#15803d">Extra Credit?</th><th style="padding:8px 10px"></th></tr></thead><tbody>${rows}</tbody></table></div><p style="margin-top:8px;font-size:11px;color:var(--c-text-muted)">Total graded points: <strong>${basePts}</strong> &nbsp;·&nbsp; Extra credit doesn't count against total.</p>`;
+  }
+}
+function _feAddPart(classId) {
+  const parts = getFinalExamConfig(classId);
+  parts.push({id:'part_'+Date.now(), name:'New Part', points:20, extra:false});
+  saveFinalExamConfig(classId, parts);
+  openFinalExamSetup(classId);
+}
+function _feRemovePart(classId, idx) {
+  const parts = getFinalExamConfig(classId);
+  parts.splice(idx, 1);
+  saveFinalExamConfig(classId, parts);
+  openFinalExamSetup(classId);
+}
+
 function toggleCharts() {
   _deactivateAllTabs('charts');
   chartsMode = !chartsMode;
@@ -4498,6 +4737,15 @@ function renderCharts() {
   }
   if (data.classes.length === 0) {
     html += `<span style="font-size:13px;color:var(--c-text-muted)">No classes — add them in Gradebook first</span>`;
+  }
+  // ── Final Exam button (lives in the same flex row as class tabs)
+  if (cls) {
+    html += `<button onclick="openFinalExamModal('${cls.id}')"
+      style="padding:6px 14px;border-radius:10px;font-size:12px;font-weight:700;border:2px solid #9f1239;cursor:pointer;background:#fff1f2;color:#9f1239;margin-left:auto;white-space:nowrap"
+      onmouseover="this.style.background='#9f1239';this.style.color='white'"
+      onmouseout="this.style.background='#fff1f2';this.style.color='#9f1239'">
+      📝 Final Exam
+    </button>`;
   }
   html += `</div>`;
 
