@@ -2923,6 +2923,7 @@ function _gbSaveSyncUrl() {
 
 function getLetterGrade(pct) {
   if (pct === null || pct === undefined || isNaN(pct)) return '—';
+  pct = Math.round(pct); // school rounds .5+ up to next whole number
   if (pct >= 98) return 'A+'; if (pct >= 93) return 'A'; if (pct >= 90) return 'A-';
   if (pct >= 88) return 'B+'; if (pct >= 82) return 'B'; if (pct >= 80) return 'B-';
   if (pct >= 79) return 'C+'; if (pct >= 76) return 'C'; if (pct >= 75) return 'C-';
