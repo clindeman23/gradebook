@@ -4728,53 +4728,63 @@ function renderChartsNoExams(cls) {
     return parts.map(l => `<span style="font-weight:800;color:${gradeLetterColor(l.trim())};background:${gradeLetterBg(l.trim())};padding:2px 7px;border-radius:5px;font-size:12px">${l.trim()}</span>`).join('<span style="color:#9ca3af;font-size:10px;margin:0 2px">/</span>');
   }
 
-  let t = `<div style="overflow-x:auto;border-radius:12px;border:1.5px solid var(--c-pale)">
-  <table style="border-collapse:collapse;min-width:100%;font-size:12px;background:var(--c-surface);white-space:nowrap">
+  let t = `<div style="overflow-x:auto;border-radius:12px;border:1.5px solid #d1d5db;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+  <table style="border-collapse:collapse;min-width:100%;font-size:12px;background:#fff;white-space:nowrap">
   <thead>
-    <tr style="background:var(--c-cream)">
-      <th rowspan="2" style="padding:8px 14px;text-align:left;font-weight:800;color:var(--c-text-primary);border-right:2px solid var(--c-pale);position:sticky;left:0;background:var(--c-cream);min-width:130px">Student</th>
-      <th colspan="3" style="padding:6px 10px;text-align:center;font-weight:800;color:#1d4ed8;border-left:2px solid var(--c-pale);border-bottom:1px solid var(--c-pale);background:#eff6ff">Semester 1</th>
-      <th colspan="3" style="padding:6px 10px;text-align:center;font-weight:800;color:#15803d;border-left:2px solid var(--c-pale);border-bottom:1px solid var(--c-pale);background:#f0fdf4">Semester 2</th>
-      <th rowspan="2" style="padding:6px 10px;text-align:center;font-weight:800;color:var(--c-brown);border-left:2px solid var(--c-pale);background:var(--c-pale);min-width:70px">Year</th>
+    <tr style="background:#f1f5f9">
+      <th rowspan="2" style="padding:10px 16px;text-align:left;font-weight:800;font-size:11px;color:#374151;border-right:2px solid #cbd5e1;position:sticky;left:0;background:#f1f5f9;min-width:150px;letter-spacing:.02em">STUDENT</th>
+      <th colspan="3" style="padding:7px 10px;text-align:center;font-weight:800;color:#1d4ed8;border-left:2px solid #cbd5e1;border-bottom:1.5px solid #bfdbfe;background:#dbeafe">Semester 1</th>
+      <th colspan="3" style="padding:7px 10px;text-align:center;font-weight:800;color:#15803d;border-left:2px solid #cbd5e1;border-bottom:1.5px solid #bbf7d0;background:#dcfce7">Semester 2</th>
+      <th rowspan="2" style="padding:7px 12px;text-align:center;font-weight:800;color:var(--c-brown);border-left:2px solid #cbd5e1;background:#fdf8f0;min-width:80px">Year</th>
     </tr>
-    <tr style="background:var(--c-pale)">
-      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#1d4ed8;border-left:2px solid var(--c-pale);background:#eff6ff">Q1</th>
-      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#1d4ed8;background:#eff6ff">Q2</th>
-      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#1d4ed8;background:#eff6ff;font-weight:900">Sem 1</th>
-      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#15803d;border-left:2px solid var(--c-pale);background:#f0fdf4">Q3</th>
-      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#15803d;background:#f0fdf4">Q4</th>
-      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#15803d;background:#f0fdf4;font-weight:900">Sem 2</th>
+    <tr style="background:#f8fafc">
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#1d4ed8;border-left:2px solid #cbd5e1;background:#dbeafe;letter-spacing:.04em">Q1</th>
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#1d4ed8;background:#dbeafe;letter-spacing:.04em">Q2</th>
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:900;color:#1e40af;background:#dbeafe;letter-spacing:.04em">SEM 1</th>
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#15803d;border-left:2px solid #cbd5e1;background:#dcfce7;letter-spacing:.04em">Q3</th>
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#15803d;background:#dcfce7;letter-spacing:.04em">Q4</th>
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:900;color:#166534;background:#dcfce7;letter-spacing:.04em">SEM 2</th>
     </tr>
   </thead>
   <tbody>`;
 
   if (students.length === 0) {
-    t += `<tr><td colspan="8" style="padding:20px;text-align:center;color:var(--c-text-muted);font-style:italic">No students — add them in Gradebook</td></tr>`;
+    t += `<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--c-text-muted);font-style:italic">No students — add them in Gradebook</td></tr>`;
   }
+
+  const _hoverOn  = `this.querySelectorAll('td').forEach(c=>c.style.background='#fefce8')`;
+  const _hoverOff = (si) => `this.querySelectorAll('td').forEach((c,i)=>{const e=${si}%2===0;c.style.background=i===0?(e?'#fff':'#f8fafc'):i<=3?(e?'#f0f7ff':'#e6f0ff'):i<=6?(e?'#f0fdf4':'#e6faed'):'#fdf8f0'})`;
 
   for (let si = 0; si < students.length; si++) {
     const stu = students[si];
-    const rowBg = si % 2 === 0 ? 'var(--c-surface)' : 'var(--c-cream)';
+    const isEven = si % 2 === 0;
+    const nameBg = isEven ? '#ffffff' : '#f8fafc';
+    const s1Bg   = isEven ? '#f0f7ff' : '#e6f0ff';
+    const s2Bg   = isEven ? '#f0fdf4' : '#e6faed';
+    const yearBg = '#fdf8f0';
+    const rowBorder = 'border-bottom:1.5px solid #e2e8f0';
+
     const q1 = qGrade(stu.id, 'Q1'), q2 = qGrade(stu.id, 'Q2');
     const q3 = qGrade(stu.id, 'Q3'), q4 = qGrade(stu.id, 'Q4');
     const sem1 = (q1 && q2) ? chartQSLookup(q1, q2) : null;
     const sem2 = (q3 && q4) ? chartQSLookup(q3, q4) : null;
-    // Year uses CHART_C (same structure as semester→year no-exam chart)
     const yearGrade = (sem1 && sem2) ? chartCLookup(sem1.split('/')[0], sem2.split('/')[0]) : null;
 
-    t += `<tr style="background:${rowBg}">
-      <td style="padding:6px 14px;font-weight:700;color:var(--c-text-primary);border-right:2px solid var(--c-pale);position:sticky;left:0;background:${rowBg}">${escHtml(stu.name)}</td>
-      <td style="padding:6px 10px;text-align:center;border-left:2px solid var(--c-pale);background:${si%2===0?'#f8faff':'#eef4ff'}">${gradeCell(q1)}</td>
-      <td style="padding:6px 10px;text-align:center;background:${si%2===0?'#f8faff':'#eef4ff'}">${gradeCell(q2)}</td>
-      <td style="padding:6px 10px;text-align:center;background:${si%2===0?'#f8faff':'#eef4ff'}">
-        ${sem1 ? `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(sem1.split('/')[0])};background:${gradeLetterBg(sem1.split('/')[0])};padding:2px 8px;border-radius:6px">${sem1}</span>` : '<span style="color:#9ca3af;font-size:10px">Need Q1+Q2</span>'}
+    t += `<tr style="cursor:default" onmouseover="${_hoverOn}" onmouseout="${_hoverOff(si)}">
+      <td style="padding:9px 16px;font-weight:700;font-size:12px;color:#111827;border-right:2px solid #cbd5e1;${rowBorder};position:sticky;left:0;background:${nameBg};white-space:nowrap">
+        <span style="display:inline-block;width:18px;font-size:10px;font-weight:500;color:#9ca3af;margin-right:4px">${si+1}</span>${escHtml(stu.name)}
       </td>
-      <td style="padding:6px 10px;text-align:center;border-left:2px solid var(--c-pale);background:${si%2===0?'#f7fdf7':'#edfaed'}">${gradeCell(q3)}</td>
-      <td style="padding:6px 10px;text-align:center;background:${si%2===0?'#f7fdf7':'#edfaed'}">${gradeCell(q4)}</td>
-      <td style="padding:6px 10px;text-align:center;background:${si%2===0?'#f7fdf7':'#edfaed'}">
-        ${sem2 ? `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(sem2.split('/')[0])};background:${gradeLetterBg(sem2.split('/')[0])};padding:2px 8px;border-radius:6px">${sem2}</span>` : '<span style="color:#9ca3af;font-size:10px">Need Q3+Q4</span>'}
+      <td style="padding:9px 10px;text-align:center;border-left:2px solid #cbd5e1;${rowBorder};background:${s1Bg}">${gradeCell(q1)}</td>
+      <td style="padding:9px 10px;text-align:center;${rowBorder};background:${s1Bg}">${gradeCell(q2)}</td>
+      <td style="padding:9px 10px;text-align:center;${rowBorder};background:${s1Bg};border-right:2px solid #cbd5e1">
+        ${sem1 ? `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(sem1.split('/')[0])};background:${gradeLetterBg(sem1.split('/')[0])};padding:2px 9px;border-radius:6px">${sem1}</span>` : '<span style="color:#9ca3af;font-size:10px">Need Q1+Q2</span>'}
       </td>
-      <td style="padding:6px 10px;text-align:center;border-left:2px solid var(--c-pale);background:var(--c-cream)">
+      <td style="padding:9px 10px;text-align:center;${rowBorder};background:${s2Bg}">${gradeCell(q3)}</td>
+      <td style="padding:9px 10px;text-align:center;${rowBorder};background:${s2Bg}">${gradeCell(q4)}</td>
+      <td style="padding:9px 10px;text-align:center;${rowBorder};background:${s2Bg};border-right:2px solid #cbd5e1">
+        ${sem2 ? `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(sem2.split('/')[0])};background:${gradeLetterBg(sem2.split('/')[0])};padding:2px 9px;border-radius:6px">${sem2}</span>` : '<span style="color:#9ca3af;font-size:10px">Need Q3+Q4</span>'}
+      </td>
+      <td style="padding:9px 12px;text-align:center;${rowBorder};background:${yearBg}">
         ${yearGrade ? `<span style="font-weight:900;font-size:15px;color:${gradeLetterColor(yearGrade)};background:${gradeLetterBg(yearGrade)};padding:3px 10px;border-radius:8px">${yearGrade}</span>` : '<span style="color:#9ca3af;font-size:11px">—</span>'}
       </td>
     </tr>`;
@@ -4858,35 +4868,44 @@ function renderCharts() {
   }
 
   // Table
-  html += `<div style="overflow-x:auto;border-radius:12px;border:1.5px solid var(--c-pale)">
-  <table style="border-collapse:collapse;min-width:100%;font-size:12px;background:var(--c-surface);white-space:nowrap">
+  html += `<div style="overflow-x:auto;border-radius:12px;border:1.5px solid #d1d5db;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+  <table style="border-collapse:collapse;min-width:100%;font-size:12px;background:#fff;white-space:nowrap">
   <thead>
-    <tr style="background:var(--c-cream)">
-      <th rowspan="2" style="padding:8px 14px;text-align:left;font-weight:800;color:var(--c-text-primary);border-right:2px solid var(--c-pale);position:sticky;left:0;background:var(--c-cream);min-width:130px">Student</th>
-      <th colspan="4" style="padding:6px 10px;text-align:center;font-weight:800;color:#1d4ed8;border-left:2px solid var(--c-pale);border-bottom:1px solid var(--c-pale);background:#eff6ff">Semester 1</th>
-      <th colspan="4" style="padding:6px 10px;text-align:center;font-weight:800;color:#15803d;border-left:2px solid var(--c-pale);border-bottom:1px solid var(--c-pale);background:#f0fdf4">Semester 2</th>
-      <th rowspan="2" style="padding:6px 10px;text-align:center;font-weight:800;color:var(--c-brown);border-left:2px solid var(--c-pale);background:var(--c-pale);min-width:70px">Year</th>
+    <tr style="background:#f1f5f9">
+      <th rowspan="2" style="padding:10px 16px;text-align:left;font-weight:800;font-size:11px;color:#374151;border-right:2px solid #cbd5e1;position:sticky;left:0;background:#f1f5f9;min-width:150px;letter-spacing:.02em">STUDENT</th>
+      <th colspan="4" style="padding:7px 10px;text-align:center;font-weight:800;color:#1d4ed8;border-left:2px solid #cbd5e1;border-bottom:1.5px solid #bfdbfe;background:#dbeafe">Semester 1</th>
+      <th colspan="4" style="padding:7px 10px;text-align:center;font-weight:800;color:#15803d;border-left:2px solid #cbd5e1;border-bottom:1.5px solid #bbf7d0;background:#dcfce7">Semester 2</th>
+      <th rowspan="2" style="padding:7px 12px;text-align:center;font-weight:800;color:var(--c-brown);border-left:2px solid #cbd5e1;background:#fdf8f0;min-width:80px">Year</th>
     </tr>
-    <tr style="background:var(--c-pale)">
-      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#1d4ed8;border-left:2px solid var(--c-pale);background:#eff6ff">Q1</th>
-      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#1d4ed8;background:#eff6ff">Q2</th>
-      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#1d4ed8;background:#eff6ff">Qual Pts</th>
-      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#1d4ed8;background:#eff6ff">Midterm → <strong>Sem 1</strong></th>
-      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#15803d;border-left:2px solid var(--c-pale);background:#f0fdf4">Q3</th>
-      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#15803d;background:#f0fdf4">Q4</th>
-      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#15803d;background:#f0fdf4">Qual Pts</th>
-      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#15803d;background:#f0fdf4">Final → <strong>Sem 2</strong></th>
+    <tr style="background:#f8fafc">
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#1d4ed8;border-left:2px solid #cbd5e1;background:#dbeafe;letter-spacing:.04em">Q1</th>
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#1d4ed8;background:#dbeafe;letter-spacing:.04em">Q2</th>
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#1d4ed8;background:#dbeafe;letter-spacing:.04em">Qual Pts</th>
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:900;color:#1e40af;background:#dbeafe;letter-spacing:.04em">MIDTERM → SEM 1</th>
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#15803d;border-left:2px solid #cbd5e1;background:#dcfce7;letter-spacing:.04em">Q3</th>
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#15803d;background:#dcfce7;letter-spacing:.04em">Q4</th>
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:#15803d;background:#dcfce7;letter-spacing:.04em">Qual Pts</th>
+      <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:900;color:#166534;background:#dcfce7;letter-spacing:.04em">FINAL → SEM 2</th>
     </tr>
   </thead>
   <tbody>`;
 
   if (students.length === 0) {
-    html += `<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--c-text-muted);font-style:italic">No students — add them in Gradebook</td></tr>`;
+    html += `<tr><td colspan="10" style="padding:24px;text-align:center;color:var(--c-text-muted);font-style:italic">No students — add them in Gradebook</td></tr>`;
   }
+
+  const _hoverOnE  = `this.querySelectorAll('td').forEach(c=>c.style.background='#fefce8')`;
+  const _hoverOffE = (si) => `this.querySelectorAll('td').forEach((c,i)=>{const e=${si}%2===0;c.style.background=i===0?(e?'#fff':'#f8fafc'):i<=4?(e?'#f0f7ff':'#e6f0ff'):i<=8?(e?'#f0fdf4':'#e6faed'):'#fdf8f0'})`;
 
   for (let si = 0; si < students.length; si++) {
     const stu = students[si];
-    const rowBg = si % 2 === 0 ? 'var(--c-surface)' : 'var(--c-cream)';
+    const isEven = si % 2 === 0;
+    const nameBg = isEven ? '#ffffff' : '#f8fafc';
+    const s1Bg   = isEven ? '#f0f7ff' : '#e6f0ff';
+    const s2Bg   = isEven ? '#f0fdf4' : '#e6faed';
+    const yearBg = '#fdf8f0';
+    const rowBorder = 'border-bottom:1.5px solid #e2e8f0';
+
     const stuExams = exams[stu.id] || {};
 
     const q1 = qGrade(stu.id, 'Q1');
@@ -4907,27 +4926,29 @@ function renderCharts() {
 
     const yearGrade = (sem1 && sem2) ? chartCLookup(sem1, sem2) : null;
 
-    html += `<tr style="background:${rowBg}">
-      <td style="padding:6px 14px;font-weight:700;color:var(--c-text-primary);border-right:2px solid var(--c-pale);position:sticky;left:0;background:${rowBg}">${escHtml(stu.name)}</td>
-      <td style="padding:6px 10px;text-align:center;border-left:2px solid var(--c-pale);background:${si%2===0?'#f8faff':'#eef4ff'}">${gradeCell(q1)}</td>
-      <td style="padding:6px 10px;text-align:center;background:${si%2===0?'#f8faff':'#eef4ff'}">${gradeCell(q2)}</td>
-      <td style="padding:6px 10px;text-align:center;background:${si%2===0?'#f8faff':'#eef4ff'}">${qpCell(qp1)}</td>
-      <td style="padding:6px 10px;text-align:center;background:${si%2===0?'#f8faff':'#eef4ff'}">
+    html += `<tr style="cursor:default" onmouseover="${_hoverOnE}" onmouseout="${_hoverOffE(si)}">
+      <td style="padding:9px 16px;font-weight:700;font-size:12px;color:#111827;border-right:2px solid #cbd5e1;${rowBorder};position:sticky;left:0;background:${nameBg};white-space:nowrap">
+        <span style="display:inline-block;width:18px;font-size:10px;font-weight:500;color:#9ca3af;margin-right:4px">${si+1}</span>${escHtml(stu.name)}
+      </td>
+      <td style="padding:9px 10px;text-align:center;border-left:2px solid #cbd5e1;${rowBorder};background:${s1Bg}">${gradeCell(q1)}</td>
+      <td style="padding:9px 10px;text-align:center;${rowBorder};background:${s1Bg}">${gradeCell(q2)}</td>
+      <td style="padding:9px 10px;text-align:center;${rowBorder};background:${s1Bg}">${qpCell(qp1)}</td>
+      <td style="padding:9px 10px;text-align:center;${rowBorder};background:${s1Bg};border-right:2px solid #cbd5e1">
         <div style="display:flex;align-items:center;gap:6px;justify-content:center">
           ${gradeSelect(cls.id, stu.id, 'midterm', midterm)}
           ${sem1 ? `<span style="font-weight:800;font-size:13px;color:${gradeLetterColor(sem1)};background:${gradeLetterBg(sem1)};padding:2px 8px;border-radius:6px">${sem1}</span>` : ''}
         </div>
       </td>
-      <td style="padding:6px 10px;text-align:center;border-left:2px solid var(--c-pale);background:${si%2===0?'#f7fdf7':'#edfaed'}">${gradeCell(q3)}</td>
-      <td style="padding:6px 10px;text-align:center;background:${si%2===0?'#f7fdf7':'#edfaed'}">${gradeCell(q4)}</td>
-      <td style="padding:6px 10px;text-align:center;background:${si%2===0?'#f7fdf7':'#edfaed'}">${qpCell(qp2)}</td>
-      <td style="padding:6px 10px;text-align:center;background:${si%2===0?'#f7fdf7':'#edfaed'}">
+      <td style="padding:9px 10px;text-align:center;${rowBorder};background:${s2Bg}">${gradeCell(q3)}</td>
+      <td style="padding:9px 10px;text-align:center;${rowBorder};background:${s2Bg}">${gradeCell(q4)}</td>
+      <td style="padding:9px 10px;text-align:center;${rowBorder};background:${s2Bg}">${qpCell(qp2)}</td>
+      <td style="padding:9px 10px;text-align:center;${rowBorder};background:${s2Bg};border-right:2px solid #cbd5e1">
         <div style="display:flex;align-items:center;gap:6px;justify-content:center">
           ${gradeSelect(cls.id, stu.id, 'final', final_)}
           ${sem2 ? `<span style="font-weight:800;font-size:13px;color:${gradeLetterColor(sem2)};background:${gradeLetterBg(sem2)};padding:2px 8px;border-radius:6px">${sem2}</span>` : ''}
         </div>
       </td>
-      <td style="padding:6px 10px;text-align:center;border-left:2px solid var(--c-pale);background:var(--c-cream)">
+      <td style="padding:9px 12px;text-align:center;${rowBorder};background:${yearBg}">
         ${yearGrade ? `<span style="font-weight:900;font-size:15px;color:${gradeLetterColor(yearGrade)};background:${gradeLetterBg(yearGrade)};padding:3px 10px;border-radius:8px">${yearGrade}</span>` : '<span style="color:#9ca3af;font-size:11px">Enter exams</span>'}
       </td>
     </tr>`;
