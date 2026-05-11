@@ -5123,6 +5123,10 @@ function doAttendancePdf() {
   // Portrait letter: 216mm wide × 279mm tall
   const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
   const W = 216, MARGIN = 14;
+  // Column widths — wide enough that header words never wrap
+  // Total table width = W - MARGIN*2 = 188mm
+  // 8 + 62 + 26 + 24 + 22 + 46 = 188
+  const COL_W = { num:8, name:62, present:26, absent:24, tardy:22, notes:46 };
   let isFirst = true;
 
   for (const cls of classes) {
@@ -5135,86 +5139,100 @@ function doAttendancePdf() {
     const cg = parseInt(clr.slice(3,5),16)||45;
     const cb2= parseInt(clr.slice(5,7),16)||12;
 
-    // ── Top color bar
+    // ── Top color bar (18mm)
     doc.setFillColor(cr,cg,cb2);
-    doc.rect(0, 0, W, 22, 'F');
+    doc.rect(0, 0, W, 18, 'F');
     doc.setTextColor(255,255,255);
-    doc.setFont('helvetica','bold'); doc.setFontSize(15);
-    doc.text(cls.name||'Class', MARGIN, 10);
-    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-    doc.text('Substitute Attendance Record', MARGIN, 16.5);
-    doc.text('Printed: '+dateStr, W-MARGIN, 16.5, {align:'right'});
+    doc.setFont('helvetica','bold'); doc.setFontSize(14);
+    doc.text(cls.name||'Class', MARGIN, 9);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    doc.text('Substitute Attendance Record', MARGIN, 15);
+    doc.text('Printed: '+dateStr, W-MARGIN, 15, {align:'right'});
 
-    // ── Info fill-in line
+    // ── Info fill-in box (9mm tall)
     doc.setTextColor(30,30,30);
     doc.setFillColor(248,250,252);
-    doc.rect(MARGIN, 26, W-MARGIN*2, 12, 'F');
-    doc.setDrawColor(200,200,200);
-    doc.rect(MARGIN, 26, W-MARGIN*2, 12, 'S');
-    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-
-    const fy = 33.5;
+    doc.rect(MARGIN, 20, W-MARGIN*2, 9, 'F');
+    doc.setDrawColor(200,200,200); doc.setLineWidth(0.3);
+    doc.rect(MARGIN, 20, W-MARGIN*2, 9, 'S');
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    const fy = 26;
     doc.text('Sub Name:', MARGIN+3, fy);
-    doc.line(MARGIN+22, fy+0.5, MARGIN+70, fy+0.5);
-    doc.text('Date:', MARGIN+75, fy);
-    doc.line(MARGIN+87, fy+0.5, MARGIN+117, fy+0.5);
-    doc.text('Period:', MARGIN+122, fy);
-    doc.line(MARGIN+135, fy+0.5, W-MARGIN-3, fy+0.5);
+    doc.line(MARGIN+22, fy+0.5, MARGIN+68, fy+0.5);
+    doc.text('Date:', MARGIN+72, fy);
+    doc.line(MARGIN+83, fy+0.5, MARGIN+115, fy+0.5);
+    doc.text('Period:', MARGIN+119, fy);
+    doc.line(MARGIN+131, fy+0.5, W-MARGIN-3, fy+0.5);
 
-    let y = 44;
+    // ── Dynamic row sizing so ALL students fit on one page
+    const TABLE_START = 32;   // y where table begins
+    const FOOTER_H    = 13;   // mm reserved at bottom for footer
+    const PAGE_H      = 279;
+    const numBodyRows = students.length + 3; // +3 blank rows for walk-ins
+    const availForBody = PAGE_H - TABLE_START - FOOTER_H - 9; // subtract ~9mm header row
+    const targetRowH   = availForBody / numBodyRows;
 
-    // ── Attendance table
+    let fs, padV, padH;
+    if      (targetRowH >= 9.5) { fs=9.5; padV=3.2; padH=3; }
+    else if (targetRowH >= 8.0) { fs=9;   padV=2.5; padH=3; }
+    else if (targetRowH >= 6.8) { fs=8.5; padV=1.8; padH=3; }
+    else if (targetRowH >= 5.8) { fs=8;   padV=1.3; padH=3; }
+    else if (targetRowH >= 5.0) { fs=7.5; padV=0.9; padH=2.5; }
+    else                        { fs=7;   padV=0.6; padH=2; }
+
+    // Checkbox size scales with row
+    const chk = Math.max(3, Math.min(5.5, targetRowH - 2));
+
     const head = [['#', 'Student Name', 'Present', 'Absent', 'Tardy', 'Notes']];
     const body = [];
-
-    // Numbered real students
-    for (let i = 0; i < students.length; i++) {
-      body.push([String(i+1), students[i].name, '', '', '', '']);
-    }
-    // Extra blank rows for walk-ins / new students
-    for (let i = students.length; i < students.length + 3; i++) {
-      body.push([String(i+1), '', '', '', '', '']);
-    }
+    for (let i = 0; i < students.length; i++) body.push([String(i+1), students[i].name||'', '', '', '', '']);
+    for (let i = students.length; i < numBodyRows; i++) body.push([String(i+1), '', '', '', '', '']);
 
     doc.autoTable({
       head,
       body,
-      startY: y,
+      startY: TABLE_START,
       margin: { left:MARGIN, right:MARGIN },
       tableWidth: W - MARGIN*2,
-      styles: { fontSize:9, cellPadding:{top:4,bottom:4,left:4,right:4} },
-      headStyles: { fillColor:[cr,cg,cb2], textColor:[255,255,255], fontStyle:'bold', fontSize:9, halign:'center' },
+      pageBreak: 'avoid', // try to keep all rows together
+      styles: {
+        fontSize: fs,
+        cellPadding: { top:padV, bottom:padV, left:padH, right:padH },
+        overflow: 'ellipsize',
+        lineHeightFactor: 1.1
+      },
+      headStyles: {
+        fillColor:[cr,cg,cb2], textColor:[255,255,255], fontStyle:'bold',
+        fontSize:fs, halign:'center',
+        cellPadding:{top:2.5, bottom:2.5, left:padH, right:padH},
+        overflow:'ellipsize'
+      },
       alternateRowStyles: { fillColor:[248,250,252] },
       columnStyles: {
-        0: { cellWidth:9,  halign:'center', fontStyle:'bold' },
-        1: { cellWidth:58, halign:'left',   fontStyle:'bold' },
-        2: { cellWidth:18, halign:'center' },
-        3: { cellWidth:16, halign:'center' },
-        4: { cellWidth:14, halign:'center' },
-        5: { halign:'left' }
+        0: { cellWidth:COL_W.num,     halign:'center', fontStyle:'bold' },
+        1: { cellWidth:COL_W.name,    halign:'left',   fontStyle:'bold' },
+        2: { cellWidth:COL_W.present, halign:'center' },
+        3: { cellWidth:COL_W.absent,  halign:'center' },
+        4: { cellWidth:COL_W.tardy,   halign:'center' },
+        5: { cellWidth:COL_W.notes,   halign:'left'   }
       },
       didDrawCell(hookData) {
-        // Draw a small checkbox square in the P/A/T cells
         if (hookData.section==='body' && hookData.column.index >= 2 && hookData.column.index <= 4) {
-          const x = hookData.cell.x + hookData.cell.width/2 - 3.5;
-          const yy = hookData.cell.y + hookData.cell.height/2 - 3.5;
-          doc.setDrawColor(160,160,160);
-          doc.setLineWidth(0.4);
-          doc.rect(x, yy, 7, 7, 'S');
+          const cx = hookData.cell.x + hookData.cell.width/2 - chk/2;
+          const cy = hookData.cell.y + hookData.cell.height/2 - chk/2;
+          doc.setDrawColor(150,150,150); doc.setLineWidth(0.3);
+          doc.rect(cx, cy, chk, chk, 'S');
         }
       }
     });
 
-    const tableBottom = doc.lastAutoTable.finalY;
-
-    // ── Footer line
-    const footY = Math.min(tableBottom + 10, 268);
-    doc.setDrawColor(200,200,200);
-    doc.setLineWidth(0.3);
+    // ── Footer pinned near bottom of page
+    const footY = PAGE_H - FOOTER_H + 1;
+    doc.setDrawColor(210,210,210); doc.setLineWidth(0.25);
     doc.line(MARGIN, footY, W-MARGIN, footY);
     doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(130,130,130);
-    doc.text('Lesson plan location: ___________________________________   Emergency contacts / procedures: see sub folder', MARGIN, footY+5);
-    doc.text(`${cls.name||'Class'}  ·  ${students.length} student${students.length!==1?'s':''}  ·  Page 1`, W-MARGIN, footY+5, {align:'right'});
+    doc.text('Lesson plan location: _________________________________   Emergency info: see sub folder', MARGIN, footY+4.5);
+    doc.text(`${cls.name||'Class'} · ${students.length} student${students.length!==1?'s':''}`, W-MARGIN, footY+4.5, {align:'right'});
   }
 
   const date = new Date().toISOString().slice(0,10);
