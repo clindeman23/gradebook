@@ -5125,8 +5125,8 @@ function doAttendancePdf() {
   const W = 216, MARGIN = 14;
   // Column widths — wide enough that header words never wrap
   // Total table width = W - MARGIN*2 = 188mm
-  // 8 + 62 + 26 + 24 + 22 + 46 = 188
-  const COL_W = { num:8, name:62, present:26, absent:24, tardy:22, notes:46 };
+  // 12 + 62 + 26 + 24 + 22 + 42 = 188
+  const COL_W = { num:12, name:62, present:26, absent:24, tardy:22, notes:42 };
   let isFirst = true;
 
   for (const cls of classes) {
