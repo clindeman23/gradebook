@@ -4983,8 +4983,9 @@ function doPdfExport() {
       if (y > 188) { doc.addPage(); y = 14; }
     }
 
-    // ── Charts section
-    if (y > 165) { doc.addPage(); y = 14; }
+    // ── Charts section — always on its own page
+    doc.addPage();
+    y = 14;
 
     // Charts label bar
     doc.setFillColor(245,245,244);
