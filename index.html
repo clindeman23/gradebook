@@ -4692,53 +4692,127 @@ function _loadScript(src, cb) {
   document.head.appendChild(s);
 }
 
-function openExportModal() {
-  openGbModal(`
-    <div style="padding:26px 24px;min-width:min(92vw,440px)">
-      <div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--c-brown);margin-bottom:5px">⬇ Export</div>
-      <h3 style="font-size:19px;font-weight:800;color:var(--c-brown);margin:0 0 5px">Download Gradebook</h3>
-      <p style="font-size:12px;color:var(--c-text-muted);margin:0 0 22px;line-height:1.5">Exports all classes — each quarter's grades plus the Charts summary — in one file.</p>
-      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+let _pendingExportClasses = null; // set by runExport before lib loads
 
-        <button onclick="runExport('excel')" style="display:flex;align-items:center;gap:16px;padding:18px;border-radius:14px;border:2px solid #16a34a;background:#f0fdf4;cursor:pointer;text-align:left;transition:all .15s"
-          onmouseover="this.style.background='#16a34a';this.style.color='white';this.querySelector('.ex-title').style.color='white';this.querySelector('.ex-sub').style.color='#d1fae5'"
+function openExportModal() {
+  const data = getGbData();
+  const classChecks = data.classes.map(cls => {
+    const clr = cls.color || 'var(--c-brown)';
+    return `<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;cursor:pointer;border:1.5px solid var(--c-pale);background:var(--c-surface);transition:background .12s"
+        onmouseover="this.style.background='var(--c-cream)'" onmouseout="this.style.background='var(--c-surface)'">
+      <input type="checkbox" id="export-cls-${cls.id}" checked style="width:15px;height:15px;accent-color:${clr};cursor:pointer;flex-shrink:0">
+      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${clr};flex-shrink:0"></span>
+      <span style="font-size:13px;font-weight:600;color:var(--c-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(cls.name||'Class')}</span>
+    </label>`;
+  }).join('');
+
+  openGbModal(`
+    <div style="padding:24px;min-width:min(92vw,460px);max-width:500px">
+      <div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--c-brown);margin-bottom:5px">⬇ Export</div>
+      <h3 style="font-size:19px;font-weight:800;color:var(--c-brown);margin:0 0 16px">Download Gradebook</h3>
+
+      <!-- ── Class selector ── -->
+      <div style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:10px;font-weight:800;color:var(--c-light);text-transform:uppercase;letter-spacing:.06em">Classes to include</span>
+          <div style="display:flex;gap:6px">
+            <button onclick="_exportToggleAll(true)" style="padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;border:1.5px solid var(--c-pale);background:var(--c-surface);color:var(--c-brown);cursor:pointer">All</button>
+            <button onclick="_exportToggleAll(false)" style="padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;border:1.5px solid var(--c-pale);background:var(--c-surface);color:var(--c-text-muted);cursor:pointer">None</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          ${classChecks || '<span style="font-size:12px;color:var(--c-text-muted)">No classes yet</span>'}
+        </div>
+      </div>
+
+      <div style="border-top:1.5px solid var(--c-pale);margin-bottom:16px"></div>
+
+      <!-- ── Grades downloads ── -->
+      <p style="font-size:10px;font-weight:800;color:var(--c-light);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px">Download grades</p>
+      <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:16px">
+
+        <button onclick="runExport('excel')" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:13px;border:2px solid #16a34a;background:#f0fdf4;cursor:pointer;text-align:left;transition:all .15s"
+          onmouseover="this.style.background='#16a34a';this.querySelector('.ex-title').style.color='white';this.querySelector('.ex-sub').style.color='#d1fae5'"
           onmouseout="this.style.background='#f0fdf4';this.querySelector('.ex-title').style.color='#166534';this.querySelector('.ex-sub').style.color='#4ade80'">
-          <span style="font-size:32px;line-height:1;flex-shrink:0">📊</span>
+          <span style="font-size:26px;line-height:1;flex-shrink:0">📊</span>
           <div>
-            <div class="ex-title" style="font-weight:800;font-size:14px;color:#166534;margin-bottom:3px">Excel Spreadsheet (.xlsx)</div>
-            <div class="ex-sub" style="font-size:11px;color:#4ade80;line-height:1.4">One sheet per class &nbsp;·&nbsp; All quarters + Charts section &nbsp;·&nbsp; Open in Excel or Google Sheets</div>
+            <div class="ex-title" style="font-weight:800;font-size:13px;color:#166534;margin-bottom:2px">Excel Spreadsheet (.xlsx)</div>
+            <div class="ex-sub" style="font-size:10px;color:#4ade80;line-height:1.4">One sheet per class · All quarters + Charts · Opens in Excel or Google Sheets</div>
           </div>
         </button>
 
-        <button onclick="runExport('pdf')" style="display:flex;align-items:center;gap:16px;padding:18px;border-radius:14px;border:2px solid #dc2626;background:#fef2f2;cursor:pointer;text-align:left;transition:all .15s"
-          onmouseover="this.style.background='#dc2626';this.style.color='white';this.querySelector('.pdf-title').style.color='white';this.querySelector('.pdf-sub').style.color='#fecaca'"
+        <button onclick="runExport('pdf')" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:13px;border:2px solid #dc2626;background:#fef2f2;cursor:pointer;text-align:left;transition:all .15s"
+          onmouseover="this.style.background='#dc2626';this.querySelector('.pdf-title').style.color='white';this.querySelector('.pdf-sub').style.color='#fecaca'"
           onmouseout="this.style.background='#fef2f2';this.querySelector('.pdf-title').style.color='#991b1b';this.querySelector('.pdf-sub').style.color='#f87171'">
-          <span style="font-size:32px;line-height:1;flex-shrink:0">📄</span>
+          <span style="font-size:26px;line-height:1;flex-shrink:0">📄</span>
           <div>
-            <div class="pdf-title" style="font-weight:800;font-size:14px;color:#991b1b;margin-bottom:3px">PDF Document (.pdf)</div>
-            <div class="pdf-sub" style="font-size:11px;color:#f87171;line-height:1.4">Each class on its own page &nbsp;·&nbsp; Print-ready layout &nbsp;·&nbsp; Color-coded letter grades</div>
+            <div class="pdf-title" style="font-weight:800;font-size:13px;color:#991b1b;margin-bottom:2px">PDF Document (.pdf)</div>
+            <div class="pdf-sub" style="font-size:10px;color:#f87171;line-height:1.4">Each class on its own page · Color-coded letter grades · Charts on separate page</div>
           </div>
         </button>
       </div>
+
+      <div style="border-top:1.5px solid var(--c-pale);margin-bottom:16px"></div>
+
+      <!-- ── Attendance ── -->
+      <p style="font-size:10px;font-weight:800;color:var(--c-light);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px">Sub / Attendance</p>
+      <button onclick="runExport('attendance')" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:13px;border:2px solid #7c3aed;background:#f5f3ff;cursor:pointer;text-align:left;width:100%;transition:all .15s;margin-bottom:16px"
+        onmouseover="this.style.background='#7c3aed';this.querySelector('.att-title').style.color='white';this.querySelector('.att-sub').style.color='#ddd6fe'"
+        onmouseout="this.style.background='#f5f3ff';this.querySelector('.att-title').style.color='#5b21b6';this.querySelector('.att-sub').style.color='#8b5cf6'">
+        <span style="font-size:26px;line-height:1;flex-shrink:0">📋</span>
+        <div>
+          <div class="att-title" style="font-weight:800;font-size:13px;color:#5b21b6;margin-bottom:2px">Blank Attendance Sheet (.pdf)</div>
+          <div class="att-sub" style="font-size:10px;color:#8b5cf6;line-height:1.4">Print-ready for a substitute · Student roster with Present / Absent / Tardy columns</div>
+        </div>
+      </button>
+
       <button onclick="closeGbModal()" style="width:100%;padding:10px;border-radius:10px;background:var(--c-pale);color:var(--c-brown);font-size:13px;font-weight:700;border:1.5px solid var(--c-light);cursor:pointer">Cancel</button>
     </div>`);
 }
 
+function _exportToggleAll(checked) {
+  const data = getGbData();
+  for (const cls of data.classes) {
+    const el = document.getElementById('export-cls-'+cls.id);
+    if (el) el.checked = checked;
+  }
+}
+
+function _getExportClasses() {
+  const data = getGbData();
+  const selected = data.classes.filter(cls => {
+    const el = document.getElementById('export-cls-'+cls.id);
+    return el ? el.checked : true;
+  });
+  return selected;
+}
+
 function runExport(fmt) {
+  _pendingExportClasses = _getExportClasses();
+  if (_pendingExportClasses.length === 0) {
+    alert('Please select at least one class.'); return;
+  }
   closeGbModal();
-  // Show a brief loading toast
+
+  const toastMsg = fmt==='excel' ? '📊 Building Excel file…' : fmt==='attendance' ? '📋 Building attendance sheet…' : '📄 Building PDF…';
   const toast = document.createElement('div');
   toast.id = 'export-toast';
   toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:white;padding:12px 22px;border-radius:12px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3)';
-  toast.textContent = fmt === 'excel' ? '📊 Building Excel file…' : '📄 Building PDF…';
+  toast.textContent = toastMsg;
   document.body.appendChild(toast);
+
+  const loadPdf = (cb) => {
+    _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => {
+      _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js', cb);
+    });
+  };
 
   if (fmt === 'excel') {
     _loadScript('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', () => { doExcelExport(); _removeExportToast(); });
+  } else if (fmt === 'attendance') {
+    loadPdf(() => { doAttendancePdf(); _removeExportToast(); });
   } else {
-    _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => {
-      _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js', () => { doPdfExport(); _removeExportToast(); });
-    });
+    loadPdf(() => { doPdfExport(); _removeExportToast(); });
   }
 }
 function _removeExportToast() { const t = document.getElementById('export-toast'); if (t) t.remove(); }
@@ -4838,11 +4912,11 @@ function _exportChartsRows(cls) {
 // ── Excel export ─────────────────────────────────────────
 function doExcelExport() {
   const XLSX = window.XLSX;
-  const data = getGbData();
   const wb = XLSX.utils.book_new();
   const dateStr = new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
+  const classes = _pendingExportClasses || getGbData().classes;
 
-  for (const cls of data.classes) {
+  for (const cls of classes) {
     const safeName = (cls.name||'Class').replace(/[:\\\/\?\*\[\]]/g,'').slice(0,22);
     const aoa = []; // array of arrays for the whole sheet
 
@@ -4905,14 +4979,14 @@ function _pdfGradeBgRgb(letter) {
 
 function doPdfExport() {
   const { jsPDF } = window.jspdf;
-  const data = getGbData();
   const dateStr = new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
   const W = 279, MARGIN = 12; // landscape letter width (mm) and margin
+  const classes = _pendingExportClasses || getGbData().classes;
 
   const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'letter' });
   let isFirstClass = true;
 
-  for (const cls of data.classes) {
+  for (const cls of classes) {
     if (!isFirstClass) doc.addPage();
     isFirstClass = false;
 
@@ -5038,6 +5112,113 @@ function doPdfExport() {
 
   const date = new Date().toISOString().slice(0,10);
   doc.save('Gradebook-'+date+'.pdf');
+}
+
+// ── Attendance PDF ───────────────────────────────────────
+function doAttendancePdf() {
+  const { jsPDF } = window.jspdf;
+  const classes = _pendingExportClasses || getGbData().classes;
+  const dateStr = new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
+
+  // Portrait letter: 216mm wide × 279mm tall
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  const W = 216, MARGIN = 14;
+  let isFirst = true;
+
+  for (const cls of classes) {
+    if (!isFirst) doc.addPage();
+    isFirst = false;
+
+    const students = cls.students || [];
+    const clr = cls.color || '#5A2D0C';
+    const cr = parseInt(clr.slice(1,3),16)||90;
+    const cg = parseInt(clr.slice(3,5),16)||45;
+    const cb2= parseInt(clr.slice(5,7),16)||12;
+
+    // ── Top color bar
+    doc.setFillColor(cr,cg,cb2);
+    doc.rect(0, 0, W, 22, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold'); doc.setFontSize(15);
+    doc.text(cls.name||'Class', MARGIN, 10);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    doc.text('Substitute Attendance Record', MARGIN, 16.5);
+    doc.text('Printed: '+dateStr, W-MARGIN, 16.5, {align:'right'});
+
+    // ── Info fill-in line
+    doc.setTextColor(30,30,30);
+    doc.setFillColor(248,250,252);
+    doc.rect(MARGIN, 26, W-MARGIN*2, 12, 'F');
+    doc.setDrawColor(200,200,200);
+    doc.rect(MARGIN, 26, W-MARGIN*2, 12, 'S');
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+
+    const fy = 33.5;
+    doc.text('Sub Name:', MARGIN+3, fy);
+    doc.line(MARGIN+22, fy+0.5, MARGIN+70, fy+0.5);
+    doc.text('Date:', MARGIN+75, fy);
+    doc.line(MARGIN+87, fy+0.5, MARGIN+117, fy+0.5);
+    doc.text('Period:', MARGIN+122, fy);
+    doc.line(MARGIN+135, fy+0.5, W-MARGIN-3, fy+0.5);
+
+    let y = 44;
+
+    // ── Attendance table
+    const head = [['#', 'Student Name', 'Present', 'Absent', 'Tardy', 'Notes']];
+    const body = [];
+
+    // Numbered real students
+    for (let i = 0; i < students.length; i++) {
+      body.push([String(i+1), students[i].name, '', '', '', '']);
+    }
+    // Extra blank rows for walk-ins / new students
+    for (let i = students.length; i < students.length + 3; i++) {
+      body.push([String(i+1), '', '', '', '', '']);
+    }
+
+    doc.autoTable({
+      head,
+      body,
+      startY: y,
+      margin: { left:MARGIN, right:MARGIN },
+      tableWidth: W - MARGIN*2,
+      styles: { fontSize:9, cellPadding:{top:4,bottom:4,left:4,right:4} },
+      headStyles: { fillColor:[cr,cg,cb2], textColor:[255,255,255], fontStyle:'bold', fontSize:9, halign:'center' },
+      alternateRowStyles: { fillColor:[248,250,252] },
+      columnStyles: {
+        0: { cellWidth:9,  halign:'center', fontStyle:'bold' },
+        1: { cellWidth:58, halign:'left',   fontStyle:'bold' },
+        2: { cellWidth:18, halign:'center' },
+        3: { cellWidth:16, halign:'center' },
+        4: { cellWidth:14, halign:'center' },
+        5: { halign:'left' }
+      },
+      didDrawCell(hookData) {
+        // Draw a small checkbox square in the P/A/T cells
+        if (hookData.section==='body' && hookData.column.index >= 2 && hookData.column.index <= 4) {
+          const x = hookData.cell.x + hookData.cell.width/2 - 3.5;
+          const yy = hookData.cell.y + hookData.cell.height/2 - 3.5;
+          doc.setDrawColor(160,160,160);
+          doc.setLineWidth(0.4);
+          doc.rect(x, yy, 7, 7, 'S');
+        }
+      }
+    });
+
+    const tableBottom = doc.lastAutoTable.finalY;
+
+    // ── Footer line
+    const footY = Math.min(tableBottom + 10, 268);
+    doc.setDrawColor(200,200,200);
+    doc.setLineWidth(0.3);
+    doc.line(MARGIN, footY, W-MARGIN, footY);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(130,130,130);
+    doc.text('Lesson plan location: ___________________________________   Emergency contacts / procedures: see sub folder', MARGIN, footY+5);
+    doc.text(`${cls.name||'Class'}  ·  ${students.length} student${students.length!==1?'s':''}  ·  Page 1`, W-MARGIN, footY+5, {align:'right'});
+  }
+
+  const date = new Date().toISOString().slice(0,10);
+  doc.save('Attendance-'+date+'.pdf');
 }
 
 function gbToggleExam(examType, toggleEl) {
