@@ -3365,8 +3365,8 @@ function renderGradebook() {
     return;
   }
 
-  // ── Row 2: Actions toolbar (grouped)
-  if (gbSubView !== 'charts') {
+  // ── Row 2: Actions toolbar (grouped) — hidden for charts + exam summary sub-views
+  if (gbSubView === 'grades') {
     const _syncActive = getSyncUrl() || getGistToken();
     html += `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px;padding:8px 12px;background:var(--c-surface);border:1.5px solid var(--c-pale);border-radius:14px">
 
@@ -3418,6 +3418,24 @@ function renderGradebook() {
 
   if (gbSubView === 'charts') {
     html += _chartsBodyHtml(cls);
+    html += '</div>';
+    _mc.innerHTML = html;
+    _mc.style.background = '';
+    return;
+  }
+
+  if (gbSubView.startsWith('exam-summary-')) {
+    const _esType = gbSubView.replace('exam-summary-', '');
+    html += _examSummaryBodyHtml(cls, _esType);
+    html += '</div>';
+    _mc.innerHTML = html;
+    _mc.style.background = '';
+    return;
+  }
+
+  if (gbSubView.startsWith('exam-entry-')) {
+    const _eeType = gbSubView.replace('exam-entry-', '');
+    html += _examEntryBodyHtml(cls, _eeType);
     html += '</div>';
     _mc.innerHTML = html;
     _mc.style.background = '';
@@ -4441,6 +4459,17 @@ function chartCLookup(sem1Grade, sem2Grade) {
   return CHART_C[row][col];
 }
 
+// Renders a grade badge that handles dual-grade values like "C-/F" or "F/D+"
+function _dualGradeCell(grade, fontSize, padH, padV) {
+  if (!grade) return '<span style="color:#9ca3af;font-size:11px">—</span>';
+  fontSize = fontSize || '13px'; padH = padH || '8px'; padV = padV || '2px';
+  const parts = String(grade).split('/');
+  return parts.map(l => {
+    l = l.trim();
+    return `<span style="font-weight:900;font-size:${fontSize};color:${gradeLetterColor(l)};background:${gradeLetterBg(l)};padding:${padV} ${padH};border-radius:6px">${l}</span>`;
+  }).join('<span style="color:#9ca3af;font-size:9px;margin:0 2px">/</span>');
+}
+
 function gradeLetterColor(letter) {
   if (!letter || letter === '—') return '#9ca3af';
   const l = letter.replace(/[^A-Z+\-]/g,'');
@@ -4556,21 +4585,18 @@ function _feRefreshRow(classId, examType, stuId, parts, scores) {
   }
 }
 
-function openExamSummary(classId, examType) {
-  const data = getGbData();
-  const cls  = data.classes.find(c => c.id === classId);
-  if (!cls) return;
+function _examSummaryBodyHtml(cls, examType) {
+  if (!cls) return '';
   examType = examType || 'final';
-  const isMidterm    = examType === 'midterm';
-  const accentColor  = isMidterm ? '#1d4ed8' : '#9f1239';
-  const bgColor      = isMidterm ? '#eff6ff' : '#fff1f2';
-  const borderColor  = isMidterm ? '#bfdbfe' : '#fecaca';
-  const label        = isMidterm ? 'Midterm Exam' : 'Final Exam';
-  const parts        = getExamConfig(classId, examType);
-  const scores       = getExamScores(classId, examType);
-  const students     = cls.students || [];
+  const isMidterm   = examType === 'midterm';
+  const accentColor = isMidterm ? '#1d4ed8' : '#9f1239';
+  const bgColor     = isMidterm ? '#eff6ff'  : '#fff1f2';
+  const borderColor = isMidterm ? '#bfdbfe'  : '#fecaca';
+  const label       = isMidterm ? 'Midterm Exam' : 'Final Exam';
+  const parts       = getExamConfig(cls.id, examType);
+  const scores      = getExamScores(cls.id, examType);
+  const students    = cls.students || [];
 
-  // Build per-student data, sorted by pct descending (ungraded at bottom)
   const rows = students
     .map(stu => {
       const pct    = _feGetPct(parts, scores, stu.id);
@@ -4580,13 +4606,12 @@ function openExamSummary(classId, examType) {
     .sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1));
 
   const gradedRows = rows.filter(r => r.pct !== null);
-  const avgPct     = gradedRows.length
-    ? Math.round(gradedRows.reduce((s,r) => s + r.pct, 0) / gradedRows.length * 10) / 10
+  const avgPct = gradedRows.length
+    ? Math.round(gradedRows.reduce((s, r) => s + r.pct, 0) / gradedRows.length * 10) / 10
     : null;
-  const avgLetter  = avgPct !== null ? getLetterGrade(avgPct) : null;
+  const avgLetter = avgPct !== null ? getLetterGrade(avgPct) : null;
 
-  // Grade distribution
-  const dist = { 'A':0, 'B':0, 'C':0, 'D':0, 'F':0 };
+  const dist = { 'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0 };
   for (const r of gradedRows) {
     const k = r.letter?.[0];
     if (k && dist[k] !== undefined) dist[k]++;
@@ -4599,9 +4624,9 @@ function openExamSummary(classId, examType) {
     return `<div style="display:flex;align-items:center;gap:10px;padding:7px 14px;border-bottom:1px solid var(--c-pale)">
       <div style="font-size:12px;font-weight:600;color:var(--c-text-primary);min-width:140px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(r.name)}</div>
       <div style="flex:1;height:9px;background:var(--c-pale);border-radius:5px;overflow:hidden;min-width:60px">
-        <div style="height:100%;width:${barW}%;background:${clr};border-radius:5px"></div>
+        <div style="height:100%;width:${barW}%;background:${clr};border-radius:5px;transition:width .4s ease"></div>
       </div>
-      <div style="font-size:11px;color:var(--c-text-muted);width:42px;text-align:right;flex-shrink:0">${r.pct !== null ? r.pct.toFixed(1)+'%' : '<span style="opacity:.4">—</span>'}</div>
+      <div style="font-size:11px;color:var(--c-text-muted);width:42px;text-align:right;flex-shrink:0">${r.pct !== null ? r.pct.toFixed(1) + '%' : '<span style="opacity:.4">—</span>'}</div>
       <div style="width:46px;text-align:center;flex-shrink:0">
         ${r.letter
           ? `<span style="font-weight:900;font-size:13px;color:${clr};background:${bg};padding:2px 8px;border-radius:6px">${r.letter}</span>`
@@ -4612,70 +4637,98 @@ function openExamSummary(classId, examType) {
 
   const distHtml = Object.entries(dist)
     .map(([g, c]) => `<div style="text-align:center">
-        <div style="font-weight:900;font-size:16px;color:${gradeLetterColor(g)}">${c}</div>
-        <div style="font-size:10px;font-weight:700;color:${gradeLetterColor(g)};background:${gradeLetterBg(g)};padding:1px 8px;border-radius:5px;margin-top:2px">${g}</div>
-      </div>`)
-    .join('');
+      <div style="font-weight:900;font-size:18px;color:${gradeLetterColor(g)}">${c}</div>
+      <div style="font-size:10px;font-weight:700;color:${gradeLetterColor(g)};background:${gradeLetterBg(g)};padding:2px 10px;border-radius:5px;margin-top:3px">${g}</div>
+    </div>`).join('');
 
-  openGbModal(`
-    <div style="padding:20px;min-width:min(96vw,540px)">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-        <div>
-          <div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${accentColor};margin-bottom:4px">📊 ${label} Overview</div>
-          <h3 style="font-size:18px;font-weight:800;color:var(--c-brown);margin:0">${escHtml(cls.name)}</h3>
-          <p style="font-size:11px;color:var(--c-text-muted);margin:4px 0 0">
-            ${gradedRows.length}/${students.length} student${students.length!==1?'s':''} graded
-            ${avgPct !== null ? `· Class avg: <strong style="color:${accentColor}">${avgPct}% (${avgLetter})</strong>` : ''}
-          </p>
-        </div>
-        <button onclick="closeGbModal()" style="padding:7px 16px;border-radius:9px;background:var(--c-brown);color:white;font-size:13px;font-weight:700;border:none;cursor:pointer;flex-shrink:0">✓ Done</button>
-      </div>
-
-      <!-- Student list with bar chart -->
-      <div style="border:1.5px solid ${borderColor};border-radius:12px;overflow:hidden;margin-bottom:14px">
-        <div style="background:${bgColor};padding:6px 14px;border-bottom:1.5px solid ${borderColor};display:flex;align-items:center;gap:10px">
-          <span style="font-size:9px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.06em;min-width:140px">Student</span>
-          <span style="font-size:9px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.06em;flex:1">Score</span>
-          <span style="font-size:9px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.06em;width:42px;text-align:right">Pct</span>
-          <span style="font-size:9px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.06em;width:46px;text-align:center">Grade</span>
-        </div>
-        <div style="max-height:340px;overflow-y:auto">
-          ${rowHtml || '<div style="padding:18px;text-align:center;color:var(--c-text-muted);font-size:12px;font-style:italic">No students yet</div>'}
+  const clsId = cls.id;
+  return `<div class="fade-in">
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${accentColor};margin-bottom:5px">📊 ${label} Overview</div>
+        <div style="font-size:16px;font-weight:800;color:var(--c-brown)">${escHtml(cls.name)}</div>
+        <div style="font-size:11px;color:var(--c-text-muted);margin-top:3px">
+          ${gradedRows.length}/${students.length} student${students.length !== 1 ? 's' : ''} graded
+          ${avgPct !== null ? `&nbsp;·&nbsp; Class avg: <strong style="color:${accentColor}">${avgPct}% (${avgLetter})</strong>` : ''}
         </div>
       </div>
-
-      <!-- Grade distribution -->
-      <div style="background:var(--c-cream);border-radius:10px;padding:12px 16px;margin-bottom:12px">
-        <div style="font-size:9px;font-weight:800;color:var(--c-light);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Grade Distribution</div>
-        <div style="display:flex;justify-content:space-around;gap:8px">${distHtml}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button onclick="openExamModal('${clsId}','${examType}')"
+          style="padding:7px 15px;border-radius:10px;background:${bgColor};color:${accentColor};font-size:12px;font-weight:700;border:1.5px solid ${borderColor};cursor:pointer">
+          ✎ Edit Scores
+        </button>
+        <button onclick="gbSubView='grades';renderGradebook()"
+          style="padding:8px 18px;border-radius:10px;background:var(--c-brown);color:white;font-size:13px;font-weight:700;border:none;cursor:pointer">
+          ← Grades
+        </button>
       </div>
+    </div>
 
-      <button onclick="closeGbModal();openExamModal('${classId}','${examType}')"
-        style="width:100%;padding:9px;border-radius:10px;background:${bgColor};color:${accentColor};font-size:12px;font-weight:700;border:1.5px solid ${borderColor};cursor:pointer">
-        ✎ Enter / Edit Scores
-      </button>
-    </div>`);
+    <!-- Student bar chart -->
+    <div style="border:1.5px solid ${borderColor};border-radius:14px;overflow:hidden;margin-bottom:14px;background:var(--c-surface)">
+      <div style="background:${bgColor};padding:7px 14px;border-bottom:1.5px solid ${borderColor};display:flex;align-items:center;gap:10px">
+        <span style="font-size:9px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.06em;min-width:140px">Student</span>
+        <span style="font-size:9px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.06em;flex:1">Score</span>
+        <span style="font-size:9px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.06em;width:42px;text-align:right">Pct</span>
+        <span style="font-size:9px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.06em;width:46px;text-align:center">Grade</span>
+      </div>
+      <div>
+        ${rowHtml || '<div style="padding:20px;text-align:center;color:var(--c-text-muted);font-size:12px;font-style:italic">No students yet</div>'}
+      </div>
+    </div>
+
+    <!-- Grade distribution -->
+    <div style="background:var(--c-cream);border-radius:12px;padding:14px 20px">
+      <div style="font-size:9px;font-weight:800;color:var(--c-light);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Grade Distribution</div>
+      <div style="display:flex;justify-content:space-around;gap:8px">${distHtml}</div>
+    </div>
+  </div>`;
 }
 
-function openExamModal(classId, examType) {
+function openExamSummary(classId, examType) {
   examType = examType || 'final';
   const data = getGbData();
-  const cls = data.classes.find(c => c.id === classId);
+  const cls  = data.classes.find(c => c.id === classId);
   if (!cls) return;
-  const parts = getExamConfig(classId, examType);
-  const scores = getExamScores(classId, examType);
+
+  const targetView = 'exam-summary-' + examType;
+  // Clicking the same exam header again returns to grade table
+  if (gbSubView === targetView) {
+    gbSubView = 'grades';
+  } else {
+    gbSubView = targetView;
+    gbClassIdx = data.classes.indexOf(cls);
+    // Ensure gradebook mode is active
+    if (!gradebookMode) {
+      _deactivateAllTabs('gradebook');
+      gradebookMode = true;
+      const b = document.getElementById('gradebook-btn');
+      if (b) { b.style.background = 'var(--c-brown)'; b.style.color = 'white'; b.style.borderColor = 'var(--c-brown)'; }
+      syncTodoVisibility();
+    }
+  }
+  renderGradebook();
+}
+
+function _examEntryBodyHtml(cls, examType) {
+  if (!cls) return '';
+  examType = examType || 'final';
+  const parts    = getExamConfig(cls.id, examType);
+  const scores   = getExamScores(cls.id, examType);
   const students = cls.students || [];
-  const basePts = parts.filter(p=>!p.extra).reduce((s,p)=>s+(parseFloat(p.points)||0),0);
-  const isMidterm = examType === 'midterm';
+  const basePts  = parts.filter(p => !p.extra).reduce((s, p) => s + (parseFloat(p.points) || 0), 0);
+  const isMidterm   = examType === 'midterm';
   const accentColor = isMidterm ? '#1d4ed8' : '#9f1239';
-  const accentBg   = isMidterm ? '#eff6ff'  : '#fff1f2';
-  const label      = isMidterm ? '📝 Midterm Exam Calculator' : '📝 Final Exam Calculator';
-  const colLabel   = isMidterm ? 'Midterm Grade →<br>Charts' : 'Final Grade →<br>Charts';
+  const accentBg    = isMidterm ? '#eff6ff'  : '#fff1f2';
+  const borderColor = isMidterm ? '#bfdbfe'  : '#fecaca';
+  const label       = isMidterm ? '📝 Midterm Exam' : '📝 Final Exam';
+  const colLabel    = isMidterm ? 'Midterm Grade → Charts' : 'Final Grade → Charts';
 
   const partHeaders = parts.map(p => `
-    <th style="padding:6px 8px;text-align:center;font-size:10px;font-weight:700;min-width:80px;white-space:nowrap;color:${p.extra?'#15803d':'var(--c-light)'}">
+    <th style="padding:6px 8px;text-align:center;font-size:10px;font-weight:700;min-width:80px;white-space:nowrap;color:${p.extra ? '#15803d' : 'var(--c-light)'}">
       ${escHtml(p.name)}<br>
-      <span style="font-weight:400;color:var(--c-text-muted)">${p.extra?'EC ':''}/${p.points}pts</span>
+      <span style="font-weight:400;color:var(--c-text-muted)">${p.extra ? 'EC ' : ''}/${p.points}pts</span>
     </th>`).join('');
 
   const rows = students.map(stu => {
@@ -4684,55 +4737,74 @@ function openExamModal(classId, examType) {
       const val = stuScores[p.id] !== undefined ? stuScores[p.id] : '';
       return `<td style="padding:4px 5px;text-align:center">
         <input type="number" min="0" max="${p.extra ? 999 : p.points}" step="0.5" value="${val}" placeholder="—"
-          oninput="saveExamScore('${classId}','${examType}','${stu.id}','${p.id}',this.value)"
-          style="width:68px;padding:5px 4px;border-radius:7px;border:1.5px solid var(--c-pale);text-align:center;font-size:12px;font-family:inherit;font-weight:600;color:var(--c-text-primary);background:${p.extra?'#f0fdf4':'var(--c-cream)'};box-sizing:border-box"
+          oninput="saveExamScore('${cls.id}','${examType}','${stu.id}','${p.id}',this.value)"
+          style="width:68px;padding:5px 4px;border-radius:7px;border:1.5px solid var(--c-pale);text-align:center;font-size:12px;font-family:inherit;font-weight:600;color:var(--c-text-primary);background:${p.extra ? '#f0fdf4' : 'var(--c-cream)'};box-sizing:border-box"
           onfocus="this.style.borderColor='${accentColor}'" onblur="this.style.borderColor='var(--c-pale)'">
       </td>`;
     }).join('');
     const pct = _feGetPct(parts, scores, stu.id);
     const letter = pct !== null ? getLetterGrade(pct) : null;
-    let earned = 0; for (const p of parts) { const v=parseFloat(stuScores[p.id]); if(!isNaN(v)) earned+=v; }
+    let earned = 0; for (const p of parts) { const v = parseFloat(stuScores[p.id]); if (!isNaN(v)) earned += v; }
     const gradeHtml = letter
       ? `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(letter)};background:${gradeLetterBg(letter)};padding:2px 8px;border-radius:6px">${letter}</span><br><span style="font-size:10px;color:var(--c-text-muted)">${pct.toFixed(1)}%</span>`
       : '<span style="color:#9ca3af;font-size:11px">—</span>';
     return `<tr style="border-bottom:1px solid var(--c-pale)" onmouseover="this.style.background='var(--c-cream)'" onmouseout="this.style.background=''">
       <td style="padding:7px 14px;font-size:12px;font-weight:700;color:var(--c-text-primary);position:sticky;left:0;background:var(--c-surface);white-space:nowrap;min-width:140px">${escHtml(stu.name)}</td>
       ${cells}
-      <td style="padding:4px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--c-text-muted)" id="fe-total-${stu.id}">${pct!==null ? earned.toFixed(earned%1===0?0:1)+'/'+basePts : '—'}</td>
+      <td style="padding:4px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--c-text-muted)" id="fe-total-${stu.id}">${pct !== null ? earned.toFixed(earned % 1 === 0 ? 0 : 1) + '/' + basePts : '—'}</td>
       <td style="padding:4px 10px;text-align:center;min-width:80px" id="fe-grade-${stu.id}">${gradeHtml}</td>
     </tr>`;
   }).join('');
 
-  openGbModal(`
-    <div style="padding:20px;max-width:min(96vw,960px)">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
-        <div>
-          <div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${accentColor};margin-bottom:4px">${label}</div>
-          <h3 style="font-size:18px;font-weight:800;color:var(--c-brown);margin:0">${escHtml(cls.name)}</h3>
-          <p style="font-size:11px;color:var(--c-text-muted);margin:4px 0 0">${parts.filter(p=>!p.extra).length} graded parts · ${basePts} total points · Letter grades auto-save to Charts</p>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button onclick="openExamSetup('${classId}','${examType}')" style="padding:7px 14px;border-radius:9px;background:var(--c-pale);color:var(--c-brown);font-size:12px;font-weight:700;border:1.5px solid var(--c-light);cursor:pointer">⚙ Edit Parts</button>
-          <button onclick="closeGbModal()" style="padding:7px 16px;border-radius:9px;background:var(--c-brown);color:white;font-size:13px;font-weight:700;border:none;cursor:pointer">✓ Done</button>
-        </div>
+  return `<div class="fade-in">
+    <!-- Header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${accentColor};margin-bottom:5px">${label} Scores</div>
+        <div style="font-size:16px;font-weight:800;color:var(--c-brown)">${escHtml(cls.name)}</div>
+        <div style="font-size:11px;color:var(--c-text-muted);margin-top:3px">${parts.filter(p => !p.extra).length} graded parts · ${basePts} total points · Letter grades auto-save to Charts</div>
       </div>
-      <div style="overflow-x:auto;border:1.5px solid var(--c-pale);border-radius:12px">
-        <table style="border-collapse:collapse;width:100%">
-          <thead>
-            <tr style="background:var(--c-cream);border-bottom:2px solid var(--c-medium)">
-              <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--c-light);position:sticky;left:0;background:var(--c-cream)">Student</th>
-              ${partHeaders}
-              <th style="padding:6px 8px;text-align:center;font-size:10px;font-weight:700;color:var(--c-light);min-width:60px">Total</th>
-              <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:${accentColor};min-width:80px">${colLabel}</th>
-            </tr>
-          </thead>
-          <tbody>${rows || '<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--c-text-muted);font-style:italic">No students — add in Gradebook first</td></tr>'}</tbody>
-        </table>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button onclick="openExamSetup('${cls.id}','${examType}')" style="padding:7px 14px;border-radius:9px;background:var(--c-pale);color:var(--c-brown);font-size:12px;font-weight:700;border:1.5px solid var(--c-light);cursor:pointer">⚙ Edit Parts</button>
+        <button onclick="openExamSummary('${cls.id}','${examType}')" style="padding:7px 14px;border-radius:9px;background:${accentBg};color:${accentColor};font-size:12px;font-weight:700;border:1.5px solid ${borderColor};cursor:pointer">📊 Overview</button>
+        <button onclick="gbSubView='grades';renderGradebook()" style="padding:8px 18px;border-radius:10px;background:var(--c-brown);color:white;font-size:13px;font-weight:700;border:none;cursor:pointer">← Grades</button>
       </div>
-      <div style="margin-top:10px;padding:10px 14px;background:#fef3c7;border-radius:8px;font-size:11px;color:#92400e">
-        ✨ Scores auto-calculate the letter grade and push it to the ${isMidterm?'Midterm':'Final'} column in Charts. Extra credit (green) can only help the grade, not lower it.
-      </div>
-    </div>`);
+    </div>
+    <!-- Score table -->
+    <div style="overflow-x:auto;border:1.5px solid var(--c-pale);border-radius:12px;background:var(--c-surface)">
+      <table style="border-collapse:collapse;width:100%;min-width:400px">
+        <thead>
+          <tr style="background:${accentBg};border-bottom:1.5px solid ${borderColor}">
+            <th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:${accentColor};position:sticky;left:0;background:${accentBg};min-width:140px">Student</th>
+            ${partHeaders}
+            <th style="padding:6px 8px;text-align:center;font-size:10px;font-weight:700;color:var(--c-light);min-width:60px">Total</th>
+            <th style="padding:6px 10px;text-align:center;font-size:10px;font-weight:700;color:${accentColor};min-width:80px">${colLabel}</th>
+          </tr>
+        </thead>
+        <tbody>${rows || '<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--c-text-muted);font-style:italic">No students — add in Gradebook first</td></tr>'}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px;padding:10px 14px;background:#fef3c7;border-radius:8px;font-size:11px;color:#92400e">
+      ✨ Scores auto-calculate the letter grade and push it to the ${isMidterm ? 'Midterm' : 'Final'} column in Charts. Extra credit (green) can only help the grade, not lower it.
+    </div>
+  </div>`;
+}
+
+function openExamModal(classId, examType) {
+  examType = examType || 'final';
+  const data = getGbData();
+  const cls  = data.classes.find(c => c.id === classId);
+  if (!cls) return;
+  gbSubView  = 'exam-entry-' + examType;
+  gbClassIdx = data.classes.indexOf(cls);
+  if (!gradebookMode) {
+    _deactivateAllTabs('gradebook');
+    gradebookMode = true;
+    const b = document.getElementById('gradebook-btn');
+    if (b) { b.style.background = 'var(--c-brown)'; b.style.color = 'white'; b.style.borderColor = 'var(--c-brown)'; }
+    syncTodoVisibility();
+  }
+  renderGradebook();
 }
 // Backward-compat wrapper
 function openFinalExamModal(classId) { openExamModal(classId, 'final'); }
@@ -5418,6 +5490,7 @@ function gbToggleExam(examType, toggleEl) {
 }
 
 function toggleCharts() {
+  // If currently in an exam summary, pressing Charts goes to charts (not back to exam summary)
   gbSubView = gbSubView === 'charts' ? 'grades' : 'charts';
   // If not already in gradebook mode, switch to it
   if (!gradebookMode) {
@@ -5503,7 +5576,7 @@ function renderChartsNoExams(cls) {
         ${sem2 ? `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(sem2.split('/')[0])};background:${gradeLetterBg(sem2.split('/')[0])};padding:2px 9px;border-radius:6px">${sem2}</span>` : '<span style="color:#9ca3af;font-size:10px">Need Q3+Q4</span>'}
       </td>
       <td style="padding:9px 12px;text-align:center;${rowBorder};background:${yearBg}">
-        ${yearGrade ? `<span style="font-weight:900;font-size:15px;color:${gradeLetterColor(yearGrade)};background:${gradeLetterBg(yearGrade)};padding:3px 10px;border-radius:8px">${yearGrade}</span>` : '<span style="color:#9ca3af;font-size:11px">—</span>'}
+        ${yearGrade ? _dualGradeCell(yearGrade, '15px', '10px', '3px') : '<span style="color:#9ca3af;font-size:11px">—</span>'}
       </td>
     </tr>`;
   }
@@ -5554,11 +5627,11 @@ function _chartsBodyHtml(cls) {
   const tdS = 'padding:5px 8px;font-size:12px;border-bottom:1px solid var(--c-pale);text-align:center';
 
   let t = `<div style="overflow-x:auto;border:1.5px solid var(--c-pale);border-radius:12px">
-    <table style="border-collapse:collapse;width:100%;min-width:500px">
+    <table style="border-collapse:collapse;width:100%;min-width:620px">
     <thead><tr style="background:var(--c-cream)">
       <th style="${thS};text-align:left;position:sticky;left:0;background:var(--c-cream);min-width:150px">Student</th>
-      <th style="${thS};background:#eef4ff;border-left:2px solid var(--c-pale)" colspan="3">Semester 1</th>
-      <th style="${thS};background:#edfaed;border-left:2px solid var(--c-pale)" colspan="3">Semester 2</th>
+      <th style="${thS};background:#eef4ff;border-left:2px solid var(--c-pale)" colspan="4">Semester 1</th>
+      <th style="${thS};background:#edfaed;border-left:2px solid var(--c-pale)" colspan="4">Semester 2</th>
       <th style="${thS};background:var(--c-cream);border-left:2px solid var(--c-medium)" rowspan="2">Year</th>
     </tr>
     <tr style="background:var(--c-pale)">
@@ -5566,9 +5639,11 @@ function _chartsBodyHtml(cls) {
       <th style="${thS};background:#eef4ff;border-left:2px solid var(--c-pale);font-size:10px">Q1</th>
       <th style="${thS};background:#eef4ff;font-size:10px">Q2</th>
       <th style="${thS};background:#eef4ff;font-size:10px">Midterm</th>
+      <th style="${thS};background:#dbeafe;font-size:10px;font-weight:900;color:#1e40af">Sem 1</th>
       <th style="${thS};background:#edfaed;border-left:2px solid var(--c-pale);font-size:10px">Q3</th>
       <th style="${thS};background:#edfaed;font-size:10px">Q4</th>
       <th style="${thS};background:#edfaed;font-size:10px">Final</th>
+      <th style="${thS};background:#bbf7d0;font-size:10px;font-weight:900;color:#166534">Sem 2</th>
     </tr></thead>
     <tbody>`;
 
@@ -5577,28 +5652,37 @@ function _chartsBodyHtml(cls) {
     const rowBg = si % 2 === 0 ? 'var(--c-surface)' : 'var(--c-cream)';
     const q1 = qGrade(stu.id, 'Q1'), q2 = qGrade(stu.id, 'Q2');
     const q3 = qGrade(stu.id, 'Q3'), q4 = qGrade(stu.id, 'Q4');
-    const sem1 = (q1 && q2) ? chartQSLookup(q1, q2) : null;
-    const sem2 = (q3 && q4) ? chartQSLookup(q3, q4) : null;
-    const yearGrade = (sem1 && sem2) ? chartCLookup(sem1.split('/')[0], sem2.split('/')[0]) : null;
     const midExam = exams[stu.id]?.midterm || '';
     const finExam = exams[stu.id]?.final || '';
+    // Semester grades: Chart A (quality pts from Q1+Q2) + Chart B (qual pts + exam → sem grade)
+    const qp1 = chartALookup(q1, q2);
+    const qp2 = chartALookup(q3, q4);
+    const sem1 = (qp1 !== null && midExam) ? chartBLookup(qp1, midExam) : null;
+    const sem2 = (qp2 !== null && finExam) ? chartBLookup(qp2, finExam) : null;
+    const yearGrade = (sem1 && sem2) ? chartCLookup(sem1, sem2) : null;
 
     t += `<tr style="background:${rowBg}" onmouseover="this.style.filter='brightness(0.97)'" onmouseout="this.style.filter=''">
       <td style="padding:5px 14px;font-size:12px;font-weight:700;color:var(--c-text-primary);border-right:2px solid var(--c-pale);position:sticky;left:0;background:${rowBg};white-space:nowrap">${escHtml(stu.name)}</td>
       <td style="${tdS};background:${si%2===0?'#f8faff':'#eef4ff'};border-left:2px solid var(--c-pale)">${gradeCell(q1)}</td>
       <td style="${tdS};background:${si%2===0?'#f8faff':'#eef4ff'}">${gradeCell(q2)}</td>
       <td style="${tdS};background:${si%2===0?'#f8faff':'#eef4ff'}">${gradeSelect(cls.id, stu.id, 'midterm', midExam)}</td>
+      <td style="${tdS};background:${si%2===0?'#e8f0fe':'#dbeafe'}">
+        ${sem1 ? `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(sem1)};background:${gradeLetterBg(sem1)};padding:2px 9px;border-radius:6px">${sem1}</span>` : '<span style="color:#9ca3af;font-size:10px">—</span>'}
+      </td>
       <td style="${tdS};background:${si%2===0?'#f5fdf5':'#edfaed'};border-left:2px solid var(--c-pale)">${gradeCell(q3)}</td>
       <td style="${tdS};background:${si%2===0?'#f5fdf5':'#edfaed'}">${gradeCell(q4)}</td>
       <td style="${tdS};background:${si%2===0?'#f5fdf5':'#edfaed'}">${gradeSelect(cls.id, stu.id, 'final', finExam)}</td>
+      <td style="${tdS};background:${si%2===0?'#dcfce7':'#bbf7d0'}">
+        ${sem2 ? `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(sem2)};background:${gradeLetterBg(sem2)};padding:2px 9px;border-radius:6px">${sem2}</span>` : '<span style="color:#9ca3af;font-size:10px">—</span>'}
+      </td>
       <td style="${tdS};border-left:2px solid var(--c-medium);background:var(--c-cream)">
-        ${yearGrade ? `<span style="font-weight:900;font-size:15px;color:${gradeLetterColor(yearGrade)};background:${gradeLetterBg(yearGrade)};padding:3px 10px;border-radius:8px">${yearGrade}</span>` : '<span style="color:#9ca3af;font-size:11px">—</span>'}
+        ${yearGrade ? _dualGradeCell(yearGrade, '15px', '10px', '3px') : '<span style="color:#9ca3af;font-size:11px">—</span>'}
       </td>
     </tr>`;
   }
 
   if (students.length === 0) {
-    t += `<tr><td colspan="8" style="padding:20px;text-align:center;color:var(--c-text-muted);font-style:italic">No students — add them in Gradebook</td></tr>`;
+    t += `<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--c-text-muted);font-style:italic">No students — add them in Gradebook</td></tr>`;
   }
 
   t += `</tbody></table></div>
