@@ -3344,8 +3344,11 @@ function renderGradebook() {
   html += `</div>`;
   if (cls) {
     const _chartsOn = gbSubView === 'charts';
-    html += `<button onclick="toggleCharts()" style="padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;border:2px solid;cursor:pointer;transition:all .15s;flex-shrink:0;
-      ${_chartsOn ? 'background:var(--c-brown);color:white;border-color:var(--c-brown)' : 'background:var(--c-surface);color:var(--c-text-secondary);border-color:var(--c-pale)'}">
+    const _clrC = cls.color || 'var(--c-brown)';
+    html += `<button onclick="toggleCharts()" style="padding:8px 20px;border-radius:20px;font-size:13px;font-weight:800;border:2px solid;cursor:pointer;transition:all .15s;flex-shrink:0;letter-spacing:.01em;
+      ${_chartsOn
+        ? `background:${_clrC};color:white;border-color:${_clrC};box-shadow:0 3px 10px ${_clrC}50`
+        : `background:white;color:var(--c-brown);border-color:var(--c-brown);box-shadow:0 1px 4px rgba(0,0,0,.08)`}">
       📊 Charts
     </button>`;
   }
@@ -3417,7 +3420,7 @@ function renderGradebook() {
     html += _chartsBodyHtml(cls);
     html += '</div>';
     _mc.innerHTML = html;
-    _mc.style.background = hexToRgba(cls.color || '#5A2D0C', 0.07);
+    _mc.style.background = '';
     return;
   }
 
@@ -3425,7 +3428,7 @@ function renderGradebook() {
   html += gbRenderTable(cls, data);
   html += '</div>';
   _mc.innerHTML = html;
-  _mc.style.background = hexToRgba(cls.color || '#5A2D0C', 0.07);
+  _mc.style.background = '';
 }
 
 function gbRenderTable(cls, data) {
