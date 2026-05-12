@@ -3201,7 +3201,7 @@ function toggleGradebook() {
   }
 }
 
-function gbSelectClass(idx) { gbClassIdx = idx; gbEditMode = false; renderGradebook(); }
+function gbSelectClass(idx) { gbClassIdx = idx; chartsClassIdx = idx; gbEditMode = false; renderGradebook(); }
 function gbSelectQuarter(q) { gbQuarter = q; localStorage.setItem('mca-last-quarter', q); renderGradebook(); }
 function toggleGbEditMode() { gbEditMode = !gbEditMode; renderGradebook(); }
 
@@ -3440,6 +3440,8 @@ function gbRenderTable(cls, data) {
     for (const a of assignments) cols.push({type:'asgn', a, cat:null});
   }
   cols.push({type:'total'});
+  if (cls.examEnabled?.midterm) cols.push({type:'exam', examType:'midterm'});
+  if (cls.examEnabled?.final)   cols.push({type:'exam', examType:'final'});
 
   const stickyStyle  = `position:sticky;left:0;z-index:2`;
   const stickyStyle2 = `position:sticky;left:140px;z-index:2`;
@@ -3468,6 +3470,11 @@ function gbRenderTable(cls, data) {
     const uncatCount = assignments.filter(a => !categories.find(c=>c.id===a.categoryId)).length;
     if (uncatCount > 0) t += `<th colspan="${uncatCount}" style="${thBase};text-align:center;border-left:2px solid var(--c-pale)">Uncategorized</th>`;
     t += `<th style="${thBase};text-align:center;border-left:2px solid var(--c-medium);background:var(--c-pale);min-width:80px" rowspan="2">Grade</th>`;
+    for (const _ec of cols.filter(c=>c.type==='exam')) {
+      const _ea = _ec.examType==='midterm'?'#1d4ed8':'#9f1239';
+      const _eb = _ec.examType==='midterm'?'#eff6ff':'#fff1f2';
+      t += `<th style="${thBase};text-align:center;border-left:2px solid var(--c-pale);min-width:68px;color:${_ea};background:${_eb}" rowspan="2">📝 ${_ec.examType==='midterm'?'Midterm':'Final'}</th>`;
+    }
     t += `</tr>`;
   }
 
@@ -3515,9 +3522,14 @@ function gbRenderTable(cls, data) {
       t += `<th style="${thBase};text-align:center;background:var(--c-cream);border-left:1px solid var(--c-medium);min-width:65px">%</th>`;
     } else if (col.type === 'total') {
       t += `<th style="${thBase};text-align:center;border-left:2px solid var(--c-medium);background:var(--c-pale);min-width:80px">Grade</th>`;
+    } else if (col.type === 'exam' && !isWeighted) {
+      const _ea = col.examType==='midterm'?'#1d4ed8':'#9f1239';
+      const _eb = col.examType==='midterm'?'#eff6ff':'#fff1f2';
+      t += `<th style="${thBase};text-align:center;border-left:2px solid var(--c-pale);min-width:68px;color:${_ea};background:${_eb}">📝 ${col.examType==='midterm'?'Midterm':'Final'}</th>`;
     }
   }
   t += `</tr></thead><tbody>`;
+  const _examGrades = getExamGrades(cls.id); // loaded once for all rows
 
   // ── Student rows
   for (let si = 0; si < students.length; si++) {
@@ -3604,6 +3616,13 @@ function gbRenderTable(cls, data) {
         t += `<td style="${tdBase};text-align:center;border-left:2px solid var(--c-medium);background:var(--c-cream)">
           ${pct !== null ? `<div style="font-weight:900;font-size:14px;color:${gradeColor(letter)}">${letter}</div><div style="font-size:10px;color:var(--c-text-muted)">${pct}%</div>` : '<span style="color:var(--c-text-muted)">—</span>'}
         </td>`;
+      } else if (col.type === 'exam') {
+        const _eg = _examGrades[stu.id]?.[col.examType];
+        const _ea = col.examType==='midterm'?'#1d4ed8':'#9f1239';
+        const _eb = col.examType==='midterm'?'#eff6ff':'#fff1f2';
+        t += `<td style="${tdBase};text-align:center;border-left:2px solid var(--c-pale);background:${_eb}">
+          ${_eg ? `<div style="font-weight:900;font-size:14px;color:${gradeColor(_eg)}">${_eg}</div>` : '<span style="color:var(--c-text-muted);font-size:11px">—</span>'}
+        </td>`;
       }
     }
     t += `</tr>`;
@@ -3650,6 +3669,9 @@ function gbRenderTable(cls, data) {
         t += `<td style="${tdBase};text-align:center;border-left:2px solid var(--c-medium);background:var(--c-cream)">
           ${avg!==null?`<div style="font-weight:900;font-size:13px;color:${gradeColor(letter)}">${letter}</div><div style="font-size:10px;color:var(--c-text-muted)">${avg}%</div>`:'—'}
         </td>`;
+      } else if (col.type === 'exam') {
+        const _eb = col.examType==='midterm'?'#eff6ff':'#fff1f2';
+        t += `<td style="${tdBase};text-align:center;border-left:2px solid var(--c-pale);background:${_eb}"></td>`;
       }
     }
     t += `</tr>`;
@@ -5273,7 +5295,7 @@ function toggleCharts() {
   }
 }
 
-function chartsSelectClass(idx) { chartsClassIdx = idx; renderCharts(); }
+function chartsSelectClass(idx) { chartsClassIdx = idx; gbClassIdx = idx; renderCharts(); }
 
 function renderChartsNoExams(cls) {
   const students = cls.students || [];
