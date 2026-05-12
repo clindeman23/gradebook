@@ -3489,7 +3489,11 @@ function gbRenderTable(cls, data) {
     for (const _ec of cols.filter(c=>c.type==='exam')) {
       const _ea = _ec.examType==='midterm'?'#1d4ed8':'#9f1239';
       const _eb = _ec.examType==='midterm'?'#eff6ff':'#fff1f2';
-      t += `<th style="${thBase};text-align:center;border-left:2px solid var(--c-pale);min-width:68px;color:${_ea};background:${_eb}" rowspan="2">📝 ${_ec.examType==='midterm'?'Midterm':'Final'}</th>`;
+      t += `<th style="${thBase};text-align:center;border-left:2px solid var(--c-pale);min-width:72px;color:${_ea};background:${_eb};cursor:pointer" rowspan="2"
+          onclick="openExamSummary('${cls.id}','${_ec.examType}')" title="Click for exam overview">
+        📝 ${_ec.examType==='midterm'?'Midterm':'Final'}
+        <div style="font-size:8px;font-weight:500;opacity:.6;margin-top:1px">📊 overview</div>
+      </th>`;
     }
     t += `</tr>`;
   }
@@ -3539,11 +3543,25 @@ function gbRenderTable(cls, data) {
     } else if (col.type === 'exam' && !isWeighted) {
       const _ea = col.examType==='midterm'?'#1d4ed8':'#9f1239';
       const _eb = col.examType==='midterm'?'#eff6ff':'#fff1f2';
-      t += `<th style="${thBase};text-align:center;border-left:2px solid var(--c-pale);min-width:68px;color:${_ea};background:${_eb}">📝 ${col.examType==='midterm'?'Midterm':'Final'}</th>`;
+      t += `<th style="${thBase};text-align:center;border-left:2px solid var(--c-pale);min-width:72px;color:${_ea};background:${_eb};cursor:pointer"
+          onclick="openExamSummary('${cls.id}','${col.examType}')" title="Click for exam overview">
+        📝 ${col.examType==='midterm'?'Midterm':'Final'}
+        <div style="font-size:8px;font-weight:500;opacity:.6;margin-top:1px">📊 overview</div>
+      </th>`;
     }
   }
   t += `</tr></thead><tbody>`;
-  const _examGrades = getExamGrades(cls.id); // loaded once for all rows
+  const _examGrades = getExamGrades(cls.id);
+  // Pre-load exam configs/scores once so every cell can show % without repeated localStorage hits
+  const _examPctCache = {};
+  for (const col of cols) {
+    if (col.type === 'exam') {
+      _examPctCache[col.examType] = {
+        parts:  getExamConfig(cls.id, col.examType),
+        scores: getExamScores(cls.id, col.examType)
+      };
+    }
+  }
 
   // ── Student rows
   for (let si = 0; si < students.length; si++) {
@@ -3628,11 +3646,15 @@ function gbRenderTable(cls, data) {
             : '<span style="color:var(--c-text-muted)">—</span>'}
         </td>`;
       } else if (col.type === 'exam') {
-        const _eg = _examGrades[stu.id]?.[col.examType];
-        const _ea = col.examType==='midterm'?'#1d4ed8':'#9f1239';
-        const _eb = col.examType==='midterm'?'#eff6ff':'#fff1f2';
+        const _eg  = _examGrades[stu.id]?.[col.examType];
+        const _ea  = col.examType==='midterm'?'#1d4ed8':'#9f1239';
+        const _eb  = col.examType==='midterm'?'#eff6ff':'#fff1f2';
+        const _epc = _examPctCache[col.examType];
+        const _ep  = _epc ? _feGetPct(_epc.parts, _epc.scores, stu.id) : null;
         t += `<td style="${tdBase};text-align:center;border-left:2px solid var(--c-pale);background:${_eb}">
-          ${_eg ? `<div style="font-weight:900;font-size:14px;color:${gradeColor(_eg)}">${_eg}</div>` : '<span style="color:var(--c-text-muted);font-size:11px">—</span>'}
+          ${_eg
+            ? `<div style="font-weight:900;font-size:13px;color:${gradeColor(_eg)}">${_eg}</div><div style="font-size:9px;color:var(--c-text-muted)">${_ep !== null ? _ep.toFixed(1)+'%' : ''}</div>`
+            : '<span style="color:var(--c-text-muted);font-size:11px">—</span>'}
         </td>`;
       }
     }
@@ -3676,8 +3698,14 @@ function gbRenderTable(cls, data) {
           ${avg!==null ? `<div style="font-weight:900;font-size:12px;color:var(--c-brown)">${getLetterGrade(avg)}</div><div style="font-size:9px;color:var(--c-text-muted)">${avg}%</div>` : '—'}
         </td>`;
       } else if (col.type === 'exam') {
-        const _eb = col.examType==='midterm'?'#eff6ff':'#fff1f2';
-        t += `<td style="${tdBase};text-align:center;border-left:2px solid var(--c-pale);background:${_eb}"></td>`;
+        const _ea  = col.examType==='midterm'?'#1d4ed8':'#9f1239';
+        const _eb  = col.examType==='midterm'?'#eff6ff':'#fff1f2';
+        const _epc = _examPctCache[col.examType];
+        const _eps = _epc ? students.map(s=>_feGetPct(_epc.parts,_epc.scores,s.id)).filter(p=>p!==null) : [];
+        const _eavg = _eps.length ? Math.round(_eps.reduce((a,b)=>a+b,0)/_eps.length*10)/10 : null;
+        t += `<td style="${tdBase};text-align:center;border-left:2px solid var(--c-pale);background:${_eb}">
+          ${_eavg !== null ? `<div style="font-weight:900;font-size:12px;color:${_ea}">${getLetterGrade(_eavg)}</div><div style="font-size:9px;color:var(--c-text-muted)">${_eavg}%</div>` : '—'}
+        </td>`;
       }
     }
     t += `</tr>`;
@@ -4526,6 +4554,107 @@ function _feRefreshRow(classId, examType, stuId, parts, scores) {
     for (const p of parts) { const v=parseFloat(stuScores[p.id]); if(!isNaN(v)) earned+=v; }
     totEl.textContent = earned.toFixed(earned%1===0?0:1) + '/' + basePts;
   }
+}
+
+function openExamSummary(classId, examType) {
+  const data = getGbData();
+  const cls  = data.classes.find(c => c.id === classId);
+  if (!cls) return;
+  examType = examType || 'final';
+  const isMidterm    = examType === 'midterm';
+  const accentColor  = isMidterm ? '#1d4ed8' : '#9f1239';
+  const bgColor      = isMidterm ? '#eff6ff' : '#fff1f2';
+  const borderColor  = isMidterm ? '#bfdbfe' : '#fecaca';
+  const label        = isMidterm ? 'Midterm Exam' : 'Final Exam';
+  const parts        = getExamConfig(classId, examType);
+  const scores       = getExamScores(classId, examType);
+  const students     = cls.students || [];
+
+  // Build per-student data, sorted by pct descending (ungraded at bottom)
+  const rows = students
+    .map(stu => {
+      const pct    = _feGetPct(parts, scores, stu.id);
+      const letter = pct !== null ? getLetterGrade(pct) : null;
+      return { name: stu.name, id: stu.id, pct, letter };
+    })
+    .sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1));
+
+  const gradedRows = rows.filter(r => r.pct !== null);
+  const avgPct     = gradedRows.length
+    ? Math.round(gradedRows.reduce((s,r) => s + r.pct, 0) / gradedRows.length * 10) / 10
+    : null;
+  const avgLetter  = avgPct !== null ? getLetterGrade(avgPct) : null;
+
+  // Grade distribution
+  const dist = { 'A':0, 'B':0, 'C':0, 'D':0, 'F':0 };
+  for (const r of gradedRows) {
+    const k = r.letter?.[0];
+    if (k && dist[k] !== undefined) dist[k]++;
+  }
+
+  const rowHtml = rows.map(r => {
+    const barW = r.pct !== null ? r.pct.toFixed(0) : 0;
+    const clr  = r.letter ? gradeLetterColor(r.letter) : '#9ca3af';
+    const bg   = r.letter ? gradeLetterBg(r.letter)   : '#f3f4f6';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 14px;border-bottom:1px solid var(--c-pale)">
+      <div style="font-size:12px;font-weight:600;color:var(--c-text-primary);min-width:140px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(r.name)}</div>
+      <div style="flex:1;height:9px;background:var(--c-pale);border-radius:5px;overflow:hidden;min-width:60px">
+        <div style="height:100%;width:${barW}%;background:${clr};border-radius:5px"></div>
+      </div>
+      <div style="font-size:11px;color:var(--c-text-muted);width:42px;text-align:right;flex-shrink:0">${r.pct !== null ? r.pct.toFixed(1)+'%' : '<span style="opacity:.4">—</span>'}</div>
+      <div style="width:46px;text-align:center;flex-shrink:0">
+        ${r.letter
+          ? `<span style="font-weight:900;font-size:13px;color:${clr};background:${bg};padding:2px 8px;border-radius:6px">${r.letter}</span>`
+          : '<span style="color:#9ca3af;font-size:11px">—</span>'}
+      </div>
+    </div>`;
+  }).join('');
+
+  const distHtml = Object.entries(dist)
+    .map(([g, c]) => `<div style="text-align:center">
+        <div style="font-weight:900;font-size:16px;color:${gradeLetterColor(g)}">${c}</div>
+        <div style="font-size:10px;font-weight:700;color:${gradeLetterColor(g)};background:${gradeLetterBg(g)};padding:1px 8px;border-radius:5px;margin-top:2px">${g}</div>
+      </div>`)
+    .join('');
+
+  openGbModal(`
+    <div style="padding:20px;min-width:min(96vw,540px)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${accentColor};margin-bottom:4px">📊 ${label} Overview</div>
+          <h3 style="font-size:18px;font-weight:800;color:var(--c-brown);margin:0">${escHtml(cls.name)}</h3>
+          <p style="font-size:11px;color:var(--c-text-muted);margin:4px 0 0">
+            ${gradedRows.length}/${students.length} student${students.length!==1?'s':''} graded
+            ${avgPct !== null ? `· Class avg: <strong style="color:${accentColor}">${avgPct}% (${avgLetter})</strong>` : ''}
+          </p>
+        </div>
+        <button onclick="closeGbModal()" style="padding:7px 16px;border-radius:9px;background:var(--c-brown);color:white;font-size:13px;font-weight:700;border:none;cursor:pointer;flex-shrink:0">✓ Done</button>
+      </div>
+
+      <!-- Student list with bar chart -->
+      <div style="border:1.5px solid ${borderColor};border-radius:12px;overflow:hidden;margin-bottom:14px">
+        <div style="background:${bgColor};padding:6px 14px;border-bottom:1.5px solid ${borderColor};display:flex;align-items:center;gap:10px">
+          <span style="font-size:9px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.06em;min-width:140px">Student</span>
+          <span style="font-size:9px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.06em;flex:1">Score</span>
+          <span style="font-size:9px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.06em;width:42px;text-align:right">Pct</span>
+          <span style="font-size:9px;font-weight:800;color:${accentColor};text-transform:uppercase;letter-spacing:.06em;width:46px;text-align:center">Grade</span>
+        </div>
+        <div style="max-height:340px;overflow-y:auto">
+          ${rowHtml || '<div style="padding:18px;text-align:center;color:var(--c-text-muted);font-size:12px;font-style:italic">No students yet</div>'}
+        </div>
+      </div>
+
+      <!-- Grade distribution -->
+      <div style="background:var(--c-cream);border-radius:10px;padding:12px 16px;margin-bottom:12px">
+        <div style="font-size:9px;font-weight:800;color:var(--c-light);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Grade Distribution</div>
+        <div style="display:flex;justify-content:space-around;gap:8px">${distHtml}</div>
+      </div>
+
+      <button onclick="closeGbModal();openExamModal('${classId}','${examType}')"
+        style="width:100%;padding:9px;border-radius:10px;background:${bgColor};color:${accentColor};font-size:12px;font-weight:700;border:1.5px solid ${borderColor};cursor:pointer">
+        ✎ Enter / Edit Scores
+      </button>
+    </div>`);
 }
 
 function openExamModal(classId, examType) {
