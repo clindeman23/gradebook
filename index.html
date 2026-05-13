@@ -4756,6 +4756,58 @@ function _examEntryBodyHtml(cls, examType) {
     </tr>`;
   }).join('');
 
+  // ── Class averages per part
+  const partAvgs = parts.map(p => {
+    const vals = students.map(s => parseFloat((scores[s.id] || {})[p.id])).filter(v => !isNaN(v));
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  });
+  const gradedStudents = students.filter(s => _feGetPct(parts, scores, s.id) !== null);
+  const avgPct = gradedStudents.length
+    ? gradedStudents.reduce((sum, s) => sum + _feGetPct(parts, scores, s.id), 0) / gradedStudents.length
+    : null;
+  const avgLetter = avgPct !== null ? getLetterGrade(avgPct) : null;
+  const avgEarned = gradedStudents.length
+    ? gradedStudents.reduce((sum, s) => {
+        let e = 0; for (const p of parts) { const v = parseFloat((scores[s.id] || {})[p.id]); if (!isNaN(v)) e += v; } return sum + e;
+      }, 0) / gradedStudents.length
+    : null;
+
+  const avgCells = partAvgs.map((avg, i) => {
+    const p = parts[i];
+    const pPts = parseFloat(p.points) || 1;
+    const pct  = avg !== null ? (avg / pPts) * 100 : null;
+    // colour the pct bar
+    const barClr = pct === null ? '#e5e7eb' : pct >= 90 ? '#22c55e' : pct >= 80 ? '#84cc16' : pct >= 70 ? '#f59e0b' : pct >= 60 ? '#f97316' : '#ef4444';
+    return `<td style="padding:6px 5px;text-align:center;background:${accentBg};border-top:2px solid ${borderColor}">
+      ${avg !== null ? `
+        <div style="font-size:12px;font-weight:800;color:${accentColor}">${avg.toFixed(1)}<span style="font-size:10px;font-weight:500;color:var(--c-text-muted)">/${p.points}</span></div>
+        <div style="margin:3px auto 0;width:52px;height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${Math.min(100,pct).toFixed(0)}%;background:${barClr};border-radius:2px"></div>
+        </div>
+        <div style="font-size:9px;color:var(--c-text-muted);margin-top:2px">${pct.toFixed(1)}%</div>`
+      : '<span style="color:#9ca3af;font-size:11px">—</span>'}
+    </td>`;
+  }).join('');
+
+  const avgFooter = students.length > 0 ? `
+    <tfoot>
+      <tr>
+        <td style="padding:8px 14px;font-size:11px;font-weight:800;color:${accentColor};position:sticky;left:0;background:${accentBg};border-top:2px solid ${borderColor};white-space:nowrap">
+          Class Avg
+          <div style="font-size:9px;font-weight:500;color:var(--c-text-muted);margin-top:1px">${gradedStudents.length}/${students.length} graded</div>
+        </td>
+        ${avgCells}
+        <td style="padding:6px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--c-text-muted);background:${accentBg};border-top:2px solid ${borderColor}">
+          ${avgEarned !== null ? avgEarned.toFixed(1) + '/' + basePts : '—'}
+        </td>
+        <td style="padding:6px 10px;text-align:center;background:${accentBg};border-top:2px solid ${borderColor}">
+          ${avgLetter
+            ? `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(avgLetter)};background:${gradeLetterBg(avgLetter)};padding:2px 8px;border-radius:6px">${avgLetter}</span><br><span style="font-size:10px;color:var(--c-text-muted)">${avgPct.toFixed(1)}%</span>`
+            : '<span style="color:#9ca3af;font-size:11px">—</span>'}
+        </td>
+      </tr>
+    </tfoot>` : '';
+
   return `<div class="fade-in">
     <!-- Header -->
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
@@ -4782,6 +4834,7 @@ function _examEntryBodyHtml(cls, examType) {
           </tr>
         </thead>
         <tbody>${rows || '<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--c-text-muted);font-style:italic">No students — add in Gradebook first</td></tr>'}</tbody>
+        ${avgFooter}
       </table>
     </div>
     <div style="margin-top:10px;padding:10px 14px;background:#fef3c7;border-radius:8px;font-size:11px;color:#92400e">
