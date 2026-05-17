@@ -6,19 +6,20 @@
   h2 { color: #5A2D0C; }
   pre { background: #f0f0f0; padding: 12px; border-radius: 8px; font-size: 12px; max-height: 400px; overflow: auto; }
   .ok { color: #15803d; font-weight: bold; }
-  .err { color: #dc2626; font-weight: bold; }
   .warn { color: #b45309; font-weight: bold; }
+  .err { color: #dc2626; font-weight: bold; }
 </style>
 </head>
 <body>
-<h2>📒 Seed Math Report Card — All Periods (Pre-Cal, Rahman)</h2>
-<p>Seeds Period 1, Period 4, and Period 7 student grades.<br>
-<strong>⚠ Existing Math RC data will be replaced.</strong></p>
+<h2>📒 Seed Math Report Card — All 5 Periods (Pre-Cal, Rahman)</h2>
+<p>Seeds all periods into the Math Report Card.<br>
+<strong>⚠ All existing Math RC data will be replaced.</strong></p>
 <pre id="log">Running...</pre>
 <script>
-const log = s => { document.getElementById('log').textContent += '\n' + s; console.log(s); };
+const log = s => { document.getElementById('log').textContent += '\n' + s; };
 
-const period1Students = [
+// ── Period 1 — TIME A — 14 students ──────────────────────────
+const period1 = [
   { id:'rc-p1-cain',        name:'Cain, Hayden',       q1:'B-', q2:'B',  midExam:'C',  q3:'C',  q4:'B',  finExam:'D'  },
   { id:'rc-p1-cress',       name:'Cressionnie, Zoey',  q1:'B',  q2:'B',  midExam:'F',  q3:'D',  q4:'B',  finExam:'F'  },
   { id:'rc-p1-diaz',        name:'Diaz, Kassie',       q1:'A',  q2:'A+', midExam:'A+', q3:'A+', q4:'A',  finExam:'B+' },
@@ -35,7 +36,8 @@ const period1Students = [
   { id:'rc-p1-salsman',     name:'Salsman, Addison',   q1:'B-', q2:'B',  midExam:'C',  q3:'B',  q4:'B',  finExam:'B'  }
 ];
 
-const period4Students = [
+// ── Period 4 — TIME D — 12 students ──────────────────────────
+const period4 = [
   { id:'rc-p4-chanove',     name:'Chanove, Catherine', q1:'D-', q2:'C',  midExam:'F',  q3:'C',  q4:'B',  finExam:'F'  },
   { id:'rc-p4-coulon',      name:'Coulon, Vivian',     q1:'C',  q2:'C',  midExam:'F',  q3:'B',  q4:'B',  finExam:'F'  },
   { id:'rc-p4-decastro',    name:'DeCastro, Avery',    q1:'C',  q2:'C',  midExam:'D',  q3:'B+', q4:'B',  finExam:'F'  },
@@ -46,12 +48,36 @@ const period4Students = [
   { id:'rc-p4-leblanc',     name:'LeBlanc, Brooke',    q1:'A-', q2:'A-', midExam:'B+', q3:'A-', q4:'A',  finExam:'B'  },
   { id:'rc-p4-lew',         name:'Lew, Zoe',           q1:'C+', q2:'B',  midExam:'C',  q3:'C+', q4:'A-', finExam:'F'  },
   { id:'rc-p4-nuila',       name:'Nuila, Carmen',      q1:'B+', q2:'B',  midExam:'B',  q3:'A',  q4:'B+', finExam:'C-' },
-  { id:'rc-p4-reuther',     name:'Reuther, Paige',     q1:'B',  q2:'B',  midExam:'D-', q3:'C',  q4:'B-'              },
+  { id:'rc-p4-reuther',     name:'Reuther, Paige ⚠',  q1:'B',  q2:'B',  midExam:'D-', q3:'C',  q4:'B-'              },
   { id:'rc-p4-wilson',      name:'Wilson, Taylor',     q1:'A',  q2:'B+', midExam:'B+', q3:'A-', q4:'C+', finExam:'C-' }
 ];
-// Note: Reuther finExam = "I" (Incomplete) — left blank, needs manual follow-up
+// Reuther finExam = "I" (Incomplete) — left blank
 
-const period7Students = [
+// ── Period 5 — TIME E — 8 students ───────────────────────────
+const period5 = [
+  { id:'rc-p5-ackerman',    name:'Ackerman, Laikyn',   q1:'B',  q2:'A-', midExam:'B-', q3:'A',  q4:'A',  finExam:'C'  },
+  { id:'rc-p5-alphonso',    name:'Alphonso, Shelbi',   q1:'D+', q2:'B',  midExam:'F',  q3:'B-', q4:'B-', finExam:'F'  },
+  { id:'rc-p5-dysart',      name:'Dysart, Elyse',      q1:'B+', q2:'A',  midExam:'A-', q3:'A-', q4:'A',  finExam:'B-' },
+  { id:'rc-p5-favalora',    name:'Favalora, Madelyn',  q1:'F',  q2:'C',  midExam:'F',  q3:'F',  q4:'C',  finExam:'F'  },
+  { id:'rc-p5-flores',      name:'Flores, Ellie',      q1:'A',  q2:'A-', midExam:'A',  q3:'A-', q4:'B',  finExam:'D'  },
+  { id:'rc-p5-franatovich', name:'Franatovich, Alivia',q1:'B+', q2:'B',  midExam:'B',  q3:'B+', q4:'B+', finExam:'D'  },
+  { id:'rc-p5-goudeau',     name:'Goudeau, Lillian',   q1:'D',  q2:'F',  midExam:'F',  q3:'F',  q4:'F',  finExam:'F'  },
+  { id:'rc-p5-saucier',     name:'Saucier, Sophie',    q1:'A-', q2:'B',  midExam:'B',  q3:'B',  q4:'A-', finExam:'B'  }
+];
+
+// ── Period 6 — TIME F — 7 students ───────────────────────────
+const period6 = [
+  { id:'rc-p6-burke',       name:'Burke, Madelyn',     q1:'F',  q2:'D',  midExam:'F',  q3:'C',  q4:'B-', finExam:'D-' },
+  { id:'rc-p6-gagnard',     name:'Gagnard, Emri',      q1:'B',  q2:'D',  midExam:'F',  q3:'B',  q4:'B',  finExam:'F'  },
+  { id:'rc-p6-lara',        name:'Lara, Natalia',      q1:'B',  q2:'A-', midExam:'B',  q3:'A-', q4:'A',  finExam:'B-' },
+  { id:'rc-p6-leone',       name:'Leone, Kyra',        q1:'B-', q2:'B',  midExam:'D-', q3:'B-', q4:'B',  finExam:'B'  },
+  { id:'rc-p6-livaccari',   name:'Livaccari, Daphne',  q1:'C+', q2:'C',  midExam:'C',  q3:'B+', q4:'A',  finExam:'F'  },
+  { id:'rc-p6-macaluso',    name:'Macaluso, Ava',      q1:'B-', q2:'C-', midExam:'D-', q3:'B',  q4:'B+', finExam:'F'  },
+  { id:'rc-p6-pugh',        name:'Pugh, Abbey',        q1:'B',  q2:'B',  midExam:'C',  q3:'A',  q4:'A-', finExam:'D'  }
+];
+
+// ── Period 7 — TIME G — 12 students ──────────────────────────
+const period7 = [
   { id:'rc-p7-adams',       name:'Adams, Rebekah',     q1:'B-', q2:'B',  midExam:'D+', q3:'A-', q4:'B+', finExam:'C'  },
   { id:'rc-p7-baroni',      name:'Baroni, Kallie',     q1:'A',  q2:'A',  midExam:'B+', q3:'A-', q4:'A',  finExam:'C-' },
   { id:'rc-p7-burvant',     name:'Burvant, Colette',   q1:'C',  q2:'B',  midExam:'F',  q3:'B-', q4:'B',  finExam:'F'  },
@@ -69,23 +95,24 @@ const period7Students = [
 try {
   const data = {
     periods: [
-      { name:'Period 1', students: period1Students },
-      { name:'Period 4', students: period4Students },
-      { name:'Period 7', students: period7Students },
-      { name:'Period ?', students: [] },
-      { name:'Period ?', students: [] }
+      { name:'Period 1', students: period1 },
+      { name:'Period 4', students: period4 },
+      { name:'Period 5', students: period5 },
+      { name:'Period 6', students: period6 },
+      { name:'Period 7', students: period7 }
     ]
   };
 
   localStorage.setItem('mca-math-rc', JSON.stringify(data));
   localStorage.setItem('mca-math-gb-on', 'true');
 
-  log('✅ Period 1: ' + period1Students.length + ' students');
-  log('✅ Period 4: ' + period4Students.length + ' students (Reuther FEX=I left blank — needs follow-up)');
-  log('✅ Period 7: ' + period7Students.length + ' students');
-  log('⏳ Period ? (slots 4–5): waiting for remaining PDFs');
+  log('✅ Period 1 (TIME A): ' + period1.length + ' students');
+  log('✅ Period 4 (TIME D): ' + period4.length + ' students  ⚠ Reuther FEX = Incomplete (left blank)');
+  log('✅ Period 5 (TIME E): ' + period5.length + ' students');
+  log('✅ Period 6 (TIME F): ' + period6.length + ' students');
+  log('✅ Period 7 (TIME G): ' + period7.length + ' students');
+  log('\nTotal: ' + (period1.length+period4.length+period5.length+period6.length+period7.length) + ' students across 5 periods');
   log('\nRedirecting to app in 2 seconds...');
-
   setTimeout(() => { window.location.href = '/'; }, 2000);
 } catch(e) {
   log('❌ Error: ' + e.message);
