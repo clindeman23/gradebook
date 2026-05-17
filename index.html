@@ -3373,6 +3373,7 @@ function openTopStudentModal() {
 
 function renderGradebook() {
   if (!gradebookMode) return;
+  if (mathGradebookMode) { renderMathReportCard(); return; }
   const data = getGbData();
   const cls = data.classes[gbClassIdx] || null;
   let html = '<div class="fade-in">';
@@ -5827,6 +5828,313 @@ function renderCharts() {
 // ════════════════════════════════════════════════════════
 //  HELPERS
 // ════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+//  MATH GRADEBOOK — REPORT CARD VIEW
+// ════════════════════════════════════════════════════════
+let mathRcPeriodIdx = 0;
+
+function getMathRcData() {
+  try { return JSON.parse(localStorage.getItem('mca-math-rc') || 'null') || {periods:[]}; }
+  catch(e) { return {periods:[]}; }
+}
+function saveMathRcData(d) { localStorage.setItem('mca-math-rc', JSON.stringify(d)); }
+
+function _ensureMathRcPeriods(data) {
+  while (data.periods.length < 5) {
+    data.periods.push({ name: `Period ${data.periods.length + 1}`, students: [] });
+  }
+  return data;
+}
+
+function renderMathReportCard() {
+  if (!gradebookMode) return;
+  const data = _ensureMathRcPeriods(getMathRcData());
+  const mc = document.getElementById('main-content');
+  let html = '<div class="fade-in">';
+
+  // Banner
+  html += `<div style="margin-bottom:14px;padding:9px 16px;border-radius:12px;background:#fef9c3;border:2px solid #eab308;display:flex;align-items:center;gap:10px">
+    <span style="font-size:16px">📒</span>
+    <span style="font-size:13px;font-weight:700;color:#713f12;flex:1">Math Gradebook — Report Card View</span>
+    <button onclick="mathRcExportPrint()" style="font-size:10px;font-weight:700;color:#92400e;background:transparent;border:1.5px solid #d97706;border-radius:6px;padding:3px 8px;cursor:pointer;margin-right:4px">🖨 Print</button>
+    <button onclick="setSettingsTab('gradebook');openSettings()" style="font-size:10px;font-weight:700;color:#92400e;background:transparent;border:1.5px solid #d97706;border-radius:6px;padding:3px 8px;cursor:pointer">Settings</button>
+  </div>`;
+
+  // Period tabs + Add Student
+  html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap">`;
+  for (let i = 0; i < 5; i++) {
+    const p = data.periods[i];
+    const active = i === mathRcPeriodIdx;
+    const cnt = (p.students || []).length;
+    html += `<button onclick="mathRcPeriodIdx=${i};renderGradebook()" style="padding:7px 18px;border-radius:20px;font-size:12px;font-weight:700;border:2px solid;cursor:pointer;transition:all .15s;
+      ${active ? 'background:var(--c-brown);color:white;border-color:var(--c-brown);box-shadow:0 2px 8px rgba(90,45,12,.3)' : 'background:white;color:var(--c-text-secondary);border-color:var(--c-pale)'}">
+      ${escHtml(p.name || `Period ${i+1}`)} <span style="opacity:.7;font-size:10px">(${cnt})</span>
+    </button>`;
+  }
+  html += `<div style="flex:1"></div>`;
+  html += `<button onclick="mathRcRenamePeriodPrompt(${mathRcPeriodIdx})" style="padding:6px 12px;border-radius:10px;font-size:11px;font-weight:700;border:1.5px solid var(--c-pale);background:white;color:var(--c-text-secondary);cursor:pointer;margin-right:6px">✏ Rename</button>`;
+  html += `<button onclick="mathRcAddStudentPrompt(${mathRcPeriodIdx})" style="padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;background:var(--c-brown);color:white;border:none;cursor:pointer">+ Student</button>`;
+  html += `</div>`;
+
+  // Table
+  const period = data.periods[mathRcPeriodIdx];
+  const students = period.students || [];
+
+  if (students.length === 0) {
+    html += `<div style="text-align:center;padding:60px 20px;color:var(--c-text-muted);font-size:14px;background:white;border-radius:14px;border:2px dashed var(--c-pale)">
+      No students in this period yet.<br><br>
+      <button onclick="mathRcAddStudentPrompt(${mathRcPeriodIdx})" style="padding:9px 20px;border-radius:10px;background:var(--c-brown);color:white;font-size:13px;font-weight:700;border:none;cursor:pointer">+ Add Student</button>
+    </div>`;
+  } else {
+    // Legend
+    html += `<div style="display:flex;gap:12px;margin-bottom:8px;font-size:10px;color:var(--c-text-muted);align-items:center;flex-wrap:wrap">
+      <span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;background:#fffbeb;border:1.5px solid #fbbf24;border-radius:3px"></span> Exam grade (editable)</span>
+      <span style="display:inline-flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;background:#f3f4f6;border-radius:3px"></span> Computed (auto)</span>
+      <span style="margin-left:auto;font-style:italic">Click any grade cell to edit</span>
+    </div>`;
+
+    html += `<div style="overflow-x:auto;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.07)">
+    <table style="width:100%;border-collapse:collapse;min-width:700px;font-size:12px">
+      <thead>
+        <tr>
+          <th style="padding:10px 14px;text-align:left;background:var(--c-brown);color:white;font-weight:700;font-size:11px;border-radius:14px 0 0 0;white-space:nowrap">Student</th>
+          <th style="padding:10px 8px;background:var(--c-brown);color:white;font-weight:700;font-size:11px;text-align:center;min-width:52px">Q1</th>
+          <th style="padding:10px 8px;background:var(--c-brown);color:white;font-weight:700;font-size:11px;text-align:center;min-width:52px">Q2</th>
+          <th style="padding:10px 8px;background:#7c3a1a;color:#fef08a;font-weight:700;font-size:11px;text-align:center;min-width:64px">Mid Exam</th>
+          <th style="padding:10px 8px;background:#6b3010;color:#fde68a;font-weight:700;font-size:11px;text-align:center;min-width:52px">S1 ▸</th>
+          <th style="padding:10px 8px;background:var(--c-brown);color:white;font-weight:700;font-size:11px;text-align:center;min-width:52px">Q3</th>
+          <th style="padding:10px 8px;background:var(--c-brown);color:white;font-weight:700;font-size:11px;text-align:center;min-width:52px">Q4</th>
+          <th style="padding:10px 8px;background:#7c3a1a;color:#fef08a;font-weight:700;font-size:11px;text-align:center;min-width:64px">Fin Exam</th>
+          <th style="padding:10px 8px;background:#6b3010;color:#fde68a;font-weight:700;font-size:11px;text-align:center;min-width:52px">S2 ▸</th>
+          <th style="padding:10px 8px;background:#3d1a06;color:#fde68a;font-weight:800;font-size:11px;text-align:center;border-radius:0 14px 0 0;min-width:60px">Year ▸</th>
+          <th style="padding:10px 4px;background:#3d1a06;border-radius:0 14px 0 0;min-width:30px"></th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+    students.forEach((stu, si) => {
+      const q1=stu.q1||'', q2=stu.q2||'', mid=stu.midExam||'';
+      const q3=stu.q3||'', q4=stu.q4||'', fin=stu.finExam||'';
+      const qp1=(q1&&q2)?chartALookup(q1,q2):null;
+      const qp2=(q3&&q4)?chartALookup(q3,q4):null;
+      const s1=(qp1!==null&&mid)?chartBLookup(qp1,mid):'';
+      const s2=(qp2!==null&&fin)?chartBLookup(qp2,fin):'';
+      const yr=(s1&&s2)?chartCLookup(s1,s2):'';
+      const rowBg = si%2===1 ? '#faf7f4' : 'white';
+
+      html += `<tr style="background:${rowBg}">
+        <td style="padding:7px 14px;font-weight:600;color:var(--c-text-primary);border-bottom:1px solid #f0ece6;white-space:nowrap">${escHtml(stu.name||'')}</td>
+        ${_mrc(mathRcPeriodIdx,stu.id,'q1',q1)}
+        ${_mrc(mathRcPeriodIdx,stu.id,'q2',q2)}
+        ${_mrc(mathRcPeriodIdx,stu.id,'midExam',mid,true)}
+        ${_mrcComp(s1)}
+        ${_mrc(mathRcPeriodIdx,stu.id,'q3',q3)}
+        ${_mrc(mathRcPeriodIdx,stu.id,'q4',q4)}
+        ${_mrc(mathRcPeriodIdx,stu.id,'finExam',fin,true)}
+        ${_mrcComp(s2)}
+        ${_mrcComp(yr,true)}
+        <td style="padding:2px 6px;border-bottom:1px solid #f0ece6;text-align:center">
+          <button onclick="mathRcDeleteStudent(${mathRcPeriodIdx},'${stu.id}')" style="width:22px;height:22px;border-radius:6px;background:transparent;border:none;color:#d1d5db;cursor:pointer;font-size:12px" title="Remove" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#d1d5db'">✕</button>
+        </td>
+      </tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+  }
+
+  html += '</div>';
+  mc.innerHTML = html;
+  mc.style.background = '';
+}
+
+// Editable grade cell
+function _mrc(periodIdx, stuId, field, grade, isExam) {
+  const col = grade ? gradeLetterColor(grade) : (isExam ? '#d97706' : '#9ca3af');
+  const bg  = grade ? gradeLetterBg(grade)    : (isExam ? '#fffbeb' : 'transparent');
+  const border = isExam ? 'border:2px solid #fbbf24;' : 'border:2px solid transparent;';
+  return `<td style="padding:4px 4px;border-bottom:1px solid #f0ece6;text-align:center">
+    <div onclick="mathRcOpenPicker(${periodIdx},'${stuId}','${field}',this)"
+      style="cursor:pointer;border-radius:8px;padding:4px 8px;font-weight:700;font-size:13px;color:${col};background:${bg};${border}min-width:44px;display:inline-block;text-align:center;transition:transform .12s;user-select:none"
+      onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform=''">${grade||'—'}</div>
+  </td>`;
+}
+
+// Computed (read-only) cell
+function _mrcComp(grade, isYear) {
+  if (!grade) return `<td style="padding:4px 4px;border-bottom:1px solid #f0ece6;text-align:center"><div style="border-radius:8px;padding:4px 8px;font-size:12px;color:#c9b99a;background:#f3f4f6;min-width:44px;display:inline-block;text-align:center">—</div></td>`;
+  const col = gradeLetterColor(grade);
+  const bg  = gradeLetterBg(grade);
+  const extra = isYear ? 'font-size:14px;font-weight:800;' : 'font-weight:700;font-size:12px;';
+  return `<td style="padding:4px 4px;border-bottom:1px solid #f0ece6;text-align:center"><div style="border-radius:8px;padding:4px 8px;${extra}color:${col};background:${bg};min-width:44px;display:inline-block;text-align:center">${grade}</div></td>`;
+}
+
+function mathRcOpenPicker(periodIdx, stuId, field, anchorEl) {
+  const old = document.getElementById('math-rc-picker');
+  if (old) {
+    const same = old._stuId===stuId && old._field===field;
+    old.remove();
+    if (same) return;
+  }
+  const ALL_GRADES = ['A+','A','A-','B+','B','B-','C+','C','C-','D+','D','D-','F'];
+  const picker = document.createElement('div');
+  picker.id = 'math-rc-picker';
+  picker._stuId = stuId; picker._field = field;
+  picker.style.cssText = 'position:fixed;z-index:9999;background:white;border-radius:14px;padding:10px 8px;box-shadow:0 8px 32px rgba(0,0,0,.22);border:1.5px solid #e5e7eb;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;width:152px';
+
+  ALL_GRADES.forEach(g => {
+    const btn = document.createElement('button');
+    btn.textContent = g;
+    btn.style.cssText = `padding:7px 4px;border-radius:8px;font-size:12px;font-weight:700;border:1.5px solid transparent;cursor:pointer;background:${gradeLetterBg(g)};color:${gradeLetterColor(g)};transition:transform .1s`;
+    btn.onmouseover = () => btn.style.transform = 'scale(1.12)';
+    btn.onmouseout  = () => btn.style.transform = '';
+    btn.onclick = () => { mathRcSetGrade(periodIdx, stuId, field, g); picker.remove(); };
+    picker.appendChild(btn);
+  });
+
+  const clr = document.createElement('button');
+  clr.textContent = '✕ Clear';
+  clr.style.cssText = 'padding:6px;border-radius:8px;font-size:11px;font-weight:700;border:1.5px solid #e5e7eb;cursor:pointer;background:#f9fafb;color:#6b7280;grid-column:1/-1;margin-top:3px';
+  clr.onclick = () => { mathRcSetGrade(periodIdx, stuId, field, null); picker.remove(); };
+  picker.appendChild(clr);
+
+  document.body.appendChild(picker);
+
+  // Position
+  const r = anchorEl.getBoundingClientRect();
+  let top = r.bottom + 6, left = r.left - 44;
+  if (top + 200 > window.innerHeight) top = r.top - 206;
+  if (left + 158 > window.innerWidth) left = window.innerWidth - 162;
+  if (left < 4) left = 4;
+  picker.style.top = top + 'px';
+  picker.style.left = left + 'px';
+
+  const _cl = e => { if (!picker.contains(e.target) && e.target !== anchorEl) { picker.remove(); document.removeEventListener('mousedown', _cl); } };
+  setTimeout(() => document.addEventListener('mousedown', _cl), 10);
+}
+
+function mathRcSetGrade(periodIdx, stuId, field, grade) {
+  const data = getMathRcData();
+  _ensureMathRcPeriods(data);
+  const stu = (data.periods[periodIdx]?.students || []).find(s => s.id === stuId);
+  if (!stu) return;
+  if (grade === null) delete stu[field]; else stu[field] = grade;
+  saveMathRcData(data);
+  renderGradebook();
+}
+
+function mathRcAddStudentPrompt(periodIdx) {
+  const old = document.getElementById('math-rc-add-modal');
+  if (old) old.remove();
+  const modal = document.createElement('div');
+  modal.id = 'math-rc-add-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `<div style="background:white;border-radius:18px;padding:24px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="font-size:16px;font-weight:800;color:var(--c-brown);margin-bottom:6px">Add Student — Period ${periodIdx+1}</div>
+    <div style="font-size:11px;color:var(--c-text-muted);margin-bottom:14px">Enter one name per line (Last, First format recommended)</div>
+    <textarea id="math-rc-names-input" rows="6" placeholder="Doe, Jane&#10;Smith, John&#10;..."
+      style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid var(--c-pale);font-size:13px;outline:none;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea>
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+      <button onclick="document.getElementById('math-rc-add-modal').remove()" style="padding:8px 16px;border-radius:10px;border:1.5px solid var(--c-pale);background:white;font-size:13px;font-weight:700;color:var(--c-text-secondary);cursor:pointer">Cancel</button>
+      <button onclick="mathRcConfirmAddStudents(${periodIdx})" style="padding:8px 18px;border-radius:10px;background:var(--c-brown);color:white;font-size:13px;font-weight:700;border:none;cursor:pointer">Add</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  setTimeout(() => document.getElementById('math-rc-names-input')?.focus(), 50);
+}
+
+function mathRcConfirmAddStudents(periodIdx) {
+  const raw = document.getElementById('math-rc-names-input')?.value || '';
+  const names = raw.split('\n').map(s=>s.trim()).filter(Boolean);
+  if (!names.length) return;
+  const data = getMathRcData();
+  _ensureMathRcPeriods(data);
+  if (!data.periods[periodIdx].students) data.periods[periodIdx].students = [];
+  names.forEach(name => {
+    const id = 'stu-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+    data.periods[periodIdx].students.push({ id, name });
+  });
+  saveMathRcData(data);
+  document.getElementById('math-rc-add-modal')?.remove();
+  renderGradebook();
+}
+
+function mathRcDeleteStudent(periodIdx, stuId) {
+  if (!confirm('Remove this student from the period?')) return;
+  const data = getMathRcData();
+  _ensureMathRcPeriods(data);
+  if (data.periods[periodIdx]) {
+    data.periods[periodIdx].students = (data.periods[periodIdx].students||[]).filter(s=>s.id!==stuId);
+  }
+  saveMathRcData(data);
+  renderGradebook();
+}
+
+function mathRcRenamePeriodPrompt(periodIdx) {
+  const data = getMathRcData();
+  _ensureMathRcPeriods(data);
+  const cur = data.periods[periodIdx].name || `Period ${periodIdx+1}`;
+  const name = prompt(`Rename period:`, cur);
+  if (name && name.trim()) {
+    data.periods[periodIdx].name = name.trim();
+    saveMathRcData(data);
+    renderGradebook();
+  }
+}
+
+function mathRcExportPrint() {
+  const data = getMathRcData();
+  _ensureMathRcPeriods(data);
+  let w = window.open('', '_blank');
+  let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Math Gradebook — Report Card</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:11px;margin:20px}
+    h2{margin:0 0 6px;font-size:14px;color:#5A2D0C}
+    .period{margin-bottom:32px;page-break-inside:avoid}
+    table{border-collapse:collapse;width:100%;margin-bottom:8px}
+    th{background:#5A2D0C;color:white;padding:6px 8px;font-size:10px;text-align:center}
+    th:first-child{text-align:left}
+    td{padding:5px 8px;border-bottom:1px solid #e5e7eb;text-align:center}
+    td:first-child{text-align:left;font-weight:600}
+    tr:nth-child(even) td{background:#faf7f4}
+    .comp{color:#6b7280;font-style:italic}
+    .yr{font-weight:800;font-size:13px}
+    @media print{body{margin:10px}.period{page-break-inside:avoid}}
+  </style></head><body>
+  <h1 style="font-size:16px;margin:0 0 4px;color:#3d1a06">📒 Math Gradebook — Report Card</h1>
+  <p style="font-size:10px;color:#9ca3af;margin:0 0 20px">Printed ${new Date().toLocaleDateString()}</p>`;
+
+  data.periods.forEach((p, pi) => {
+    const students = p.students || [];
+    html += `<div class="period"><h2>${escHtml(p.name||`Period ${pi+1}`)}</h2>`;
+    if (!students.length) { html += `<p style="color:#9ca3af;font-style:italic">No students</p></div>`; return; }
+    html += `<table><thead><tr>
+      <th style="text-align:left">Student</th><th>Q1</th><th>Q2</th><th>Mid Exam</th><th>S1</th>
+      <th>Q3</th><th>Q4</th><th>Fin Exam</th><th>S2</th><th>Year</th>
+    </tr></thead><tbody>`;
+    students.forEach(stu => {
+      const q1=stu.q1||'',q2=stu.q2||'',mid=stu.midExam||'',q3=stu.q3||'',q4=stu.q4||'',fin=stu.finExam||'';
+      const qp1=(q1&&q2)?chartALookup(q1,q2):null;
+      const qp2=(q3&&q4)?chartALookup(q3,q4):null;
+      const s1=(qp1!==null&&mid)?chartBLookup(qp1,mid):'';
+      const s2=(qp2!==null&&fin)?chartBLookup(qp2,fin):'';
+      const yr=(s1&&s2)?chartCLookup(s1,s2):'';
+      html += `<tr>
+        <td>${escHtml(stu.name||'')}</td>
+        <td>${q1||'—'}</td><td>${q2||'—'}</td><td>${mid||'—'}</td>
+        <td class="comp">${s1||'—'}</td>
+        <td>${q3||'—'}</td><td>${q4||'—'}</td><td>${fin||'—'}</td>
+        <td class="comp">${s2||'—'}</td>
+        <td class="yr">${yr||'—'}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  });
+  html += '</body></html>';
+  w.document.write(html);
+  w.document.close();
+  w.print();
+}
+
 function escHtml(s) {
   return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
