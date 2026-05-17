@@ -170,6 +170,11 @@
         style="border-color:transparent;color:var(--c-text-muted);background:transparent;border-left:none;border-right:none;border-top:none;cursor:pointer">
         ☁ Sync
       </button>
+      <button id="stab-btn-gradebook" onclick="setSettingsTab('gradebook')"
+        class="settings-tab-btn flex items-center gap-1.5 px-5 py-3.5 text-xs font-extrabold whitespace-nowrap border-b-2 transition-colors"
+        style="border-color:transparent;color:var(--c-text-muted);background:transparent;border-left:none;border-right:none;border-top:none;cursor:pointer">
+        📒 Gradebook
+      </button>
     </div>
 
     <!-- ── TAB: Calendar ── -->
@@ -295,6 +300,29 @@
             <button onclick="saveSyncSettings();_syncFromSheets(false)" style="flex:1;padding:8px;border-radius:10px;background:white;border:1.5px solid var(--c-pale);color:var(--c-brown);font-size:12px;font-weight:700;cursor:pointer">⬇ Pull Now</button>
             <button onclick="saveSyncSettings();_syncToSheets(false)" style="flex:1;padding:8px;border-radius:10px;background:white;border:1.5px solid var(--c-pale);color:var(--c-brown);font-size:12px;font-weight:700;cursor:pointer">⬆ Push Now</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: Gradebook ── -->
+    <div id="stab-content-gradebook" class="px-7 py-6 space-y-5" style="display:none">
+      <div>
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--c-light);margin-bottom:14px">Gradebook Modes</div>
+
+        <!-- Math Gradebook toggle -->
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;border:2px solid var(--c-pale);background:var(--c-cream)" id="math-gb-row">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--c-text-primary)">📒 Math Gradebook</div>
+            <div style="font-size:11px;color:var(--c-text-muted);margin-top:2px;line-height:1.5">Switches the gradebook to a completely separate dataset for the Math class. All grades, students, and exams are independent from the main gradebook.</div>
+          </div>
+          <button id="math-gb-toggle-btn" onclick="toggleMathGradebook()"
+            style="flex-shrink:0;min-width:52px;height:28px;border-radius:99px;border:none;cursor:pointer;font-size:11px;font-weight:800;transition:all .2s;background:#e5e7eb;color:#6b7280">
+            OFF
+          </button>
+        </div>
+
+        <div id="math-gb-warning" style="display:none;margin-top:10px;padding:10px 14px;border-radius:10px;background:#fef9c3;border:1.5px solid #eab308;font-size:11px;color:#713f12;line-height:1.6">
+          ⚠️ <strong>Math Gradebook is active.</strong> All gradebook edits are saved separately from the main gradebook. Toggle off to return to the normal gradebook.
         </div>
       </div>
     </div>
@@ -969,7 +997,7 @@ let _activeSettingsTab = localStorage.getItem('mca-settings-tab') || 'calendar';
 function setSettingsTab(tab) {
   _activeSettingsTab = tab;
   localStorage.setItem('mca-settings-tab', tab);
-  const tabs = ['calendar','colors','fonts','sync'];
+  const tabs = ['calendar','colors','fonts','sync','gradebook'];
   tabs.forEach(t => {
     const btn = document.getElementById('stab-btn-' + t);
     const content = document.getElementById('stab-content-' + t);
@@ -985,6 +1013,7 @@ function setSettingsTab(tab) {
   if (tab === 'fonts')  { buildFontTabUI(); }
   if (tab === 'sync')   { buildSyncTabUI(); }
   if (tab === 'calendar') { buildCalendarTabUI(); }
+  if (tab === 'gradebook') { buildGradebookTabUI(); }
 }
 
 function buildCalendarTabUI() {
@@ -2322,14 +2351,37 @@ let gbClassIdx = 0;
 let gbSubView = 'grades'; // 'grades' or 'charts'
 let gbQuarter = localStorage.getItem('mca-last-quarter') || 'Q1';
 let gbEditMode = false;
+let mathGradebookMode = localStorage.getItem('mca-math-gb-on') === 'true';
 
+function _gbKey() { return mathGradebookMode ? 'mca-math-gradebook' : 'mca-gradebook'; }
 function getGbData() {
-  try { return JSON.parse(localStorage.getItem('mca-gradebook') || 'null') || {classes:[]}; }
+  try { return JSON.parse(localStorage.getItem(_gbKey()) || 'null') || {classes:[]}; }
   catch(e) { return {classes:[]}; }
 }
 function saveGbData(d) {
-  localStorage.setItem('mca-gradebook', JSON.stringify(d));
-  _scheduleSync();
+  localStorage.setItem(_gbKey(), JSON.stringify(d));
+  if (!mathGradebookMode) _scheduleSync(); // only sync main gradebook
+}
+
+function toggleMathGradebook() {
+  mathGradebookMode = !mathGradebookMode;
+  localStorage.setItem('mca-math-gb-on', mathGradebookMode ? 'true' : 'false');
+  gbClassIdx = 0; gbSubView = 'grades'; gbEditMode = false;
+  buildGradebookTabUI();
+  if (gradebookMode) renderGradebook();
+}
+
+function buildGradebookTabUI() {
+  const btn = document.getElementById('math-gb-toggle-btn');
+  const warning = document.getElementById('math-gb-warning');
+  const row = document.getElementById('math-gb-row');
+  if (btn) {
+    btn.textContent = mathGradebookMode ? 'ON' : 'OFF';
+    btn.style.background = mathGradebookMode ? 'var(--c-brown)' : '#e5e7eb';
+    btn.style.color = mathGradebookMode ? 'white' : '#6b7280';
+  }
+  if (warning) warning.style.display = mathGradebookMode ? '' : 'none';
+  if (row) row.style.borderColor = mathGradebookMode ? 'var(--c-brown)' : 'var(--c-pale)';
 }
 
 // ── Calendar ICS URLs ─────────────────────
@@ -3324,6 +3376,15 @@ function renderGradebook() {
   const data = getGbData();
   const cls = data.classes[gbClassIdx] || null;
   let html = '<div class="fade-in">';
+
+  // ── Math Gradebook banner ──
+  if (mathGradebookMode) {
+    html += `<div style="margin-bottom:12px;padding:9px 16px;border-radius:12px;background:#fef9c3;border:2px solid #eab308;display:flex;align-items:center;gap:10px">
+      <span style="font-size:16px">📒</span>
+      <span style="font-size:12px;font-weight:700;color:#713f12;flex:1">Math Gradebook Mode — data is separate from the main gradebook</span>
+      <button onclick="setSettingsTab('gradebook');openSettings()" style="font-size:10px;font-weight:700;color:#92400e;background:transparent;border:1.5px solid #d97706;border-radius:6px;padding:3px 8px;cursor:pointer">Settings</button>
+    </div>`;
+  }
 
   // ── Row 1: Class tabs + Charts toggle
   html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
