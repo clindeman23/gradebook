@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Seed Math Report Card</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 32px; background: #fdf9f4; }
+  h2 { color: #5A2D0C; }
+  pre { background: #f0f0f0; padding: 12px; border-radius: 8px; font-size: 12px; max-height: 300px; overflow: auto; }
+  .ok { color: #15803d; font-weight: bold; }
+  .err { color: #dc2626; font-weight: bold; }
+</style>
+</head>
+<body>
+<h2>📒 Seed Math Report Card — Period 1 Pre-Cal</h2>
+<p>This page seeds Period 1 student grades into the Math Report Card.<br>
+<strong>Existing Math RC data will be replaced.</strong></p>
+<pre id="log">Running...</pre>
+<script>
+const log = s => { const el = document.getElementById('log'); el.textContent += '\n' + s; console.log(s); };
+
+const period1Students = [
+  { id:'rc-p1-cain',         name:'Cain, Hayden',         q1:'B-', q2:'B',  midExam:'C',  q3:'C',  q4:'B',  finExam:'D'  },
+  { id:'rc-p1-cressionnie',  name:'Cressionnie, Zoey',    q1:'B',  q2:'B',  midExam:'F',  q3:'D',  q4:'B',  finExam:'F'  },
+  { id:'rc-p1-diaz',         name:'Diaz, Kassie',         q1:'A',  q2:'A+', midExam:'A+', q3:'A+', q4:'A',  finExam:'B+' },
+  { id:'rc-p1-edwards',      name:'Edwards, Alexis',      q1:'B+', q2:'B',  midExam:'F',  q3:'A-', q4:'A',  finExam:'F'  },
+  { id:'rc-p1-fortier',      name:'Fortier, Kate',        q1:'A',  q2:'A',  midExam:'A',  q3:'A',  q4:'A-', finExam:'B+' },
+  { id:'rc-p1-glavinic',     name:'Glavinic, Mila',       q1:'B',  q2:'D',  midExam:'F',  q3:'D+', q4:'B-', finExam:'F'  },
+  { id:'rc-p1-guillot',      name:'Guillot, Lyla',        q1:'B',  q2:'B',  midExam:'D',  q3:'B',  q4:'B',  finExam:'B-' },
+  { id:'rc-p1-klibert',      name:'Klibert, Gabrielle',   q1:'B',  q2:'B+', midExam:'B-', q3:'B',  q4:'B+', finExam:'D+' },
+  { id:'rc-p1-knight',       name:'Knight, Delaney',      q1:'C',  q2:'B',  midExam:'D',  q3:'B',  q4:'B+', finExam:'D+' },
+  { id:'rc-p1-labruzzo',     name:'LaBruzzo, Emme',       q1:'D+', q2:'C',  midExam:'F',  q3:'C',  q4:'A',  finExam:'F'  },
+  { id:'rc-p1-mack',         name:'Mack, Abigail',        q1:'D+', q2:'C-', midExam:'F',  q3:'D+', q4:'B-', finExam:'F'  },
+  { id:'rc-p1-mills',        name:'Mills, Drew',          q1:'B+', q2:'A',  midExam:'A',  q3:'A',  q4:'A-', finExam:'B'  },
+  { id:'rc-p1-rabito',       name:'Rabito, Ava',          q1:'B+', q2:'B',  midExam:'B',  q3:'A-', q4:'B+', finExam:'C+' },
+  { id:'rc-p1-salsman',      name:'Salsman, Addison',     q1:'B-', q2:'B',  midExam:'C',  q3:'B',  q4:'B',  finExam:'B'  }
+];
+
+try {
+  // Read existing data so we don't wipe other periods
+  let existing = null;
+  try { existing = JSON.parse(localStorage.getItem('mca-math-rc') || 'null'); } catch(e) {}
+  if (!existing || !existing.periods) {
+    existing = { periods: [
+      { name:'Period 1', students:[] },
+      { name:'Period 2', students:[] },
+      { name:'Period 3', students:[] },
+      { name:'Period 4', students:[] },
+      { name:'Period 5', students:[] }
+    ]};
+  }
+  while (existing.periods.length < 5) {
+    existing.periods.push({ name:'Period ' + (existing.periods.length+1), students:[] });
+  }
+
+  // Replace Period 1 students
+  existing.periods[0].name = 'Period 1';
+  existing.periods[0].students = period1Students;
+
+  localStorage.setItem('mca-math-rc', JSON.stringify(existing));
+  localStorage.setItem('mca-math-gb-on', 'true');
+
+  log('✅ Period 1: ' + period1Students.length + ' students seeded');
+  log('✅ Math Gradebook mode: ON');
+  log('\nRedirecting to app in 2 seconds...');
+  document.getElementById('log').innerHTML += '\n<span class="ok">✅ Done! Redirecting...</span>';
+
+  setTimeout(() => { window.location.href = '/'; }, 2000);
+} catch(e) {
+  log('❌ Error: ' + e.message);
+  document.getElementById('log').innerHTML += '\n<span class="err">❌ Error: ' + e.message + '</span>';
+}
+</script>
+</body>
+</html>
