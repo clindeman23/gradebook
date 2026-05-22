@@ -393,6 +393,17 @@
       </svg>
       <span class="nav-label">Gradebook</span>
     </button>
+    <!-- Attendance tab -->
+    <button id="attendance-btn" onclick="toggleAttendance()" title="Attendance"
+      class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2"
+      style="color:var(--c-medium);border-color:var(--c-pale);background:transparent"
+      onmouseover="if(!attendanceMode){this.style.background='var(--c-pale)'}"
+      onmouseout="if(!attendanceMode){this.style.background='transparent'}">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span class="nav-label">Attendance</span>
+    </button>
     <button onclick="refresh()" title="Refresh" class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors" style="color:var(--c-light)" onmouseover="this.style.background=`var(--c-pale)`" onmouseout="this.style.background='transparent'">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -2143,15 +2154,17 @@ function renderCalendarTab() {
 
 function _deactivateAllTabs(except) {
   const tabs = {
-    'gradebook': 'gradebook-btn',
-    'classPlan': 'class-plan-btn',
-    'calendarTab': 'calendar-tab-btn'
+    'gradebook':   'gradebook-btn',
+    'classPlan':   'class-plan-btn',
+    'calendarTab': 'calendar-tab-btn',
+    'attendance':  'attendance-btn'
   };
   for (const [key, btnId] of Object.entries(tabs)) {
     if (key === except) continue;
-    if (key === 'gradebook') gradebookMode = false;
-    if (key === 'classPlan') classPlanMode = false;
+    if (key === 'gradebook')   gradebookMode   = false;
+    if (key === 'classPlan')   classPlanMode   = false;
     if (key === 'calendarTab') calendarTabMode = false;
+    if (key === 'attendance')  attendanceMode  = false;
     const b = document.getElementById(btnId);
     if (b) { b.style.background='transparent'; b.style.color='var(--c-medium)'; b.style.borderColor='var(--c-pale)'; }
   }
@@ -3406,24 +3419,12 @@ function renderGradebook() {
   html += `</div>`;
   if (cls) {
     const _chartsOn = gbSubView === 'charts';
-    const _attOn    = gbSubView === 'attendance';
     const _clrC = cls.color || 'var(--c-brown)';
     html += `<button onclick="toggleCharts()" style="padding:8px 20px;border-radius:20px;font-size:13px;font-weight:800;border:2px solid;cursor:pointer;transition:all .15s;flex-shrink:0;letter-spacing:.01em;
       ${_chartsOn
         ? `background:${_clrC};color:white;border-color:${_clrC};box-shadow:0 3px 10px ${_clrC}50`
         : `background:white;color:var(--c-brown);border-color:var(--c-brown);box-shadow:0 1px 4px rgba(0,0,0,.08)`}">
       📊 Charts
-    </button>`;
-    // Attendance button — badge shows today's absent count if any
-    const _todayAtt = getAttData(cls.id)[_todayStr()] || {};
-    const _absCnt = Object.values(_todayAtt.records||{}).filter(r=>r.status==='A').length;
-    const _tarCnt = Object.values(_todayAtt.records||{}).filter(r=>r.status==='T').length;
-    const _attBadge = (_absCnt+_tarCnt) > 0 ? ` <span style="display:inline-flex;align-items:center;justify-content:center;background:#dc2626;color:white;border-radius:99px;font-size:9px;font-weight:800;width:16px;height:16px;margin-left:3px;vertical-align:middle">${_absCnt+_tarCnt}</span>` : '';
-    html += `<button onclick="gbSubView='attendance';renderGradebook()" style="padding:8px 20px;border-radius:20px;font-size:13px;font-weight:800;border:2px solid;cursor:pointer;transition:all .15s;flex-shrink:0;
-      ${_attOn
-        ? `background:#dc2626;color:white;border-color:#dc2626;box-shadow:0 3px 10px rgba(220,38,38,.4)`
-        : `background:white;color:#dc2626;border-color:#fca5a5;box-shadow:0 1px 4px rgba(0,0,0,.08)`}">
-      📋 Attend${_attBadge}
     </button>`;
   }
   html += `</div>`;
@@ -3510,14 +3511,6 @@ function renderGradebook() {
   if (gbSubView.startsWith('exam-entry-')) {
     const _eeType = gbSubView.replace('exam-entry-', '');
     html += _examEntryBodyHtml(cls, _eeType);
-    html += '</div>';
-    _mc.innerHTML = html;
-    _mc.style.background = '';
-    return;
-  }
-
-  if (gbSubView === 'attendance') {
-    html += _attendanceBodyHtml(cls);
     html += '</div>';
     _mc.innerHTML = html;
     _mc.style.background = '';
@@ -5849,23 +5842,22 @@ function renderCharts() {
 //  HELPERS
 // ════════════════════════════════════════════════════════
 // ════════════════════════════════════════════════════════
-//  ATTENDANCE
+//  ATTENDANCE — compact grid tab
 // ════════════════════════════════════════════════════════
-let gbAttDate = _todayStr(); // currently viewed date
+let attendanceMode = false;
+let attClassIdx = 0;
 
-function _todayStr() {
-  return new Date().toISOString().slice(0,10);
+function _todayStr() { return new Date().toISOString().slice(0,10); }
+function _fmtDateShort(iso) {
+  const [,m,d] = iso.split('-');
+  const days = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const day = days[new Date(iso+'T12:00:00').getDay()];
+  return `${day}<br>${+m}/${+d}`;
 }
-function _fmtDate(iso) {
+function _fmtDateLong(iso) {
   const [y,m,d] = iso.split('-');
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const isToday = iso === _todayStr();
-  return `${months[+m-1]} ${+d}, ${y}${isToday ? ' (Today)' : ''}`;
-}
-function _shiftDate(iso, days) {
-  const d = new Date(iso + 'T12:00:00');
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0,10);
+  return `${months[+m-1]} ${+d}, ${y}${iso===_todayStr()?' (Today)':''}`;
 }
 
 function getAttData(classId) {
@@ -5876,266 +5868,216 @@ function saveAttData(classId, d) {
   localStorage.setItem('mca-att-'+classId, JSON.stringify(d));
 }
 
-function attCycleStatus(classId, stuId) {
-  const data = getAttData(classId);
-  if (!data[gbAttDate]) data[gbAttDate] = { testDay: false, records: {} };
-  const cur = (data[gbAttDate].records[stuId] || {}).status || 'P';
-  const next = cur === 'P' ? 'A' : cur === 'A' ? 'T' : 'P';
-  const testDay = data[gbAttDate].testDay || false;
-  if (next === 'P') {
-    delete data[gbAttDate].records[stuId];
+function toggleAttendance() {
+  _deactivateAllTabs('attendance');
+  attendanceMode = !attendanceMode;
+  const btn = document.getElementById('attendance-btn');
+  if (attendanceMode) {
+    btn.style.background = 'var(--c-brown)'; btn.style.color = 'white'; btn.style.borderColor = 'var(--c-brown)';
+    renderAttendance();
   } else {
-    data[gbAttDate].records[stuId] = { status: next, missedTest: testDay && next !== 'P' };
-  }
-  saveAttData(classId, data);
-  // Fast re-render just the student row
-  const rowEl = document.getElementById('att-row-'+stuId);
-  if (rowEl) {
-    const students = getGbData().classes.find(c=>c.id===classId)?.students || [];
-    const stu = students.find(s=>s.id===stuId);
-    if (stu) rowEl.outerHTML = _attStudentRow(classId, stu, data[gbAttDate]);
-  }
-  // Update the header counts
-  _attRefreshCounts(classId, data[gbAttDate]);
-}
-
-function attToggleMissedTest(classId, stuId) {
-  const data = getAttData(classId);
-  if (!data[gbAttDate]?.records?.[stuId]) return;
-  data[gbAttDate].records[stuId].missedTest = !data[gbAttDate].records[stuId].missedTest;
-  saveAttData(classId, data);
-  const rowEl = document.getElementById('att-row-'+stuId);
-  if (rowEl) {
-    const students = getGbData().classes.find(c=>c.id===classId)?.students || [];
-    const stu = students.find(s=>s.id===stuId);
-    if (stu) rowEl.outerHTML = _attStudentRow(classId, stu, data[gbAttDate]);
+    btn.style.background = 'transparent'; btn.style.color = 'var(--c-medium)'; btn.style.borderColor = 'var(--c-pale)';
+    render();
   }
 }
 
-function attToggleTestDay(classId) {
-  const data = getAttData(classId);
-  if (!data[gbAttDate]) data[gbAttDate] = { testDay: false, records: {} };
-  data[gbAttDate].testDay = !data[gbAttDate].testDay;
-  const td = data[gbAttDate].testDay;
-  // Auto-set missedTest on all currently absent/tardy students
-  Object.entries(data[gbAttDate].records || {}).forEach(([sid, r]) => {
-    if (r.status === 'A' || r.status === 'T') r.missedTest = td;
-  });
-  saveAttData(classId, data);
-  renderGradebook();
-}
+function renderAttendance() {
+  if (!attendanceMode) return;
+  const mc = document.getElementById('main-content');
+  const gbData = getGbData();
+  const classes = gbData.classes || [];
 
-function attMarkAllPresent(classId) {
-  const data = getAttData(classId);
-  if (!data[gbAttDate]) data[gbAttDate] = { testDay: false, records: {} };
-  data[gbAttDate].records = {};
-  saveAttData(classId, data);
-  renderGradebook();
-}
-
-function attNavDate(classId, days) {
-  gbAttDate = _shiftDate(gbAttDate, days);
-  renderGradebook();
-}
-
-function _attRefreshCounts(classId, dayData) {
-  const recs = dayData?.records || {};
-  const abs = Object.values(recs).filter(r=>r.status==='A').length;
-  const tar = Object.values(recs).filter(r=>r.status==='T').length;
-  const mt  = Object.values(recs).filter(r=>r.missedTest).length;
-  const el = document.getElementById('att-summary-line');
-  if (!el) return;
-  const parts = [];
-  if (abs > 0) parts.push(`<span style="color:#dc2626;font-weight:700">${abs} absent</span>`);
-  if (tar > 0) parts.push(`<span style="color:#d97706;font-weight:700">${tar} tardy</span>`);
-  if (mt  > 0) parts.push(`<span style="color:#7c3aed;font-weight:700">${mt} missed test</span>`);
-  el.innerHTML = parts.length ? parts.join(' · ') : '<span style="color:#16a34a;font-weight:700">All present ✓</span>';
-  // Update toolbar badge
-  const badgeBtn = document.querySelector('[data-att-btn]');
-  if (badgeBtn) {
-    const total = abs + tar;
-    const badgeEl = badgeBtn.querySelector('.att-badge');
-    if (badgeEl) { badgeEl.textContent = total || ''; badgeEl.style.display = total ? '' : 'none'; }
+  if (!classes.length) {
+    mc.innerHTML = `<div class="fade-in" style="text-align:center;padding:60px 20px;color:var(--c-text-muted);font-size:14px">
+      No classes yet — add classes in the <strong>Gradebook</strong> tab first and students will appear here automatically.</div>`;
+    return;
   }
-}
 
-function _attStudentRow(classId, stu, dayData) {
-  const rec = dayData?.records?.[stu.id] || {};
-  const status = rec.status || 'P';
-  const testDay = dayData?.testDay || false;
-  const missedTest = rec.missedTest || false;
-
-  const statusStyles = {
-    P: 'background:#dcfce7;color:#15803d;border-color:#86efac',
-    A: 'background:#fee2e2;color:#dc2626;border-color:#fca5a5',
-    T: 'background:#fef9c3;color:#d97706;border-color:#fde68a'
-  };
-  const statusLabels = { P:'Present', A:'Absent', T:'Tardy' };
-
-  const showMissedTest = (status === 'A' || status === 'T');
-
-  return `<div id="att-row-${stu.id}" style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:12px;margin-bottom:5px;background:${status==='A'?'#fff5f5':status==='T'?'#fffbeb':'white'};border:1.5px solid ${status==='A'?'#fecaca':status==='T'?'#fde68a':'#f3f4f6'};transition:all .15s">
-    <button onclick="attCycleStatus('${classId}','${stu.id}')"
-      style="width:80px;flex-shrink:0;padding:6px 10px;border-radius:10px;font-size:12px;font-weight:800;border:2px solid;cursor:pointer;text-align:center;${statusStyles[status]};transition:all .12s"
-      title="Tap to cycle: Present → Absent → Tardy">
-      ${status === 'P' ? '✓ ' : status === 'A' ? '✗ ' : '~ '}${statusLabels[status]}
-    </button>
-    <span style="flex:1;font-size:13px;font-weight:600;color:var(--c-text-primary)">${escHtml(stu.name || '')}</span>
-    ${showMissedTest ? `<button onclick="attToggleMissedTest('${classId}','${stu.id}')"
-      style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;border:1.5px solid;cursor:pointer;transition:all .12s;
-      ${missedTest ? 'background:#ede9fe;color:#7c3aed;border-color:#c4b5fd' : 'background:#f9fafb;color:#9ca3af;border-color:#e5e7eb'}"
-      title="Toggle missed test flag">
-      📝 ${missedTest ? 'Missed Test' : 'No Test'}
-    </button>` : ''}
-  </div>`;
-}
-
-function _attendanceBodyHtml(cls) {
-  const attData = getAttData(cls.id);
-  const dayData = attData[gbAttDate] || { testDay: false, records: {} };
+  if (attClassIdx >= classes.length) attClassIdx = 0;
+  const cls = classes[attClassIdx];
   const students = cls.students || [];
-  const testDay = dayData.testDay || false;
-  const records = dayData.records || {};
+  const attData = getAttData(cls.id);
 
-  const absCnt = Object.values(records).filter(r=>r.status==='A').length;
-  const tarCnt = Object.values(records).filter(r=>r.status==='T').length;
-  const mtCnt  = Object.values(records).filter(r=>r.missedTest).length;
+  // Collect all recorded dates, show last 20 max, always include today
+  const today = _todayStr();
+  const recorded = Object.keys(attData).filter(d => Object.keys(attData[d].records||{}).length > 0 || attData[d].testDay);
+  const dateSet = new Set([...recorded, today]);
+  const dates = [...dateSet].sort().slice(-20); // up to 20 most recent
 
-  const summaryParts = [];
-  if (absCnt > 0) summaryParts.push(`<span style="color:#dc2626;font-weight:700">${absCnt} absent</span>`);
-  if (tarCnt > 0) summaryParts.push(`<span style="color:#d97706;font-weight:700">${tarCnt} tardy</span>`);
-  if (mtCnt  > 0) summaryParts.push(`<span style="color:#7c3aed;font-weight:700">${mtCnt} missed test</span>`);
-  const summaryHtml = summaryParts.length
-    ? summaryParts.join(' · ')
-    : '<span style="color:#16a34a;font-weight:700">All present ✓</span>';
+  let html = '<div class="fade-in">';
 
-  let html = '';
+  // ── Class tabs ──
+  html += `<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:10px">`;
+  classes.forEach((c, i) => {
+    const active = i === attClassIdx;
+    const todayRec = Object.values((getAttData(c.id)[today] || {}).records || {});
+    const cnt = todayRec.filter(r => r.status === 'A' || r.status === 'T').length;
+    html += `<button onclick="attClassIdx=${i};renderAttendance()"
+      style="padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;border:2px solid;cursor:pointer;position:relative;
+      ${active ? `background:var(--c-brown);color:white;border-color:var(--c-brown)` : `background:white;color:var(--c-text-secondary);border-color:var(--c-pale)`}">
+      ${escHtml(c.name||`Class ${i+1}`)}${cnt > 0 ? `<span style="position:absolute;top:-5px;right:-5px;background:#dc2626;color:white;border-radius:99px;font-size:9px;font-weight:800;width:15px;height:15px;display:flex;align-items:center;justify-content:center">${cnt}</span>` : ''}
+    </button>`;
+  });
+  html += `<div style="flex:1"></div>`;
+  html += `<button onclick="attExportCsv('${cls.id}')" style="padding:5px 11px;border-radius:9px;font-size:11px;font-weight:700;border:1.5px solid var(--c-pale);background:white;color:var(--c-text-secondary);cursor:pointer;margin-right:5px">⬇ Export</button>`;
+  html += `</div>`;
 
-  // ── Top bar: back + date nav ──
-  html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-    <button onclick="gbSubView='grades';renderGradebook()" style="padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;border:1.5px solid var(--c-pale);background:white;color:var(--c-text-secondary);cursor:pointer">← Grades</button>
-    <button onclick="attNavDate('${cls.id}',-1)" style="padding:7px 10px;border-radius:10px;font-size:13px;border:1.5px solid var(--c-pale);background:white;color:var(--c-text-secondary);cursor:pointer;font-weight:700">‹</button>
-    <span style="font-size:13px;font-weight:700;color:var(--c-text-primary);min-width:160px;text-align:center">${_fmtDate(gbAttDate)}</span>
-    <button onclick="attNavDate('${cls.id}',1)" style="padding:7px 10px;border-radius:10px;font-size:13px;border:1.5px solid var(--c-pale);background:white;color:var(--c-text-secondary);cursor:pointer;font-weight:700">›</button>
-    <button onclick="gbAttDate='${_todayStr()}';renderGradebook()" style="padding:6px 12px;border-radius:10px;font-size:11px;font-weight:700;border:1.5px solid var(--c-pale);background:white;color:var(--c-brown);cursor:pointer">Today</button>
-    <div style="flex:1"></div>
-    <button onclick="attOpenHistory('${cls.id}')" style="padding:6px 12px;border-radius:10px;font-size:11px;font-weight:700;border:1.5px solid var(--c-pale);background:white;color:var(--c-text-secondary);cursor:pointer">📊 History</button>
-  </div>`;
-
-  // ── Controls: test day toggle + all present ──
-  html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:10px 14px;border-radius:14px;background:white;border:1.5px solid var(--c-pale);flex-wrap:wrap">
-    <button onclick="attToggleTestDay('${cls.id}')"
-      style="display:flex;align-items:center;gap:7px;padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;border:2px solid;cursor:pointer;transition:all .15s;
-      ${testDay ? 'background:#ede9fe;color:#7c3aed;border-color:#c4b5fd' : 'background:#f9fafb;color:#6b7280;border-color:#e5e7eb'}">
-      <span style="font-size:14px">📝</span> Test Day ${testDay ? 'ON' : 'OFF'}
-      <span style="width:28px;height:16px;border-radius:99px;position:relative;background:${testDay?'#7c3aed':'#d1d5db'};flex-shrink:0;display:inline-block">
-        <span style="position:absolute;top:2px;${testDay?'left:14px':'left:2px'};width:12px;height:12px;border-radius:50%;background:white;transition:left .15s"></span>
-      </span>
-    </button>
-    <div style="font-size:11px;color:var(--c-text-muted)">${testDay ? 'Absent/tardy students auto-flagged for missed test' : 'Toggle on if there\'s a test today'}</div>
-    <div style="flex:1"></div>
-    <button onclick="attMarkAllPresent('${cls.id}')" style="padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;border:2px solid #86efac;background:#dcfce7;color:#15803d;cursor:pointer">✓ All Present</button>
-  </div>`;
-
-  // ── Summary line ──
-  html += `<div id="att-summary-line" style="font-size:12px;margin-bottom:10px;padding:0 4px">${summaryHtml}</div>`;
-
-  // ── Student rows ──
-  if (students.length === 0) {
-    html += `<div style="text-align:center;padding:40px;color:var(--c-text-muted);font-size:13px">No students in this class yet.</div>`;
+  // ── Compact grid ──
+  if (!students.length) {
+    html += `<div style="text-align:center;padding:50px 20px;color:var(--c-text-muted);font-size:13px;background:white;border-radius:14px;border:2px dashed var(--c-pale)">No students in <strong>${escHtml(cls.name)}</strong> yet — add them in the Gradebook tab.</div>`;
   } else {
-    html += `<div>`;
-    students.forEach(stu => {
-      html += _attStudentRow(cls.id, stu, dayData);
+    html += `<div style="overflow-x:auto;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06)">
+    <table id="att-grid" style="border-collapse:collapse;background:white;width:100%;min-width:max-content">
+      <thead>
+        <tr>
+          <th style="padding:8px 12px;text-align:left;background:var(--c-brown);color:white;font-size:11px;font-weight:700;border-radius:14px 0 0 0;min-width:150px;position:sticky;left:0;z-index:2">Student</th>`;
+    dates.forEach((d, di) => {
+      const dd = attData[d] || {};
+      const isToday = d === today;
+      const isTest = dd.testDay || false;
+      const isLast = di === dates.length - 1;
+      html += `<th onclick="attToggleTestDay('${cls.id}','${d}')" title="Click to toggle Test Day for ${_fmtDateLong(d)}"
+        style="padding:5px 3px;text-align:center;background:${isToday?'#3d1a06':'var(--c-brown)'};color:${isTest?'#fde68a':'white'};font-size:10px;font-weight:700;min-width:46px;cursor:pointer;border-left:1px solid rgba(255,255,255,.15);${isLast?'border-radius:0 14px 0 0':''}">
+        ${_fmtDateShort(d)}${isTest ? '<br><span style="font-size:9px">📝</span>' : ''}
+      </th>`;
     });
-    html += `</div>`;
+    html += `</tr></thead><tbody>`;
+
+    students.forEach((stu, si) => {
+      const rowBg = si % 2 === 1 ? '#faf7f4' : 'white';
+      html += `<tr id="att-tr-${stu.id}" style="background:${rowBg}">
+        <td style="padding:5px 12px;font-size:12px;font-weight:600;color:var(--c-text-primary);border-bottom:1px solid #f0ece6;white-space:nowrap;position:sticky;left:0;background:${rowBg};z-index:1">${escHtml(stu.name||'')}</td>`;
+      dates.forEach(d => {
+        const rec = (attData[d]?.records||{})[stu.id] || {};
+        const st = rec.status || '';
+        const mt = rec.missedTest || false;
+        const isToday = d === today;
+        html += _attCell(cls.id, stu.id, d, st, mt, isToday);
+      });
+      html += `</tr>`;
+    });
+
+    // Totals row
+    html += `<tr style="background:#f5f0ea">
+      <td style="padding:5px 12px;font-size:10px;font-weight:800;color:var(--c-medium);border-top:2px solid var(--c-pale);position:sticky;left:0;background:#f5f0ea;z-index:1">ABSENT / TARDY</td>`;
+    dates.forEach(d => {
+      const recs = Object.values(attData[d]?.records||{});
+      const a = recs.filter(r=>r.status==='A').length;
+      const t = recs.filter(r=>r.status==='T').length;
+      html += `<td style="padding:4px 2px;text-align:center;font-size:10px;font-weight:800;border-top:2px solid var(--c-pale);border-left:1px solid #f0ece6">
+        ${a>0?`<span style="color:#dc2626">${a}A</span>`:''}${a>0&&t>0?' ':''}${t>0?`<span style="color:#d97706">${t}T</span>`:''}${a===0&&t===0?'<span style="color:#d1d5db">—</span>':''}
+      </td>`;
+    });
+    html += `</tr></tbody></table></div>`;
   }
 
   // ── Legend ──
-  html += `<div style="display:flex;gap:16px;margin-top:14px;padding:10px 14px;border-radius:12px;background:#f9fafb;font-size:11px;color:var(--c-text-muted);flex-wrap:wrap">
-    <span>Tap a student's status button to cycle:</span>
-    <span style="color:#15803d;font-weight:700">✓ Present</span>
-    <span>→</span>
-    <span style="color:#dc2626;font-weight:700">✗ Absent</span>
-    <span>→</span>
-    <span style="color:#d97706;font-weight:700">~ Tardy</span>
-    <span>→</span>
-    <span style="color:#15803d;font-weight:700">✓ Present</span>
-    <span style="margin-left:auto">Auto-saves instantly</span>
+  html += `<div style="display:flex;gap:14px;align-items:center;margin-top:8px;font-size:10px;color:var(--c-text-muted);flex-wrap:wrap;padding:0 2px">
+    <span>Click cell to mark:</span>
+    <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:#fee2e2;border:1.5px solid #fca5a5;font-size:9px;font-weight:800;color:#dc2626;text-align:center;line-height:18px">A</span> Absent</span>
+    <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:#fef9c3;border:1.5px solid #fde68a;font-size:9px;font-weight:800;color:#d97706;text-align:center;line-height:18px">T</span> Tardy</span>
+    <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:#ede9fe;border:1.5px solid #c4b5fd;font-size:8px;font-weight:800;color:#7c3aed;text-align:center;line-height:18px">📝</span> Missed Test</span>
+    <span style="margin-left:auto">Click date header to mark Test Day</span>
   </div>`;
 
-  return html;
+  html += '</div>';
+  mc.innerHTML = html;
+  mc.style.background = '';
 }
 
-function attOpenHistory(classId) {
+function _attCell(classId, stuId, dateStr, status, missedTest, isToday) {
+  const isEmpty = !status;
+  const bg = status==='A' ? '#fee2e2' : status==='T' ? '#fef9c3' : (isToday ? '#f0fdf4' : 'transparent');
+  const border = status==='A' ? '1.5px solid #fca5a5' : status==='T' ? '1.5px solid #fde68a' : (isToday ? '1.5px solid #86efac' : '1.5px solid transparent');
+  const color = status==='A' ? '#dc2626' : status==='T' ? '#d97706' : '#d1d5db';
+  const label = status==='A' ? 'A' : status==='T' ? 'T' : (isToday ? '·' : '');
+  const mtDot = missedTest ? '<span style="position:absolute;top:1px;right:1px;width:5px;height:5px;border-radius:50%;background:#7c3aed"></span>' : '';
+  return `<td id="att-cell-${stuId}-${dateStr}" style="padding:3px 2px;text-align:center;border-bottom:1px solid #f0ece6;border-left:1px solid #f0ece6">
+    <div onclick="attCellClick('${classId}','${stuId}','${dateStr}')"
+      style="position:relative;width:36px;height:26px;border-radius:6px;margin:0 auto;cursor:pointer;background:${bg};border:${border};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${color};transition:all .1s;user-select:none"
+      onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">${label}${mtDot}</div>
+  </td>`;
+}
+
+function attCellClick(classId, stuId, dateStr) {
   const data = getAttData(classId);
-  const days = Object.keys(data).sort().reverse();
-  const cls = getGbData().classes.find(c=>c.id===classId);
-
-  const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
-
-  let body = `<div style="background:white;border-radius:18px;padding:24px;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
-      <div style="font-size:16px;font-weight:800;color:var(--c-brown);flex:1">📋 Attendance History — ${escHtml(cls?.name||'')}</div>
-      <button onclick="this.closest('.att-history-modal').remove()" style="width:28px;height:28px;border-radius:8px;border:none;background:#f3f4f6;cursor:pointer;font-size:14px">✕</button>
-    </div>`;
-
-  if (!days.length) {
-    body += `<p style="color:var(--c-text-muted);font-size:13px">No attendance recorded yet.</p>`;
+  if (!data[dateStr]) data[dateStr] = { testDay: false, records: {} };
+  const cur = (data[dateStr].records[stuId] || {}).status || '';
+  const testDay = data[dateStr].testDay || false;
+  // cycle: '' → 'A' → 'T' → ''
+  if (!cur) {
+    data[dateStr].records[stuId] = { status: 'A', missedTest: testDay };
+  } else if (cur === 'A') {
+    data[dateStr].records[stuId] = { status: 'T', missedTest: testDay };
   } else {
-    // Missed test summary
-    const allMissed = [];
-    days.forEach(d => {
-      Object.entries(data[d].records||{}).forEach(([sid, r]) => {
-        if (r.missedTest) {
-          const stu = cls?.students?.find(s=>s.id===sid);
-          allMissed.push({ date:d, name:stu?.name||sid, status:r.status });
-        }
-      });
-    });
-    if (allMissed.length) {
-      body += `<div style="margin-bottom:16px;padding:12px 14px;border-radius:12px;background:#ede9fe;border:1.5px solid #c4b5fd">
-        <div style="font-size:12px;font-weight:800;color:#7c3aed;margin-bottom:8px">📝 Missed Tests (${allMissed.length})</div>`;
-      allMissed.forEach(m => {
-        body += `<div style="font-size:12px;color:#5b21b6;padding:2px 0">${_fmtDate(m.date)} — ${escHtml(m.name)} <span style="color:${m.status==='A'?'#dc2626':'#d97706'}">(${m.status==='A'?'Absent':'Tardy'})</span></div>`;
-      });
-      body += `</div>`;
-    }
-
-    // Daily log
-    days.forEach(d => {
-      const dd = data[d];
-      const recs = dd.records || {};
-      const abs = Object.entries(recs).filter(([,r])=>r.status==='A');
-      const tar = Object.entries(recs).filter(([,r])=>r.status==='T');
-      const total = abs.length + tar.length;
-      body += `<div style="margin-bottom:10px;padding:10px 14px;border-radius:12px;border:1.5px solid ${total>0?'#fecaca':'#dcfce7'};background:${total>0?'#fff5f5':'#f0fdf4'}">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:${total?'8px':'0'}">
-          <span style="font-size:12px;font-weight:700;color:var(--c-text-primary);flex:1">${_fmtDate(d)}</span>
-          ${dd.testDay?'<span style="font-size:10px;font-weight:700;color:#7c3aed;background:#ede9fe;padding:2px 7px;border-radius:6px">📝 TEST</span>':''}
-          <span style="font-size:11px;font-weight:700;color:${total>0?'#dc2626':'#15803d'}">${total===0?'All Present':total+' out'}</span>
-        </div>`;
-      if (abs.length) {
-        abs.forEach(([sid,r]) => {
-          const stu = cls?.students?.find(s=>s.id===sid);
-          body += `<div style="font-size:11px;color:#dc2626;padding:1px 0">✗ ${escHtml(stu?.name||sid)}${r.missedTest?' 📝':''}</div>`;
-        });
-      }
-      if (tar.length) {
-        tar.forEach(([sid,r]) => {
-          const stu = cls?.students?.find(s=>s.id===sid);
-          body += `<div style="font-size:11px;color:#d97706;padding:1px 0">~ ${escHtml(stu?.name||sid)}${r.missedTest?' 📝':''}</div>`;
-        });
-      }
-      body += `</div>`;
-    });
+    delete data[dateStr].records[stuId];
+    // Clean up empty date entries
+    if (!Object.keys(data[dateStr].records).length && !data[dateStr].testDay) delete data[dateStr];
   }
-  body += `</div>`;
-  modal.innerHTML = body;
-  modal.classList.add('att-history-modal');
-  modal.addEventListener('mousedown', e => { if (e.target===modal) modal.remove(); });
-  document.body.appendChild(modal);
+  saveAttData(classId, data);
+  // Patch just the cell (no full re-render needed)
+  const cellEl = document.getElementById(`att-cell-${stuId}-${dateStr}`);
+  if (cellEl) {
+    const dd = data[dateStr] || {};
+    const rec = (dd.records||{})[stuId] || {};
+    const isToday = dateStr === _todayStr();
+    cellEl.outerHTML = _attCell(classId, stuId, dateStr, rec.status||'', rec.missedTest||false, isToday);
+  }
+  // Patch totals row cell
+  _attRefreshTotals(classId, dateStr, data);
+}
+
+function attToggleTestDay(classId, dateStr) {
+  const data = getAttData(classId);
+  if (!data[dateStr]) data[dateStr] = { testDay: false, records: {} };
+  data[dateStr].testDay = !data[dateStr].testDay;
+  const td = data[dateStr].testDay;
+  Object.values(data[dateStr].records || {}).forEach(r => { if (r.status==='A'||r.status==='T') r.missedTest = td; });
+  saveAttData(classId, data);
+  renderAttendance(); // header re-render needed for 📝 indicator
+}
+
+function _attRefreshTotals(classId, dateStr, data) {
+  // Update totals row for this column
+  const recs = Object.values((data[dateStr]||{}).records||{});
+  const a = recs.filter(r=>r.status==='A').length;
+  const t = recs.filter(r=>r.status==='T').length;
+  // Find the totals cell — it's the last td in the column
+  // Re-render is simplest since totals row cells don't have IDs
+  // Just re-render the last row by doing a mini DOM update
+  const tds = document.querySelectorAll(`#att-grid tbody tr:last-child td`);
+  const dates = [...document.querySelectorAll('#att-grid thead th')].slice(1).map(th => {
+    // derive date from onclick attr
+    const m = th.getAttribute('onclick')||'';
+    const match = m.match(/'(\d{4}-\d{2}-\d{2})'/);
+    return match ? match[1] : null;
+  });
+  const colIdx = dates.indexOf(dateStr);
+  if (colIdx >= 0 && tds[colIdx+1]) {
+    tds[colIdx+1].innerHTML = `${a>0?`<span style="color:#dc2626">${a}A</span>`:''}${a>0&&t>0?' ':''}${t>0?`<span style="color:#d97706">${t}T</span>`:''}${a===0&&t===0?'<span style="color:#d1d5db">—</span>':''}`;
+  }
+}
+
+function attExportCsv(classId) {
+  const cls = getGbData().classes.find(c=>c.id===classId);
+  const students = cls?.students || [];
+  const data = getAttData(classId);
+  const dates = Object.keys(data).sort();
+  if (!dates.length) { alert('No attendance data recorded yet.'); return; }
+  let csv = 'Student,' + dates.join(',') + '\n';
+  students.forEach(stu => {
+    const row = [escHtml(stu.name||'')];
+    dates.forEach(d => {
+      const st = (data[d]?.records?.[stu.id]||{}).status || 'P';
+      row.push(st);
+    });
+    csv += row.join(',') + '\n';
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `attendance-${cls?.name||classId}-${_todayStr()}.csv`;
+  a.click();
 }
 
 // ════════════════════════════════════════════════════════
