@@ -463,7 +463,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
                 <div class="card p-6 accent-teal">
                     <span class="text-xs font-bold text-[#9A958C] tracking-wider uppercase">ACTIVE CURRICULUM</span>
-                    <p class="text-xl font-bold mt-2 text-[#82BDC3]" id="snap-active-unit">Europe & Russian Core</p>
+                    <p class="text-xl font-bold mt-2 text-[#82BDC3]" id="snap-active-unit">—</p>
                     <p class="text-xs text-gray-400 mt-1">Unit Progress • Active</p>
                 </div>
                 <div class="card p-6 accent-mauve">
@@ -835,7 +835,7 @@
                 </div>
                 <div class="flex gap-2">
                     <select id="standards-set-selector" onchange="changeStandardsSet(this.value)" class="border p-2.5 rounded-xl text-xs font-bold outline-none bg-white">
-                        <option value="WG_LA">World Geography (LA 2022)</option>
+                        <option value="CUSTOM">Custom Standards Set</option>
                         <option value="CC_ELA">Common Core ELA (Grades 11-12)</option>
                         <option value="NGSS">Next Gen Science (NGSS)</option>
                     </select>
@@ -902,7 +902,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="card p-6 accent-coral flex flex-col justify-between">
                     <div>
-                        <h4 class="font-bold text-sm mb-2 text-[#E67F76]">National Geographic Resource Portal</h4>
+                        <h4 class="font-bold text-sm mb-2 text-[#E67F76]">Resource Portal</h4>
                         <p class="text-xs text-gray-500 mb-4">Lesson guides, printable resources, maps, and curriculum templates.</p>
                     </div>
                     <button onclick="copyResourceLink('https://www.nationalgeographic.org/')" class="w-full py-2 bg-[#E67F76] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">Copy Resource Link</button>
@@ -1153,24 +1153,9 @@
     <script>
         // Academic Standards Libraries Dataset Database
         const STANDARDS_LIBRARIES = {
-            WG_LA: [
-                {
-                    strand: "Physical Systems & Geography",
-                    items: [
-                        { code: "WG.1.A", desc: "Analyze physical features (landforms, biomes, resources) shaping regional characteristics." },
-                        { code: "WG.1.B", desc: "Explain how climate and geography influence historical human settlement models." },
-                        { code: "WG.1.C", desc: "Evaluate how natural hazards alter trade and population distributions." }
-                    ]
-                },
-                {
-                    strand: "Human Systems & Geopolitics",
-                    items: [
-                        { code: "WG.2.A", desc: "Analyze population metrics, fertility profiles, and demographic models." },
-                        { code: "WG.2.B", desc: "Evaluate economic push/pull migration triggers and layout adaptations." },
-                        { code: "WG.2.C", desc: "Compare geopolitical alliances and supranational trade agreements." }
-                    ]
-                }
-            ],
+            WG_LA: [],   // renamed to "Custom Standards Set" — add your own via Settings > Standards
+            CUSTOM: [],  // add your own standards via Settings > Standards
+
             CC_ELA: [
                 {
                     strand: "Reading Literature & Informational",
@@ -1194,88 +1179,32 @@
         // Complete Default State Framework (Completely local/AI-purged workspace structure)
         const state = {
             profile: {
-                teacherName: 'Mrs. Rahman',
-                subjectName: 'Pre-Calculus / English I',
+                teacherName: '',
+                subjectName: '',
                 year: '2026-2027',
                 quote: '"Every day is a fresh opportunity to spark curiosity, build confidence, and inspire a lifelong love of learning."',
                 quoteAuthor: 'Daily Affirmation'
             },
             sections: [
-                { id: 'sec-1', name: 'Period A (Honors)' },
-                { id: 'sec-2', name: 'Period B (Honors)' }
+                { id: 'sec-1', name: 'Period 1' },
+                { id: 'sec-2', name: 'Period 2' }
             ],
             activeTheme: 'earthy',
-            activeStandardsSet: 'WG_LA',
+            activeStandardsSet: 'CUSTOM',
             customStandards: [],
             tasks: {
-                teacher: [
-                    { id: 't1', text: 'Grade European Union Map Packs', completed: false },
-                    { id: 't2', text: 'Draft Lecture Slides for Lesson 8', completed: true }
-                ],
-                admin: [
-                    { id: 'a1', text: 'Submit Mid-Term Roster Verification', completed: false }
-                ],
-                home: [
-                    { id: 'h1', text: 'Pick up groceries post-school', completed: false }
-                ]
+                teacher: [],
+                admin: [],
+                home: []
             },
-            schedule: {
-                '2026-08-13_Period 1': { label: 'Period A (Honors)', type: 'World Geography Honors A' },
-                '2026-08-13_Period 2': { label: 'Planning Window', type: 'Planning' },
-                '2026-08-14_Period 1': { label: 'Period B (Honors)', type: 'World Geography Honors B' }
-            },
-            units: [
-                {
-                    id: 'u1',
-                    title: 'Europe & Russian Core',
-                    weeks: '4',
-                    dates: 'Oct 14 - Nov 8',
-                    bigIdea: 'Geopolitics and geographic containment.',
-                    keyQuestion: 'How does geography drive supranational alliances?',
-                    globalResponsibility: 'Evaluating resource dependency models and clean energy transition benchmarks.',
-                    lessonOutline: '1. Supranationalism Intro\n2. Demographic Transitions\n3. Regional Review\n4. Formative Exam',
-                    contentSkills: 'Map analysis, isoline decoding.',
-                    assessments: 'Daily exit diagnostic, Map Quiz.',
-                    unitNotes: 'Plan for extra map practice materials; reference physical world atlas page 42.',
-                    standards: ['WG.1.A', 'WG.2.C']
-                }
-            ],
-            lessons: [
-                {
-                    id: 'l1',
-                    title: 'Introduction to Supranationalism',
-                    lClass: 'sec-1',
-                    duration: '90 mins',
-                    unit: 'Unit 5',
-                    standards: 'WG.2.C',
-                    objectives: 'Students will be able to analyze regional sovereignty trade-offs.',
-                    materials: 'EU Map templates, isoline datasets.',
-                    activities: '1. Bell Ringer (15m)\n2. Direct Instruction on Schengen treaties (30m)\n3. Interactive Map Work (30m)\n4. Exit Diagnostic (15m)',
-                    assessment: '15-question diagnostic exit check.',
-                    homework: 'Complete Map Pack Part A.',
-                    notes: 'Susan: seat near the front.'
-                }
-            ],
-            students: [
-                { id: 's1', name: 'Bell, Rebecca', period: 'sec-1', emoji: '🦋', notes: 'Seat near front.', avatarBg: '#FFB3C6' },
-                { id: 's2', name: 'Arthur, Michael', period: 'sec-1', emoji: '⭐', notes: 'Prefers printed packets.', avatarBg: '#FFE99A' },
-                { id: 's3', name: 'Evans, Janet', period: 'sec-2', emoji: '🐙', notes: 'Enjoys map projects.', avatarBg: '#B5EAD7' },
-                { id: 's4', name: 'Carter, Susan', period: 'sec-2', emoji: '🌈', notes: 'Extended work window accommodation.', avatarBg: '#AED6F1' }
-            ],
-            assignments: [
-                { id: 'as1', name: 'Map Pack A', category: 'formative', points: 50 },
-                { id: 'as2', name: 'EU Quiz', category: 'summative', points: 100 }
-            ],
-            grades: {
-                'sec-1_s1': { 'as1': 48, 'as2': 92 },
-                'sec-1_s2': { 'as1': 45, 'as2': 88 },
-                'sec-2_s3': { 'as1': 50, 'as2': 95 },
-                'sec-2_s4': { 'as1': 38, 'as2': 72 }
-            },
+            schedule: {},
+            units: [],
+            lessons: [],
+            students: [],
+            assignments: [],
+            grades: {},
             attendance: {},
-            reflections: [
-                { date: 'June 15, 2026', lesson: 'Schengen Borders Study', pacing: '4', engagement: '5', text: 'Students navigated the map analysis perfectly. Map work took slightly longer than planned.' }
-            ],
+            reflections: [],
             syncSettings: {
                 syncId: '',
                 password: '',
@@ -1483,8 +1412,8 @@
             // Core Migration Layer
             if (!state.profile) {
                 state.profile = {
-                    teacherName: 'Mrs. Rahman',
-                    subjectName: 'Pre-Calculus / English I',
+                    teacherName: '',
+                    subjectName: '',
                     year: '2026-2027',
                     quote: '"Every day is a fresh opportunity to spark curiosity, build confidence, and inspire a lifelong love of learning."',
                     quoteAuthor: 'Daily Affirmation'
@@ -1502,12 +1431,12 @@
             }
             if (!state.sections) {
                 state.sections = [
-                    { id: 'sec-1', name: 'Period A (Honors)' },
-                    { id: 'sec-2', name: 'Period B (Honors)' }
+                    { id: 'sec-1', name: 'Period 1' },
+                    { id: 'sec-2', name: 'Period 2' }
                 ];
             }
             if (!state.activeTheme) state.activeTheme = 'earthy';
-            if (!state.activeStandardsSet) state.activeStandardsSet = 'WG_LA';
+            if (!state.activeStandardsSet) state.activeStandardsSet = 'CUSTOM';
             if (!state.customStandards) state.customStandards = [];
 
             // Safe translation of old static keys to new dynamic references
@@ -9084,49 +9013,55 @@ applySidebarSections();
     <script>
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  MCA ↔ GEO PLANNER BRIDGE  (injected by merge.py)
+//  MCA ↔ GEO PLANNER BRIDGE  (injected by merge.py — v2)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// withMcaTarget: temporarily rename a target div to "main-content" so that
-// user's render functions (which all write to #main-content) land in the
-// correct friend's tab section container.
-function withMcaTarget(targetId, fn) {
-    const target   = document.getElementById(targetId);
-    const existing = document.getElementById('main-content');
-    const BACKUP_ID = '__main_content_bak__';
-    if (existing && existing !== target) existing.id = BACKUP_ID;
-    if (target) target.id = 'main-content';
-    try { fn(); } finally {
-        if (target) target.id = targetId;
-        const bak = document.getElementById(BACKUP_ID);
-        if (bak) bak.id = 'main-content';
+// activateMcaContainer: PERMANENTLY rename a target div to "main-content"
+// so ALL subsequent direct calls to renderGradebook(), renderAttendance(),
+// etc. (e.g. from gbSelectClass, quarter buttons, edit modals) always find
+// #main-content and render in the correct tab panel.
+let _activeMcaContainerId = null;
+
+function activateMcaContainer(targetId) {
+    // Restore previous container's original ID
+    if (_activeMcaContainerId) {
+        const prev = document.getElementById('main-content');
+        if (prev) prev.id = _activeMcaContainerId;
     }
+    // Point #main-content at the new target
+    _activeMcaContainerId = targetId;
+    const target = document.getElementById(targetId);
+    if (target) target.id = 'main-content';
 }
 
 // Called by friend's switchTab() for MCA tabs
 function mca_renderGradebook() {
     gradebookMode = true; attendanceMode = false; calendarTabMode = false; classPlanMode = false;
-    withMcaTarget('mca-gradebook-content', renderGradebook);
+    activateMcaContainer('mca-gradebook-content');
+    renderGradebook();
 }
 function mca_renderAttendance() {
     attendanceMode = true; gradebookMode = false; calendarTabMode = false; classPlanMode = false;
-    withMcaTarget('mca-attendance-content', renderAttendance);
+    activateMcaContainer('mca-attendance-content');
+    renderAttendance();
 }
 function mca_renderCalendarTab() {
     calendarTabMode = true; gradebookMode = false; attendanceMode = false; classPlanMode = false;
-    withMcaTarget('mca-calendar-content', renderCalendarTab);
+    activateMcaContainer('mca-calendar-content');
+    renderCalendarTab();
 }
 function mca_renderClassPlan() {
     classPlanMode = true; gradebookMode = false; attendanceMode = false; calendarTabMode = false;
-    withMcaTarget('mca-classplan-content', renderClassPlan);
+    activateMcaContainer('mca-classplan-content');
+    renderClassPlan();
 }
 
 // Override render() — route to whichever MCA mode is active
 function render() {
-    if      (gradebookMode)   mca_renderGradebook();
-    else if (attendanceMode)  mca_renderAttendance();
-    else if (calendarTabMode) mca_renderCalendarTab();
-    else if (classPlanMode)   mca_renderClassPlan();
+    if      (gradebookMode)   renderGradebook();
+    else if (attendanceMode)  renderAttendance();
+    else if (calendarTabMode) renderCalendarTab();
+    else if (classPlanMode)   renderClassPlan();
     // else: a friend's tab is active — nothing to do
 }
 
@@ -9136,6 +9071,71 @@ function renderCourseFilter()    {}   // was: writes to #course-filter
 function renderCalendarSection() {}   // was: writes to #calendar-toggle-list
 function renderAssignments()     {}   // was: writes to #main-content (home view)
 function renderTodoList()        {}   // was: renders todo sidebar
+
+// ─── Auto-sync MCA gradebook students into the Friend's Students tab ────────
+// Emojis and colors assigned deterministically from student name hash
+const _MCA_EMOJIS = ['🐾','⭐','🌟','📚','🎯','🎨','🌻','🦋','🌈','🎭','🎸','🔭','🧩','🎪','🏆'];
+const _MCA_COLORS = ['#FFB3C6','#BFEFFF','#C3FFC3','#FFE4B5','#E6CCFF','#FFD1A9','#CAFFD8','#D5E8FF','#FFF3B0','#D4F0F0'];
+
+function mca_syncStudents() {
+    const gbData  = getGbData();
+    const classes = gbData.classes || [];
+    if (!classes.length) return;                // nothing to sync yet
+
+    // Build sections in state matching MCA classes (by class ID)
+    const newSections = classes.map(cls => ({ id: cls.id, name: cls.name }));
+    state.sections = newSections;
+
+    // Build a lookup of existing student profiles (preserve notes, emoji, bg)
+    const existingById = {};
+    (state.students || []).forEach(s => { existingById[s.id] = s; });
+
+    const synced = [];
+    classes.forEach(cls => {
+        (cls.students || []).forEach(stu => {
+            const hash = stu.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+            if (existingById[stu.id]) {
+                // Preserve existing profile metadata, just update name + period
+                synced.push({ ...existingById[stu.id], name: stu.name, period: cls.id });
+            } else {
+                synced.push({
+                    id:       stu.id,
+                    name:     stu.name,
+                    period:   cls.id,
+                    emoji:    _MCA_EMOJIS[hash % _MCA_EMOJIS.length],
+                    notes:    '',
+                    avatarBg: _MCA_COLORS[hash % _MCA_COLORS.length]
+                });
+            }
+        });
+    });
+
+    if (synced.length) {
+        state.students = synced;
+        saveToStorage();
+    }
+
+    // Update student-tab-bar to show MCA classes
+    const tabBar = document.getElementById('student-tab-bar');
+    if (tabBar) {
+        tabBar.innerHTML = newSections.map((sec, i) =>
+            `<button onclick="renderStudents('${sec.id}')"
+                class="px-4 py-2 text-xs font-bold border rounded-lg shadow-sm transition ${i===0?'bg-white':'bg-[#FAF7F2]'}">${sec.name}</button>`
+        ).join('');
+    }
+}
+
+// Hook the Students tab to auto-sync from gradebook before rendering
+const _origSwitchTab = switchTab;
+function switchTab(tabId) {
+    if (tabId === 'students') mca_syncStudents();
+    _origSwitchTab(tabId);
+    if (tabId === 'students') {
+        // Render first section after sync populates state.sections
+        const firstSec = state.sections[0];
+        if (firstSec) renderStudents(firstSec.id);
+    }
+}
 
 // MCA initialization hook — called by friend's window.onload via mca_init()
 function mca_init() {
