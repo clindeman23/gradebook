@@ -459,11 +459,17 @@
 
         <!-- Tab: Dashboard -->
         <section id="tab-dashboard" class="tab-content block">
-            <div class="mb-8">
-                <h3 class="text-xl font-bold mb-1">Your Dashboard</h3>
-                <p class="text-sm text-[#9A958C]">Daily summary metrics, pending activities, and student metrics.</p>
+            <div class="mb-8 flex items-start justify-between gap-4">
+                <div>
+                    <h3 class="text-xl font-bold mb-1">Your Dashboard</h3>
+                    <p class="text-sm text-[#9A958C]">Daily summary metrics, pending activities, and student metrics.</p>
+                </div>
+                <button onclick="openDashboardCustomizer()" class="shrink-0 flex items-center gap-2 text-xs font-bold px-4 py-2 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 transition">
+                    <span class="text-base leading-none">⠿</span> Customize Layout
+                </button>
             </div>
 
+            <!-- 4 quick-stat mini cards (fixed) -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
                 <div class="card p-6 accent-teal">
                     <span class="text-xs font-bold text-[#9A958C] tracking-wider uppercase">ACTIVE CURRICULUM</span>
@@ -472,7 +478,7 @@
                 </div>
                 <div class="card p-6 accent-mauve">
                     <span class="text-xs font-bold text-[#9A958C] tracking-wider uppercase">ROSTER SECTIONS</span>
-                    <p class="text-xl font-bold mt-2 text-[#9F5F67]" id="snap-student-count">4 Students Total</p>
+                    <p class="text-xl font-bold mt-2 text-[#9F5F67]" id="snap-student-count">0 Students Total</p>
                     <p class="text-xs text-gray-400 mt-1">Students enrolled in database</p>
                 </div>
                 <div class="card p-6 accent-aqua">
@@ -484,58 +490,32 @@
                 </div>
                 <div class="card p-6 accent-mustard">
                     <span class="text-xs font-bold text-[#9A958C] tracking-wider uppercase">CLASS SECTIONS</span>
-                    <p class="text-xl font-bold mt-2 text-[#E7A445]" id="snap-period-count">2 Periods</p>
+                    <p class="text-xl font-bold mt-2 text-[#E7A445]" id="snap-period-count">0 Periods</p>
                     <p class="text-xs text-gray-400 mt-1">Classroom periods defined</p>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Schedule / Analytics -->
-                <div class="lg:col-span-2 space-y-8">
-                    <!-- Today's Block Schedule Widget -->
-                    <div class="card p-6 accent-coral">
-                        <div class="flex justify-between items-center mb-4">
-                            <h4 class="text-lg font-bold">📅 Today's Active Schedule</h4>
-                            <span class="text-xs font-bold bg-[#E67F76]/10 text-[#E67F76] px-3 py-1 rounded-full">Dynamic Tracker</span>
-                        </div>
-                        <div id="dashToday" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <!-- Populated Dynamically from JS -->
-                        </div>
-                    </div>
+            <!-- Reorderable cards — single flat grid, order controlled by JS -->
+            <div id="dashboard-card-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
 
-                    <!-- Weekly Schedule Analytics -->
-                    <div class="card p-8 accent-teal">
-                        <div class="flex justify-between items-center mb-6">
-                            <h4 class="text-lg font-bold">Class Performance Analytics</h4>
-                            <span class="text-xs font-bold text-gray-400">Class averages by period</span>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div>
-                                <h5 class="text-xs font-bold mb-4 uppercase tracking-wider text-gray-400 font-serif">Estimated Class Performance Average</h5>
-                                <div class="chart-container">
-                                    <canvas id="chart-grades"></canvas>
-                                </div>
-                            </div>
-                            <div>
-                                <h5 class="text-xs font-bold mb-4 uppercase tracking-wider text-gray-400 font-serif">Historical Attendance Rate Trends</h5>
-                                <div class="chart-container">
-                                    <canvas id="chart-attendance"></canvas>
-                                </div>
-                            </div>
-                        </div>
+                <!-- CARD: Today's Active Schedule -->
+                <div id="dash-card-schedule" data-card-id="schedule" class="card p-6 accent-coral lg:col-span-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-lg font-bold">📅 Today's Active Schedule</h4>
+                        <span class="text-xs font-bold bg-[#E67F76]/10 text-[#E67F76] px-3 py-1 rounded-full">Dynamic Tracker</span>
+                    </div>
+                    <div id="dashToday" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <!-- Populated Dynamically from JS -->
                     </div>
                 </div>
 
-                <!-- 2-Part To-Do List Panel (Teacher & Home lists) -->
-                <div class="card p-0 flex flex-col overflow-hidden">
+                <!-- CARD: Task Management -->
+                <div id="dash-card-tasks" data-card-id="tasks" class="card p-0 flex flex-col overflow-hidden">
                     <div class="p-6 bg-[#FAF7F2] border-b border-[#EBCCBD]/30 flex justify-between items-center">
                         <h4 class="text-lg font-bold">Task Management</h4>
                         <button onclick="resetAllTasks()" class="text-xs text-red-400 hover:text-red-600 font-bold underline">Reset</button>
                     </div>
-                    
                     <div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar max-h-[500px]">
-                        <!-- Teacher To-Do -->
                         <div>
                             <div class="flex justify-between items-center mb-3">
                                 <h5 class="text-xs font-bold text-[#E67F76] uppercase tracking-wider">🍎 Teaching Queue</h5>
@@ -546,8 +526,6 @@
                                 <div id="bar-teacher" class="bg-[#E67F76] h-full transition-all duration-300" style="width: 0%"></div>
                             </div>
                         </div>
-
-                        <!-- Home To-Do -->
                         <div>
                             <div class="flex justify-between items-center mb-3">
                                 <h5 class="text-xs font-bold text-[#82BDC3] uppercase tracking-wider">🏠 Personal List</h5>
@@ -559,17 +537,36 @@
                             </div>
                         </div>
                     </div>
-                    
                     <div class="p-4 bg-gray-50/50 border-t flex gap-2">
                         <button onclick="openTodoModal('teacher')" class="flex-1 py-2 bg-[#E67F76] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">+ Teaching</button>
                         <button onclick="openTodoModal('home')" class="flex-1 py-2 bg-[#82BDC3] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">+ Personal</button>
                     </div>
                 </div>
-            </div>
 
-            <!-- Subject Insights & Notepad -->
-            <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-                <div class="card p-6 accent-mauve col-span-1">
+                <!-- CARD: Class Performance Analytics -->
+                <div id="dash-card-analytics" data-card-id="analytics" class="card p-8 accent-teal lg:col-span-2">
+                    <div class="flex justify-between items-center mb-6">
+                        <h4 class="text-lg font-bold">Class Performance Analytics</h4>
+                        <span class="text-xs font-bold text-gray-400">Class averages by period</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h5 class="text-xs font-bold mb-4 uppercase tracking-wider text-gray-400 font-serif">Estimated Class Performance Average</h5>
+                            <div class="chart-container">
+                                <canvas id="chart-grades"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h5 class="text-xs font-bold mb-4 uppercase tracking-wider text-gray-400 font-serif">Historical Attendance Rate Trends</h5>
+                            <div class="chart-container">
+                                <canvas id="chart-attendance"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD: Dynamic Pacing Metrics -->
+                <div id="dash-card-pacing" data-card-id="pacing" class="card p-6 accent-mauve">
                     <h4 class="text-xs font-bold mb-6 uppercase text-gray-400 tracking-wider">Dynamic Pacing Metrics</h4>
                     <div class="space-y-4">
                         <div class="flex items-start gap-3">
@@ -589,7 +586,8 @@
                     </div>
                 </div>
 
-                <div class="card p-6 accent-teal col-span-1">
+                <!-- CARD: Remediation Blueprint -->
+                <div id="dash-card-remediation" data-card-id="remediation" class="card p-6 accent-teal">
                     <h4 class="text-xs font-bold mb-6 uppercase text-gray-400 tracking-wider">Remediation Blueprint</h4>
                     <div class="space-y-4">
                         <div>
@@ -608,14 +606,15 @@
                     </div>
                 </div>
 
-                <!-- Quick Note -->
-                <div class="card p-6 accent-mustard col-span-1 flex flex-col justify-between">
+                <!-- CARD: Quick Pad -->
+                <div id="dash-card-quickpad" data-card-id="quickpad" class="card p-6 accent-mustard flex flex-col justify-between">
                     <div>
                         <h4 class="text-xs font-bold mb-4 uppercase text-gray-400 tracking-wider">📝 Quick Pad</h4>
                         <textarea id="quickNoteText" class="w-full border p-3 rounded-xl font-medium text-xs text-[#4A4540] resize-none h-24 focus:ring-1 focus:ring-coral-400 outline-none" placeholder="Jot down a quick thought..."></textarea>
                     </div>
                     <button onclick="saveQuickNote()" class="w-full py-2 bg-[#E7A445] text-white text-xs font-bold rounded-lg hover:opacity-90 transition mt-2">Save to Reflections</button>
                 </div>
+
             </div>
         </section>
 
@@ -1216,7 +1215,8 @@
                 calendarUrl: 'https://www.mcacubs.com/calendar/calendar_323_gmt.ics'
             },
             calendarEvents: [],
-            appPassword: ''
+            appPassword: '',
+            dashboardOrder: null
         };
 
         // Navigation state for schedule dates
@@ -9253,13 +9253,95 @@ function mca_init() {
     loadData();
 }
 
-// Hook refreshDashboard so Catholic reflection is re-applied whenever dashboard reloads
+// ─── Dashboard card reorder ──────────────────────────────────────────────────
+const DASH_CARDS = [
+    { id: 'schedule',    label: '📅 Today\'s Active Schedule',     colSpan: 2 },
+    { id: 'tasks',       label: '✅ Task Management',              colSpan: 1 },
+    { id: 'analytics',   label: '📊 Class Performance Analytics',  colSpan: 2 },
+    { id: 'pacing',      label: '📈 Dynamic Pacing Metrics',       colSpan: 1 },
+    { id: 'remediation', label: '🔄 Remediation Blueprint',        colSpan: 1 },
+    { id: 'quickpad',    label: '📝 Quick Pad',                    colSpan: 1 },
+];
+
+function applyDashboardOrder() {
+    const grid = document.getElementById('dashboard-card-grid');
+    if (!grid) return;
+    const order = (state.dashboardOrder && state.dashboardOrder.length === DASH_CARDS.length)
+        ? state.dashboardOrder
+        : DASH_CARDS.map(c => c.id);
+    const cardMap = Object.fromEntries(DASH_CARDS.map(c => [c.id, c]));
+    order.forEach(cardId => {
+        const el = document.getElementById('dash-card-' + cardId);
+        if (!el) return;
+        const info = cardMap[cardId];
+        if (info) {
+            if (info.colSpan === 2) el.classList.add('lg:col-span-2');
+            else el.classList.remove('lg:col-span-2');
+        }
+        grid.appendChild(el); // moves to end preserving correct order
+    });
+}
+
+function openDashboardCustomizer() {
+    const order = (state.dashboardOrder && state.dashboardOrder.length === DASH_CARDS.length)
+        ? [...state.dashboardOrder]
+        : DASH_CARDS.map(c => c.id);
+    const cardMap = Object.fromEntries(DASH_CARDS.map(c => [c.id, c]));
+
+    const rows = order.map((id, i) => {
+        const info = cardMap[id] || { label: id };
+        const isFirst = i === 0, isLast = i === order.length - 1;
+        return `<div class="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
+            <span class="text-gray-300 text-lg leading-none select-none">⠿</span>
+            <span class="flex-1 text-sm font-semibold text-[#4A4540]">${info.label}</span>
+            <button onclick="dashMoveCard('${id}',-1)"
+                class="w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-bold transition hover:bg-gray-50 ${isFirst ? 'opacity-25 pointer-events-none' : ''}">↑</button>
+            <button onclick="dashMoveCard('${id}',1)"
+                class="w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-bold transition hover:bg-gray-50 ${isLast ? 'opacity-25 pointer-events-none' : ''}">↓</button>
+        </div>`;
+    }).join('');
+
+    showModal(`<div class="p-2">
+        <h3 class="text-xl font-bold mb-1">⠿ Customize Dashboard</h3>
+        <p class="text-xs text-gray-400 mb-5">Use the arrows to reorder your dashboard cards. Changes are saved instantly.</p>
+        <div class="space-y-2">${rows}</div>
+        <div class="mt-5 flex items-center justify-between">
+            <button onclick="dashResetOrder()" class="text-xs text-red-400 hover:text-red-600 font-bold">Reset to default</button>
+            <button onclick="closeModal()" class="px-5 py-2.5 bg-[#E67F76] text-white text-xs font-bold rounded-xl hover:opacity-90 transition">Done</button>
+        </div>
+    </div>`);
+}
+
+function dashMoveCard(cardId, dir) {
+    const order = (state.dashboardOrder && state.dashboardOrder.length === DASH_CARDS.length)
+        ? [...state.dashboardOrder]
+        : DASH_CARDS.map(c => c.id);
+    const i = order.indexOf(cardId);
+    if (i < 0) return;
+    const j = i + dir;
+    if (j < 0 || j >= order.length) return;
+    [order[i], order[j]] = [order[j], order[i]];
+    state.dashboardOrder = order;
+    saveToStorage();
+    applyDashboardOrder();
+    openDashboardCustomizer(); // refresh modal with new positions
+}
+
+function dashResetOrder() {
+    state.dashboardOrder = null;
+    saveToStorage();
+    applyDashboardOrder();
+    openDashboardCustomizer();
+}
+
+// Hook refreshDashboard so Catholic reflection + card order are applied on every dashboard visit
 // Uses IIFE to avoid function-declaration hoisting stealing window.refreshDashboard
 ;(function() {
     const _origRD = window.refreshDashboard;
     window.refreshDashboard = function() {
         if (typeof _origRD === 'function') _origRD.apply(this, arguments);
         mca_applyDailyReflection();
+        applyDashboardOrder();
     };
 })();
 
