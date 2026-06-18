@@ -9038,6 +9038,7 @@ function activateMcaContainer(targetId) {
 function mca_renderGradebook() {
     gradebookMode = true; attendanceMode = false; calendarTabMode = false; classPlanMode = false;
     activateMcaContainer('mca-gradebook-content');
+    mca_syncStudents();   // keep Students tab in sync whenever gradebook is opened
     renderGradebook();
 }
 function mca_renderAttendance() {
@@ -9125,18 +9126,6 @@ function mca_syncStudents() {
     }
 }
 
-// Hook the Students tab to auto-sync from gradebook before rendering
-const _origSwitchTab = switchTab;
-function switchTab(tabId) {
-    if (tabId === 'students') mca_syncStudents();
-    _origSwitchTab(tabId);
-    if (tabId === 'students') {
-        // Render first section after sync populates state.sections
-        const firstSec = state.sections[0];
-        if (firstSec) renderStudents(firstSec.id);
-    }
-}
-
 // MCA initialization hook — called by friend's window.onload via mca_init()
 function mca_init() {
     // Populate settings inputs from stored credentials
@@ -9148,6 +9137,8 @@ function mca_init() {
     if (sinEl)   sinEl.value   = getSchoolIcsUrl();
     if (tokenEl) tokenEl.value = getGistToken();
     if (gistEl)  gistEl.value  = getGistId();
+    // Sync students from gradebook into the Students tab on first load
+    mca_syncStudents();
     // Start fetching calendar data in background
     loadData();
 }
