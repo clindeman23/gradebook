@@ -85,9 +85,13 @@
             font-family: 'Nunito', sans-serif;
             background-color: var(--cream);
             color: var(--dark-taupe);
-            overflow-x: hidden;
+            overflow-x: clip; /* clip prevents viewport scroll but lets inner elements scroll */
             transition: background-color 0.3s ease;
         }
+
+        /* Prevent flex-item from expanding wider than viewport (fixes gradebook scroll) */
+        main { min-width: 0; }
+        #tab-gradebook, #tab-attendance { overflow-x: auto; }
 
         h1, h2, .font-serif {
             font-family: 'Lora', serif;
@@ -9126,6 +9130,110 @@ function mca_syncStudents() {
     }
 }
 
+// ─── Catholic Daily Reflections ─────────────────────────────────────────────
+const CATHOLIC_REFLECTIONS = [
+    { text: "Be strong and courageous. Do not be afraid; do not be discouraged, for the Lord your God will be with you wherever you go.", author: "Joshua 1:9" },
+    { text: "I can do all things through Christ who strengthens me.", author: "Philippians 4:13" },
+    { text: "Trust in the Lord with all your heart and lean not on your own understanding; in all your ways submit to him, and he will make your paths straight.", author: "Proverbs 3:5–6" },
+    { text: "For I know the plans I have for you, declares the Lord — plans to prosper you and not to harm you, plans to give you hope and a future.", author: "Jeremiah 29:11" },
+    { text: "The Lord is my shepherd; I shall not want. He makes me lie down in green pastures.", author: "Psalm 23:1–2" },
+    { text: "Let all that you do be done in love.", author: "1 Corinthians 16:14" },
+    { text: "Be still, and know that I am God.", author: "Psalm 46:10" },
+    { text: "Whatever you do, work at it with all your heart, as working for the Lord, not for human masters.", author: "Colossians 3:23" },
+    { text: "Do not be anxious about anything, but in every situation, by prayer and petition, with thanksgiving, present your requests to God.", author: "Philippians 4:6" },
+    { text: "Love is patient, love is kind. It does not envy, it does not boast, it is not proud.", author: "1 Corinthians 13:4" },
+    { text: "Ask and it will be given to you; seek and you will find; knock and the door will be opened to you.", author: "Matthew 7:7" },
+    { text: "Come to me, all you who are weary and burdened, and I will give you rest.", author: "Matthew 11:28" },
+    { text: "The Lord bless you and keep you; the Lord make his face shine on you and be gracious to you.", author: "Numbers 6:24–25" },
+    { text: "With God, all things are possible.", author: "Matthew 19:26" },
+    { text: "This is the day the Lord has made; let us rejoice and be glad in it.", author: "Psalm 118:24" },
+    { text: "Do not conform to the pattern of this world, but be transformed by the renewing of your mind.", author: "Romans 12:2" },
+    { text: "The Lord is my light and my salvation — whom shall I fear?", author: "Psalm 27:1" },
+    { text: "Cast all your anxiety on him because he cares for you.", author: "1 Peter 5:7" },
+    { text: "Your word is a lamp for my feet, a light on my path.", author: "Psalm 119:105" },
+    { text: "He gives strength to the weary and increases the power of the weak.", author: "Isaiah 40:29" },
+    { text: "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.", author: "John 3:16" },
+    { text: "I am the vine; you are the branches. If you remain in me and I in you, you will bear much fruit.", author: "John 15:5" },
+    { text: "Peace I leave with you; my peace I give you. I do not give to you as the world gives.", author: "John 14:27" },
+    { text: "The steadfast love of the Lord never ceases; his mercies never come to an end. They are new every morning.", author: "Lamentations 3:22–23" },
+    { text: "Be merciful, just as your Father is merciful.", author: "Luke 6:36" },
+    { text: "You have made us for yourself, O Lord, and our hearts are restless until they rest in you.", author: "St. Augustine of Hippo" },
+    { text: "Grant me, O Lord my God, a mind to know you, a heart to seek you, wisdom to find you, conduct pleasing to you, faithful perseverance in waiting for you.", author: "St. Thomas Aquinas" },
+    { text: "Not all of us can do great things. But we can do small things with great love.", author: "St. Teresa of Calcutta" },
+    { text: "Do not be afraid to be holy. Have the courage and humility to present yourself to God just as you are.", author: "St. John Paul II" },
+    { text: "Start by doing what's necessary; then do what's possible; and suddenly you are doing the impossible.", author: "St. Francis of Assisi" },
+    { text: "Lord, make me an instrument of your peace. Where there is hatred, let me sow love; where there is injury, pardon.", author: "St. Francis of Assisi" },
+    { text: "Miss no single opportunity of making some small sacrifice, here by a smiling look, there by a kindly word; always doing the smallest right and doing it all for love.", author: "St. Thérèse of Lisieux" },
+    { text: "Prayer is nothing else than union with God. When the heart is pure and united with God, it is consoled and filled with sweetness.", author: "St. John Vianney" },
+    { text: "Be who God meant you to be and you will set the world on fire.", author: "St. Catherine of Siena" },
+    { text: "Love God, serve God: everything is in that.", author: "St. Clare of Assisi" },
+    { text: "The soul of one who loves God always swims in joy, always keeps holiday, and is always in a mood for singing.", author: "St. John of the Cross" },
+    { text: "Go forth and set the world on fire.", author: "St. Ignatius of Loyola" },
+    { text: "To teach in order to lead others to faith is the task of every preacher and of each believer.", author: "St. Thomas Aquinas" },
+    { text: "For children need education as much as they need food.", author: "St. John Bosco" },
+    { text: "Do ordinary things with extraordinary love.", author: "St. Teresa of Calcutta" },
+    { text: "Educate as much by what you are as by what you say.", author: "St. John Baptist de La Salle" },
+    { text: "The first task of education is to stir up life, but leave it free to develop.", author: "St. John Baptist de La Salle" },
+    { text: "True education consists in forming men and women of virtue.", author: "St. John Paul II" },
+    { text: "Every teacher is an apostle of education. Your vocation is holy and your mission is sacred.", author: "St. John Bosco" },
+    { text: "Keep your eyes on God and leave the doing to him. That is all the doing you need to worry about.", author: "St. Jane Frances de Chantal" },
+    { text: "Peace begins with a smile.", author: "St. Teresa of Calcutta" },
+    { text: "Holiness is not the luxury of the few; it is a simple duty for you and for me.", author: "St. Teresa of Calcutta" },
+    { text: "The secret of happiness is to live moment by moment and to thank God for all that he, in his goodness, sends us every day.", author: "St. Gianna Molla" },
+    { text: "It is not how much we do, but how much love we put in the doing.", author: "St. Teresa of Calcutta" },
+    { text: "Whoever wishes to be great among you shall be your servant.", author: "Matthew 20:26" },
+    { text: "The Most High has chosen this way to save man: not through angels, not through men, but through himself.", author: "St. Faustina Kowalska" },
+    { text: "Jesus, I trust in you.", author: "St. Faustina Kowalska — Divine Mercy Chaplet" },
+    { text: "O Lord, you have searched me and you know me. You know when I sit and when I rise; you perceive my thoughts from afar.", author: "Psalm 139:1–2" },
+    { text: "Let your light shine before others, that they may see your good deeds and glorify your Father in heaven.", author: "Matthew 5:16" },
+    { text: "If you are what you should be, you will set the whole world ablaze.", author: "St. Catherine of Siena" },
+    { text: "Every child who reaches school without love has already been wounded.", author: "St. John Bosco" },
+    { text: "Pray, hope, and don't worry. Worry is useless. God is merciful and will hear your prayer.", author: "St. Padre Pio" },
+    { text: "Serve the Lord with gladness; come before him with joyful songs.", author: "Psalm 100:2" },
+    { text: "Have patience with all things, but chiefly have patience with yourself.", author: "St. Francis de Sales" },
+    { text: "Do not look forward to what may happen tomorrow; the same everlasting Father who cares for you today will take care of you tomorrow.", author: "St. Francis de Sales" },
+    { text: "Bloom where you are planted.", author: "St. Francis de Sales" },
+    { text: "The measure of love is to love without measure.", author: "St. Francis de Sales" },
+    { text: "We must love our neighbor as being made in the image of God and as an object of his love.", author: "St. Vincent de Paul" },
+    { text: "God is good, God is just, and God loves you.", author: "Blessed Carlo Acutis" },
+    { text: "The Eucharist is my highway to heaven.", author: "Blessed Carlo Acutis" },
+    { text: "Our goal must be the infinite and not the finite. The infinite is our homeland.", author: "Blessed Carlo Acutis" },
+    { text: "Let nothing disturb thee, let nothing dismay thee; all things pass; God never changes.", author: "St. Teresa of Avila" },
+    { text: "From prayer, one gains everything.", author: "St. Teresa of Avila" },
+    { text: "Christ has no body now on earth but yours; no hands but yours, no feet but yours.", author: "St. Teresa of Avila" },
+    { text: "Mary, conceived without sin, pray for us who have recourse to thee.", author: "The Miraculous Medal Prayer" },
+    { text: "Hail Mary, full of grace, the Lord is with thee. Blessed art thou among women, and blessed is the fruit of thy womb, Jesus.", author: "The Hail Mary" },
+    { text: "To Jesus through Mary.", author: "St. Louis de Montfort" },
+    { text: "I praise you because I am fearfully and wonderfully made; your works are wonderful, I know that full well.", author: "Psalm 139:14" },
+    { text: "He who has learned to pray has learned the greatest secret of a holy and happy life.", author: "St. Augustine of Hippo" },
+    { text: "You called to me, and your cry broke through my deafness. You gleamed and shone, and your radiance dispersed my blindness.", author: "St. Augustine of Hippo, Confessions" },
+    { text: "Thou madest us for Thyself, and our heart is restless, until it repose in Thee.", author: "St. Augustine of Hippo, Confessions" }
+];
+
+function mca_getDailyReflection() {
+    const now   = new Date();
+    const start = new Date(now.getFullYear(), 0, 0);
+    const dayOfYear = Math.floor((now - start) / 86400000);
+    return CATHOLIC_REFLECTIONS[dayOfYear % CATHOLIC_REFLECTIONS.length];
+}
+
+function mca_applyDailyReflection() {
+    const r = mca_getDailyReflection();
+    // Banner quote
+    const banner = document.getElementById('banner-quote');
+    if (banner) banner.innerHTML = `<em>${r.text}</em>`
+        + `<span id="banner-quote-author" class="font-semibold block mt-1.5 not-italic">✝ ${r.author}</span>`;
+    // Sidebar aesthetic quote (truncated)
+    const sidebar = document.getElementById('sidebar-aesthetic-quote');
+    if (sidebar) {
+        const short = r.text.length > 90 ? r.text.slice(0, 87) + '…' : r.text;
+        sidebar.innerHTML = `<span class="text-[#E67F76]">✝</span> <em>${short}</em><br><span class="font-semibold not-italic">— ${r.author}</span>`;
+    }
+    // Fix greeting when teacher name not set
+    const greeting = document.getElementById('banner-greeting');
+    if (greeting && !state?.profile?.teacherName) greeting.innerText = 'Hi, Educator! 👋';
+}
+
 // MCA initialization hook — called by friend's window.onload via mca_init()
 function mca_init() {
     // Populate settings inputs from stored credentials
@@ -9139,9 +9247,21 @@ function mca_init() {
     if (gistEl)  gistEl.value  = getGistId();
     // Sync students from gradebook into the Students tab on first load
     mca_syncStudents();
+    // Apply today's Catholic reflection (runs after friend's refreshDashboard)
+    mca_applyDailyReflection();
     // Start fetching calendar data in background
     loadData();
 }
+
+// Hook refreshDashboard so Catholic reflection is re-applied whenever dashboard reloads
+// Uses IIFE to avoid function-declaration hoisting stealing window.refreshDashboard
+;(function() {
+    const _origRD = window.refreshDashboard;
+    window.refreshDashboard = function() {
+        if (typeof _origRD === 'function') _origRD.apply(this, arguments);
+        mca_applyDailyReflection();
+    };
+})();
 
     </script>
 </body>
