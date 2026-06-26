@@ -2738,15 +2738,34 @@
 
             const today = new Date();
             const dateStr = formatSimpleDate(today);
+            const evts = (typeof schoolEvents !== 'undefined') ? schoolEvents : [];
 
-            const periods = ['Period 1', 'Period 2', 'Period 3', 'Period 4'];
-            periods.forEach(p => {
-                const cell = state.schedule[`${dateStr}_${p}`];
-                
+            // Find today's rotation from MCA school calendar
+            const rotEv = evts.find(e => {
+                const d = new Date(e.dueDate);
+                return d.getUTCFullYear() === today.getFullYear()
+                    && d.getUTCMonth() === today.getMonth()
+                    && d.getUTCDate() === today.getDate()
+                    && /^classes:/i.test((e.title || '').trim());
+            });
+            let todayPeriods = [];
+            if (rotEv) {
+                const m = rotEv.title.match(/classes:\s*(.+)/i);
+                if (m) todayPeriods = m[1].split(',').map(s => s.trim()).filter(Boolean);
+            }
+
+            // Show today's actual rotation, capped at 4 for dashboard; fallback to periods 1-4
+            const displayPeriods = todayPeriods.length > 0 ? todayPeriods.slice(0, 4) : ['1','2','3','4'];
+
+            displayPeriods.forEach(periodNum => {
+                const cell = state.schedule[`${dateStr}_${periodNum}`];
+                const className = getPeriodLabel(periodNum);
+                const periodLabel = className ? `P${periodNum} · ${className}` : `Period ${periodNum}`;
+
                 const blockDiv = document.createElement('div');
                 blockDiv.className = `p-4 rounded-xl flex flex-col justify-between ${cell ? 'bg-[#EBCCBD]/20 border border-[#EBCCBD]' : 'bg-gray-50 border border-dashed border-gray-200'}`;
                 blockDiv.innerHTML = `
-                    <span class="text-[10px] font-extrabold text-[#9A958C]">${p}</span>
+                    <span class="text-[10px] font-extrabold text-[#9A958C]">${periodLabel}</span>
                     <span class="text-xs font-bold text-[#4A4540] mt-1">${cell ? cell.label : '— Available Block —'}</span>
                     <span class="text-[10px] text-gray-400 mt-1">${cell ? cell.type : 'No Assignment'}</span>
                 `;
@@ -2881,46 +2900,100 @@
             const monOf = selectedWeekStart.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
             document.getElementById('sched-week-label').innerText = `Week of ${monOf}`;
 
-            weekDays.forEach(day => {
+            const evts = (typeof schoolEvents !== 'undefined') ? schoolEvents : [];
+
+            // For each weekday, find the MCA rotation event from schoolEvents
+            const dayData = weekDays.map(day => {
+                const [yr, mo, dy] = day.dateStr.split('-').map(Number);
+                const rotEv = evts.find(e => {
+                    const d = new Date(e.dueDate);
+                    return d.getUTCFullYear() === yr && d.getUTCMonth() === mo - 1 && d.getUTCDate() === dy
+                        && /^classes:/i.test((e.title || '').trim());
+                });
+                let periods = [];
+                if (rotEv) {
+                    const m = rotEv.title.match(/classes:\s*(.+)/i);
+                    if (m) periods = m[1].split(',').map(s => s.trim()).filter(Boolean);
+                }
+                // Any other school event (non-rotation) on this day
+                const otherEv = !rotEv ? evts.find(e => {
+                    const d = new Date(e.dueDate);
+                    return d.getUTCFullYear() === yr && d.getUTCMonth() === mo - 1 && d.getUTCDate() === dy;
+                }) : null;
+                return { ...day, periods, hasRotation: periods.length > 0, otherEventTitle: otherEv ? otherEv.title : null };
+            });
+
+            // Update day headers and events row
+            dayData.forEach(day => {
                 document.getElementById(`sched-hdr-${day.dayId}`).innerText = day.formattedHeader;
-                
-                const matchedEvent = state.calendarEvents.find(e => e.start === day.dateStr);
                 const evCell = document.getElementById(`sched-evt-${day.dayId}`);
-                if (evCell) {
-                    if (matchedEvent) {
-                        evCell.innerText = matchedEvent.summary;
-                        evCell.className = "text-[11px] font-bold text-center bg-[var(--peach)]/20 text-[var(--dark-taupe)] py-1 px-2 rounded-lg border border-[var(--peach)]/40 truncate";
-                    } else {
-                        evCell.innerText = "No Calendar Events";
-                        evCell.className = "text-[11px] font-medium text-center bg-gray-50 text-gray-400 py-1 rounded-lg";
-                    }
+                if (!evCell) return;
+                if (day.hasRotation) {
+                    const rotation = day.periods.map(p => {
+                        const lbl = getPeriodLabel(p);
+                        return lbl ? `P${p}·${lbl}` : `P${p}`;
+                    }).join(' → ');
+                    evCell.innerHTML = `<span style="color:var(--c-brown,#5a2d0c);font-weight:800;font-size:10px">🔄 ${rotation}</span>`;
+                    evCell.className = 'text-[10px] text-center py-1 px-2 rounded-lg border bg-amber-50 border-amber-200';
+                } else if (day.otherEventTitle) {
+                    evCell.innerText = day.otherEventTitle;
+                    evCell.className = 'text-[11px] font-bold text-center py-1 px-2 rounded-lg border bg-orange-50 text-orange-700 border-orange-200 truncate';
+                } else {
+                    evCell.innerText = 'No Calendar Events';
+                    evCell.className = 'text-[11px] font-medium text-center bg-gray-50 text-gray-400 py-1 rounded-lg';
                 }
             });
 
-            schedPeriods.forEach(p => {
+            // Collect unique period numbers from this week's rotations, sorted numerically
+            const allPeriodsSet = new Set();
+            dayData.forEach(d => d.periods.forEach(p => allPeriodsSet.add(p)));
+            const hasAnyRotation = dayData.some(d => d.hasRotation);
+            const rowPeriods = allPeriodsSet.size > 0
+                ? [...allPeriodsSet].sort((a, b) => parseInt(a) - parseInt(b))
+                : ['1','2','3','4','5','6','7'];
+
+            rowPeriods.forEach(periodNum => {
                 const row = document.createElement('div');
                 row.className = 'block-row';
-                row.innerHTML = `<div class="block-label">${p}</div>`;
-                
-                weekDays.forEach(day => {
-                    const key = `${day.dateStr}_${p}`;
+
+                const className = getPeriodLabel(periodNum);
+                const rowLabel = className
+                    ? `<div style="font-weight:800;font-size:11px;color:var(--c-brown,#5a2d0c)">P${periodNum}</div><div style="font-size:9px;color:#9A958C;line-height:1.3;word-break:break-word;margin-top:2px">${className}</div>`
+                    : `<div style="font-weight:700;font-size:12px">${hasAnyRotation ? `P${periodNum}` : `Period ${periodNum}`}</div>`;
+                row.innerHTML = `<div class="block-label">${rowLabel}</div>`;
+
+                dayData.forEach(day => {
+                    const key = `${day.dateStr}_${periodNum}`;
                     const cell = state.schedule[key];
                     const cellDiv = document.createElement('div');
-                    cellDiv.className = `block-cell ${cell ? 'has-content' : ''}`;
-                    
-                    if (cell) {
+                    const inRotation = day.hasRotation ? day.periods.includes(periodNum) : true;
+
+                    if (day.hasRotation && !inRotation) {
+                        // Period not in today's rotation — dim cell, no click
+                        cellDiv.className = 'block-cell';
+                        cellDiv.style.cssText = 'background:#f5f5f0;opacity:0.45;cursor:default;border-style:dashed;';
+                        cellDiv.innerHTML = `<div style="text-align:center;color:#ccc;margin-top:20px;font-size:13px">—</div>`;
+                    } else if (cell) {
+                        cellDiv.className = 'block-cell has-content';
                         cellDiv.style.backgroundColor = 'rgba(161, 205, 206, 0.15)';
                         cellDiv.style.borderColor = 'var(--aqua)';
+                        const slotIdx = day.hasRotation ? day.periods.indexOf(periodNum) : -1;
+                        const slotTag = slotIdx >= 0 ? `<div style="font-size:9px;color:#82BDC3;margin-bottom:2px">Block ${slotIdx + 1}</div>` : '';
                         cellDiv.innerHTML = `
-                            <div class="block-period-tag text-[#82BDC3]">${p}</div>
+                            ${slotTag}
+                            <div class="block-period-tag text-[#82BDC3]">P${periodNum}</div>
                             <div class="block-class text-[#4A4540]">${cell.label}</div>
                             <div class="block-type text-gray-400">${cell.type}</div>
                         `;
+                        cellDiv.onclick = () => openBlockModal(day.dateStr, periodNum);
                     } else {
-                        cellDiv.innerHTML = `<div class="text-center text-gray-300 mt-5 font-bold text-xs">+ Plan</div>`;
+                        cellDiv.className = 'block-cell';
+                        const slotIdx = day.hasRotation ? day.periods.indexOf(periodNum) : -1;
+                        const slotTag = slotIdx >= 0 ? `<div style="font-size:9px;color:#ccc;text-align:center;margin-top:8px">Block ${slotIdx + 1}</div>` : '';
+                        cellDiv.innerHTML = `${slotTag}<div style="text-align:center;color:#ccc;margin-top:${slotIdx >= 0 ? 4 : 20}px;font-weight:700;font-size:11px">+ Plan</div>`;
+                        cellDiv.onclick = () => openBlockModal(day.dateStr, periodNum);
                     }
-                    
-                    cellDiv.onclick = () => openBlockModal(day.dateStr, p);
+
                     row.appendChild(cellDiv);
                 });
                 grid.appendChild(row);
@@ -2932,19 +3005,20 @@
             }
         }
 
-        function openBlockModal(dateStr, period) {
-            const key = `${dateStr}_${period}`;
+        function openBlockModal(dateStr, periodNum) {
+            const key = `${dateStr}_${periodNum}`;
             const current = state.schedule[key] || {};
             const prettyDate = new Date(dateStr + "T00:00:00").toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+            const className = getPeriodLabel(periodNum);
+            const periodLabel = className ? `P${periodNum} · ${className}` : `Period ${periodNum}`;
 
-            // Dynamically generate class section options
             const sectionOptions = state.sections.map(sec => `
                 <option value="${sec.name}" ${current.label === sec.name ? 'selected' : ''}>${sec.name}</option>
             `).join('');
 
             showModal(`
                 <h3 class="text-xl font-bold mb-1">Edit Block Assignment</h3>
-                <p class="text-xs text-gray-400 mb-4">${prettyDate} · ${period}</p>
+                <p class="text-xs text-gray-400 mb-4">${prettyDate} · ${periodLabel}</p>
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Class Section Select</label>
@@ -2961,8 +3035,8 @@
                         <input id="bcType" type="text" value="${current.type || ''}" placeholder="e.g. Science Lab Investigation" class="w-full border p-2.5 rounded-lg text-xs outline-none">
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="saveBlockCell('${dateStr}', '${period}')" class="flex-1 py-2 bg-[#7EC8A4] text-white text-xs font-bold rounded-lg shadow-sm hover:opacity-90">Save Assignment</button>
-                        ${current.label ? `<button onclick="deleteBlockCell('${dateStr}', '${period}')" class="px-4 py-2 bg-red-400 text-white text-xs font-bold rounded-lg">Clear</button>` : ''}
+                        <button onclick="saveBlockCell('${dateStr}', '${periodNum}')" class="flex-1 py-2 bg-[#7EC8A4] text-white text-xs font-bold rounded-lg shadow-sm hover:opacity-90">Save Assignment</button>
+                        ${current.label ? `<button onclick="deleteBlockCell('${dateStr}', '${periodNum}')" class="px-4 py-2 bg-red-400 text-white text-xs font-bold rounded-lg">Clear</button>` : ''}
                     </div>
                 </div>
             `);
@@ -3093,24 +3167,34 @@
         function autoPopulateFromCalendarRotations() {
             const weekDays = getWeekDaysArray();
             let autoFilledCount = 0;
+            const evts = (typeof schoolEvents !== 'undefined') ? schoolEvents : [];
 
             if (state.sections.length === 0) {
                 showToast("Please configure at least one Class Section first!");
                 return;
             }
 
-            const activeSecName = state.sections[0].name;
-
             weekDays.forEach(day => {
-                const matchedEvent = state.calendarEvents.find(e => e.start === day.dateStr);
-                if (matchedEvent) {
-                    schedPeriods.forEach(p => {
-                        state.schedule[`${day.dateStr}_${p}`] = {
-                            label: activeSecName,
-                            type: matchedEvent.summary
-                        };
-                    });
-                    autoFilledCount++;
+                const [yr, mo, dy] = day.dateStr.split('-').map(Number);
+                const rotEv = evts.find(e => {
+                    const d = new Date(e.dueDate);
+                    return d.getUTCFullYear() === yr && d.getUTCMonth() === mo - 1 && d.getUTCDate() === dy
+                        && /^classes:/i.test((e.title || '').trim());
+                });
+                if (rotEv) {
+                    const m = rotEv.title.match(/classes:\s*(.+)/i);
+                    if (m) {
+                        const periods = m[1].split(',').map(s => s.trim()).filter(Boolean);
+                        periods.forEach(p => {
+                            const lbl = getPeriodLabel(p);
+                            const sec = state.sections.find(s => s.name === lbl) || state.sections[0];
+                            state.schedule[`${day.dateStr}_${p}`] = {
+                                label: sec ? sec.name : (lbl || `Period ${p}`),
+                                type: 'Class Rotation'
+                            };
+                        });
+                        autoFilledCount++;
+                    }
                 }
             });
 
@@ -3118,9 +3202,9 @@
                 saveToStorage();
                 renderBlockSchedule();
                 renderDashTodaySchedule();
-                showToast(`🔄 Auto-populate loaded ${autoFilledCount} dates!`);
+                showToast(`🔄 Auto-populated ${autoFilledCount} rotation days!`);
             } else {
-                showToast("No active calendar events found for this week.");
+                showToast("No rotation events found this week. Sync the school calendar first.");
             }
         }
 
