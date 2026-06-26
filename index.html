@@ -655,33 +655,12 @@
 
             <!-- Block Grid Container -->
             <div class="card p-6 overflow-x-auto custom-scrollbar">
-                <div class="min-w-[800px] block-schedule">
-                    <div class="block-row">
-                        <div class="block-label"></div>
-                        <div id="sched-hdr-mon" class="block-day-header">Monday</div>
-                        <div id="sched-hdr-tue" class="block-day-header">Tuesday</div>
-                        <div id="sched-hdr-wed" class="block-day-header">Wednesday</div>
-                        <div id="sched-hdr-thu" class="block-day-header">Thursday</div>
-                        <div id="sched-hdr-fri" class="block-day-header">Friday</div>
-                    </div>
-                    
-                    <!-- Events Header Row (School Holiday or Rotations) -->
-                    <div class="block-row border-b pb-2 mb-2 border-gray-100">
-                        <div class="text-[10px] font-extrabold text-[#9A958C] text-right pr-3">DAILY EVENT</div>
-                        <div id="sched-evt-mon" class="text-[11px] font-bold text-center bg-gray-50 text-gray-400 py-1 rounded-lg">None</div>
-                        <div id="sched-evt-tue" class="text-[11px] font-bold text-center bg-gray-50 text-gray-400 py-1 rounded-lg">None</div>
-                        <div id="sched-evt-wed" class="text-[11px] font-bold text-center bg-gray-50 text-gray-400 py-1 rounded-lg">None</div>
-                        <div id="sched-evt-thu" class="text-[11px] font-bold text-center bg-gray-50 text-gray-400 py-1 rounded-lg">None</div>
-                        <div id="sched-evt-fri" class="text-[11px] font-bold text-center bg-gray-50 text-gray-400 py-1 rounded-lg">None</div>
-                    </div>
-
-                    <div id="blockGrid">
-                        <!-- Populated via Javascript -->
-                    </div>
+                <div id="blockGrid" style="min-width:700px">
+                    <!-- Populated via Javascript -->
                 </div>
                 <div class="mt-6 flex justify-between items-center border-t pt-4">
-                    <button class="px-4 py-2 bg-[#EAF7F8] text-[#1E5C62] text-xs font-bold rounded-xl hover:opacity-90 transition" onclick="autoPopulateFromCalendarRotations()">🔄 Auto-populate Rotations from Events</button>
-                    <button class="px-5 py-2 bg-[#FAF7F2] text-xs font-bold border rounded-xl hover:bg-gray-100 transition" onclick="clearSchedule()">Clear Schedule Grid</button>
+                    <button class="px-4 py-2 bg-[#EAF7F8] text-[#1E5C62] text-xs font-bold rounded-xl hover:opacity-90 transition" onclick="autoPopulateFromCalendarRotations()">🔄 Auto-populate from Rotation</button>
+                    <button class="px-5 py-2 bg-[#FAF7F2] text-xs font-bold border rounded-xl hover:bg-gray-100 transition" onclick="clearSchedule()">Clear Lesson Plans</button>
                 </div>
             </div>
         </section>
@@ -1007,40 +986,48 @@
                 <div class="card p-6 accent-teal max-w-2xl">
                     <h4 class="text-lg font-bold mb-2">📅 My Period Schedule</h4>
                     <p class="text-xs text-gray-500 mb-5 leading-relaxed">
-                        Enter the class you teach each period. These labels appear in the rotation schedule and class plan view alongside the period number.
+                        Enter the class you teach each period and select its type. <strong>Class</strong> = auto-populated in the block scheduler and matched to the gradebook. <strong>Plan</strong> = planning/prep (no lesson plan required). <strong>Duty</strong> = advisory, sub coverage, or duty.
                     </p>
                     <div class="space-y-2.5">
-                        <div class="grid grid-cols-[80px_1fr] items-center gap-3">
-                            <span class="text-[11px] font-extrabold text-gray-400 uppercase">Period</span>
-                            <span class="text-[11px] font-extrabold text-gray-400 uppercase">Class Name</span>
+                        <div class="grid items-center gap-3" style="grid-template-columns:52px 1fr 160px">
+                            <span class="text-[10px] font-extrabold text-gray-400 uppercase">Period</span>
+                            <span class="text-[10px] font-extrabold text-gray-400 uppercase">Class Name / Label</span>
+                            <span class="text-[10px] font-extrabold text-gray-400 uppercase">Type</span>
                         </div>
-                        <div class="grid grid-cols-[80px_1fr] items-center gap-3">
-                            <label class="text-xs font-bold text-[#4A4540]">Period 1</label>
+                        <div class="grid items-center gap-3" style="grid-template-columns:52px 1fr 160px">
+                            <label class="text-xs font-bold text-[#4A4540]">P1</label>
                             <input id="period-label-1" type="text" placeholder="e.g. Algebra II Honors" oninput="savePeriodLabel('1',this.value)" class="border p-2 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#82BDC3] w-full">
+                            <div id="period-type-1" class="flex gap-1"></div>
                         </div>
-                        <div class="grid grid-cols-[80px_1fr] items-center gap-3">
-                            <label class="text-xs font-bold text-[#4A4540]">Period 2</label>
+                        <div class="grid items-center gap-3" style="grid-template-columns:52px 1fr 160px">
+                            <label class="text-xs font-bold text-[#4A4540]">P2</label>
                             <input id="period-label-2" type="text" placeholder="e.g. Pre-Calculus" oninput="savePeriodLabel('2',this.value)" class="border p-2 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#82BDC3] w-full">
+                            <div id="period-type-2" class="flex gap-1"></div>
                         </div>
-                        <div class="grid grid-cols-[80px_1fr] items-center gap-3">
-                            <label class="text-xs font-bold text-[#4A4540]">Period 3</label>
+                        <div class="grid items-center gap-3" style="grid-template-columns:52px 1fr 160px">
+                            <label class="text-xs font-bold text-[#4A4540]">P3</label>
                             <input id="period-label-3" type="text" placeholder="e.g. English II" oninput="savePeriodLabel('3',this.value)" class="border p-2 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#82BDC3] w-full">
+                            <div id="period-type-3" class="flex gap-1"></div>
                         </div>
-                        <div class="grid grid-cols-[80px_1fr] items-center gap-3">
-                            <label class="text-xs font-bold text-[#4A4540]">Period 4</label>
+                        <div class="grid items-center gap-3" style="grid-template-columns:52px 1fr 160px">
+                            <label class="text-xs font-bold text-[#4A4540]">P4</label>
                             <input id="period-label-4" type="text" placeholder="e.g. AP US History" oninput="savePeriodLabel('4',this.value)" class="border p-2 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#82BDC3] w-full">
+                            <div id="period-type-4" class="flex gap-1"></div>
                         </div>
-                        <div class="grid grid-cols-[80px_1fr] items-center gap-3">
-                            <label class="text-xs font-bold text-[#4A4540]">Period 5</label>
+                        <div class="grid items-center gap-3" style="grid-template-columns:52px 1fr 160px">
+                            <label class="text-xs font-bold text-[#4A4540]">P5</label>
                             <input id="period-label-5" type="text" placeholder="e.g. Theology III" oninput="savePeriodLabel('5',this.value)" class="border p-2 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#82BDC3] w-full">
+                            <div id="period-type-5" class="flex gap-1"></div>
                         </div>
-                        <div class="grid grid-cols-[80px_1fr] items-center gap-3">
-                            <label class="text-xs font-bold text-[#4A4540]">Period 6</label>
+                        <div class="grid items-center gap-3" style="grid-template-columns:52px 1fr 160px">
+                            <label class="text-xs font-bold text-[#4A4540]">P6</label>
                             <input id="period-label-6" type="text" placeholder="e.g. Spanish II" oninput="savePeriodLabel('6',this.value)" class="border p-2 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#82BDC3] w-full">
+                            <div id="period-type-6" class="flex gap-1"></div>
                         </div>
-                        <div class="grid grid-cols-[80px_1fr] items-center gap-3">
-                            <label class="text-xs font-bold text-[#4A4540]">Period 7</label>
+                        <div class="grid items-center gap-3" style="grid-template-columns:52px 1fr 160px">
+                            <label class="text-xs font-bold text-[#4A4540]">P7</label>
                             <input id="period-label-7" type="text" placeholder="e.g. Study Hall / Homeroom" oninput="savePeriodLabel('7',this.value)" class="border p-2 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#82BDC3] w-full">
+                            <div id="period-type-7" class="flex gap-1"></div>
                         </div>
                     </div>
                 </div>
@@ -2351,6 +2338,7 @@
                 { id: 'sec-2', name: 'Period 2' }
             ],
             periodLabels: { '1':'', '2':'', '3':'', '4':'', '5':'', '6':'', '7':'' },
+            periodTypes: { '1':'class','2':'class','3':'class','4':'class','5':'class','6':'class','7':'class' },
             activeTheme: 'earthy',
             activeStandardsSet: 'CUSTOM',
             activeStandardsSubject: 'CUSTOM',
@@ -2602,6 +2590,7 @@
             }
             if (!state.activeTheme) state.activeTheme = 'earthy';
             if (!state.periodLabels) state.periodLabels = { '1':'','2':'','3':'','4':'','5':'','6':'','7':'' };
+            if (!state.periodTypes) state.periodTypes = { '1':'class','2':'class','3':'class','4':'class','5':'class','6':'class','7':'class' };
             if (!state.activeStandardsSet) state.activeStandardsSet = 'CUSTOM';
             if (!state.activeStandardsSubject) state.activeStandardsSubject = state.activeStandardsSet || 'CUSTOM';
             if (!state.myClasses) state.myClasses = [];
@@ -2902,8 +2891,8 @@
 
             const evts = (typeof schoolEvents !== 'undefined') ? schoolEvents : [];
 
-            // For each weekday, find the MCA rotation event from schoolEvents
-            const dayData = weekDays.map(day => {
+            // Parse MCA rotation for each weekday
+            const dayData = weekDays.map((day, idx) => {
                 const [yr, mo, dy] = day.dateStr.split('-').map(Number);
                 const rotEv = evts.find(e => {
                     const d = new Date(e.dueDate);
@@ -2915,89 +2904,98 @@
                     const m = rotEv.title.match(/classes:\s*(.+)/i);
                     if (m) periods = m[1].split(',').map(s => s.trim()).filter(Boolean);
                 }
-                // Any other school event (non-rotation) on this day
                 const otherEv = !rotEv ? evts.find(e => {
                     const d = new Date(e.dueDate);
                     return d.getUTCFullYear() === yr && d.getUTCMonth() === mo - 1 && d.getUTCDate() === dy;
                 }) : null;
-                return { ...day, periods, hasRotation: periods.length > 0, otherEventTitle: otherEv ? otherEv.title : null };
+                const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+                return { ...day, periods, hasRotation: periods.length > 0, otherEventTitle: otherEv ? otherEv.title : null, dayName: dayNames[idx] };
             });
 
-            // Update day headers and events row
+            // Day-column layout: each day is its own column
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:start;';
+
+            const todayStr = formatSimpleDate(new Date());
+
             dayData.forEach(day => {
-                document.getElementById(`sched-hdr-${day.dayId}`).innerText = day.formattedHeader;
-                const evCell = document.getElementById(`sched-evt-${day.dayId}`);
-                if (!evCell) return;
+                const col = document.createElement('div');
+                col.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+
+                // Day header
+                const isToday = day.dateStr === todayStr;
+                const [, , dayNum] = day.dateStr.split('-');
+                const hdr = document.createElement('div');
+                hdr.style.cssText = `border-radius:10px;padding:8px 10px;text-align:center;${isToday ? 'background:var(--c-brown,#5a2d0c);color:white;' : 'background:#f5f2ee;color:#4A4540;'}`;
+                hdr.innerHTML = `<div style="font-weight:800;font-size:10px;text-transform:uppercase;letter-spacing:.06em;opacity:${isToday?1:.7}">${day.dayName}</div><div style="font-size:15px;font-weight:800;margin-top:1px">${parseInt(dayNum)}</div>`;
+                col.appendChild(hdr);
+
+                // Rotation / event badge
+                const badge = document.createElement('div');
                 if (day.hasRotation) {
-                    const rotation = day.periods.map(p => {
-                        const lbl = getPeriodLabel(p);
-                        return lbl ? `P${p}·${lbl}` : `P${p}`;
-                    }).join(' → ');
-                    evCell.innerHTML = `<span style="color:var(--c-brown,#5a2d0c);font-weight:800;font-size:10px">🔄 ${rotation}</span>`;
-                    evCell.className = 'text-[10px] text-center py-1 px-2 rounded-lg border bg-amber-50 border-amber-200';
+                    badge.style.cssText = 'background:rgba(90,45,12,0.07);border:1px solid rgba(90,45,12,0.15);border-radius:7px;padding:5px 8px;font-size:9px;font-weight:800;color:var(--c-brown,#5a2d0c);text-align:center;line-height:1.5;word-break:break-all;';
+                    badge.textContent = '🔄 ' + day.periods.map(p => `P${p}`).join(' → ');
                 } else if (day.otherEventTitle) {
-                    evCell.innerText = day.otherEventTitle;
-                    evCell.className = 'text-[11px] font-bold text-center py-1 px-2 rounded-lg border bg-orange-50 text-orange-700 border-orange-200 truncate';
+                    badge.style.cssText = 'background:#fff7ed;border:1px solid #fed7aa;border-radius:7px;padding:5px 8px;font-size:9px;font-weight:700;color:#c2410c;text-align:center;';
+                    badge.textContent = day.otherEventTitle;
                 } else {
-                    evCell.innerText = 'No Calendar Events';
-                    evCell.className = 'text-[11px] font-medium text-center bg-gray-50 text-gray-400 py-1 rounded-lg';
+                    badge.style.cssText = 'background:#f8f8f8;border:1px dashed #ddd;border-radius:7px;padding:5px 8px;font-size:9px;color:#bbb;text-align:center;';
+                    badge.textContent = 'No rotation posted';
                 }
-            });
+                col.appendChild(badge);
 
-            // Collect unique period numbers from this week's rotations, sorted numerically
-            const allPeriodsSet = new Set();
-            dayData.forEach(d => d.periods.forEach(p => allPeriodsSet.add(p)));
-            const hasAnyRotation = dayData.some(d => d.hasRotation);
-            const rowPeriods = allPeriodsSet.size > 0
-                ? [...allPeriodsSet].sort((a, b) => parseInt(a) - parseInt(b))
-                : ['1','2','3','4','5','6','7'];
+                // Which periods to show: rotation order if available, else all class/plan/duty periods
+                const displayPeriods = day.hasRotation
+                    ? day.periods
+                    : ['1','2','3','4','5','6','7'];
 
-            rowPeriods.forEach(periodNum => {
-                const row = document.createElement('div');
-                row.className = 'block-row';
-
-                const className = getPeriodLabel(periodNum);
-                const rowLabel = className
-                    ? `<div style="font-weight:800;font-size:11px;color:var(--c-brown,#5a2d0c)">P${periodNum}</div><div style="font-size:9px;color:#9A958C;line-height:1.3;word-break:break-word;margin-top:2px">${className}</div>`
-                    : `<div style="font-weight:700;font-size:12px">${hasAnyRotation ? `P${periodNum}` : `Period ${periodNum}`}</div>`;
-                row.innerHTML = `<div class="block-label">${rowLabel}</div>`;
-
-                dayData.forEach(day => {
+                displayPeriods.forEach((periodNum, slotIdx) => {
                     const key = `${day.dateStr}_${periodNum}`;
-                    const cell = state.schedule[key];
-                    const cellDiv = document.createElement('div');
-                    const inRotation = day.hasRotation ? day.periods.includes(periodNum) : true;
+                    const saved = state.schedule[key] || {};
+                    const className = getPeriodLabel(periodNum);
+                    const pType = getPeriodType(periodNum);
+                    const slotLabel = day.hasRotation ? `Block ${slotIdx + 1}` : `P${periodNum}`;
 
-                    if (day.hasRotation && !inRotation) {
-                        // Period not in today's rotation — dim cell, no click
-                        cellDiv.className = 'block-cell';
-                        cellDiv.style.cssText = 'background:#f5f5f0;opacity:0.45;cursor:default;border-style:dashed;';
-                        cellDiv.innerHTML = `<div style="text-align:center;color:#ccc;margin-top:20px;font-size:13px">—</div>`;
-                    } else if (cell) {
-                        cellDiv.className = 'block-cell has-content';
-                        cellDiv.style.backgroundColor = 'rgba(161, 205, 206, 0.15)';
-                        cellDiv.style.borderColor = 'var(--aqua)';
-                        const slotIdx = day.hasRotation ? day.periods.indexOf(periodNum) : -1;
-                        const slotTag = slotIdx >= 0 ? `<div style="font-size:9px;color:#82BDC3;margin-bottom:2px">Block ${slotIdx + 1}</div>` : '';
-                        cellDiv.innerHTML = `
-                            ${slotTag}
-                            <div class="block-period-tag text-[#82BDC3]">P${periodNum}</div>
-                            <div class="block-class text-[#4A4540]">${cell.label}</div>
-                            <div class="block-type text-gray-400">${cell.type}</div>
-                        `;
-                        cellDiv.onclick = () => openBlockModal(day.dateStr, periodNum);
+                    const cell = document.createElement('div');
+                    cell.style.cssText = 'border-radius:9px;padding:9px 11px;cursor:pointer;border:1.5px solid;min-height:62px;transition:border-color .15s,background .15s;';
+
+                    if (pType === 'plan') {
+                        cell.style.cssText += 'background:#f0f9ff;border-color:#bae6fd;';
+                        cell.innerHTML = `<div style="font-size:9px;font-weight:800;color:#0284c7;text-transform:uppercase;letter-spacing:.05em">${slotLabel} · Planning</div>
+                            <div style="font-size:11px;font-weight:600;color:#38bdf8;margin-top:4px">${className || 'Planning Period'}</div>
+                            ${saved.notes ? `<div style="font-size:10px;color:#7dd3fc;margin-top:3px;line-height:1.3">${saved.notes}</div>` : ''}`;
+                    } else if (pType === 'duty') {
+                        cell.style.cssText += 'background:#faf5ff;border-color:#e9d5ff;';
+                        cell.innerHTML = `<div style="font-size:9px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em">${slotLabel} · Duty</div>
+                            <div style="font-size:11px;font-weight:600;color:#c4b5fd;margin-top:4px">${className || 'Duty / Advisory'}</div>
+                            ${saved.notes ? `<div style="font-size:10px;color:#c4b5fd;margin-top:3px;line-height:1.3">${saved.notes}</div>` : ''}`;
+                    } else if (saved.notes || saved.type) {
+                        cell.style.cssText += 'background:rgba(130,189,195,0.12);border-color:#82BDC3;';
+                        cell.innerHTML = `<div style="font-size:9px;font-weight:800;color:#82BDC3;text-transform:uppercase;letter-spacing:.05em">${slotLabel}</div>
+                            <div style="font-size:11px;font-weight:700;color:#4A4540;margin-top:3px">P${periodNum}${className ? ' · ' + className : ''}</div>
+                            ${saved.notes ? `<div style="font-size:10px;color:#9A958C;margin-top:3px;line-height:1.3">${saved.notes}</div>` : ''}
+                            ${saved.type ? `<div style="font-size:9px;color:#bbb;margin-top:2px">${saved.type}</div>` : ''}`;
+                    } else if (className) {
+                        cell.style.cssText += 'background:#fff;border-color:#e5e7eb;';
+                        cell.innerHTML = `<div style="font-size:9px;font-weight:800;color:#ccc;text-transform:uppercase;letter-spacing:.05em">${slotLabel}</div>
+                            <div style="font-size:12px;font-weight:700;color:#4A4540;margin-top:3px">P${periodNum} · ${className}</div>
+                            <div style="font-size:10px;color:#ccc;margin-top:5px">+ Add lesson plan</div>`;
+                        cell.onmouseover = () => { cell.style.borderColor = '#82BDC3'; cell.style.background = 'rgba(130,189,195,0.05)'; };
+                        cell.onmouseout  = () => { cell.style.borderColor = '#e5e7eb'; cell.style.background = '#fff'; };
                     } else {
-                        cellDiv.className = 'block-cell';
-                        const slotIdx = day.hasRotation ? day.periods.indexOf(periodNum) : -1;
-                        const slotTag = slotIdx >= 0 ? `<div style="font-size:9px;color:#ccc;text-align:center;margin-top:8px">Block ${slotIdx + 1}</div>` : '';
-                        cellDiv.innerHTML = `${slotTag}<div style="text-align:center;color:#ccc;margin-top:${slotIdx >= 0 ? 4 : 20}px;font-weight:700;font-size:11px">+ Plan</div>`;
-                        cellDiv.onclick = () => openBlockModal(day.dateStr, periodNum);
+                        cell.style.cssText += 'background:#fafafa;border-color:#eee;border-style:dashed;';
+                        cell.innerHTML = `<div style="font-size:9px;font-weight:700;color:#ccc;text-transform:uppercase">${slotLabel} · P${periodNum}</div>
+                            <div style="font-size:11px;color:#ccc;margin-top:8px;text-align:center">+ Plan</div>`;
                     }
 
-                    row.appendChild(cellDiv);
+                    cell.onclick = () => openBlockModal(day.dateStr, periodNum);
+                    col.appendChild(cell);
                 });
-                grid.appendChild(row);
+
+                wrapper.appendChild(col);
             });
+
+            grid.appendChild(wrapper);
 
             const input = document.getElementById('ical-url-input');
             if (input && state.syncSettings) {
@@ -3010,61 +3008,52 @@
             const current = state.schedule[key] || {};
             const prettyDate = new Date(dateStr + "T00:00:00").toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
             const className = getPeriodLabel(periodNum);
+            const pType = getPeriodType(periodNum);
             const periodLabel = className ? `P${periodNum} · ${className}` : `Period ${periodNum}`;
-
-            const sectionOptions = state.sections.map(sec => `
-                <option value="${sec.name}" ${current.label === sec.name ? 'selected' : ''}>${sec.name}</option>
-            `).join('');
+            const typeChip = pType === 'plan' ? '🗓 Planning Period' : pType === 'duty' ? '📋 Duty / Advisory' : '📚 Class';
 
             showModal(`
-                <h3 class="text-xl font-bold mb-1">Edit Block Assignment</h3>
-                <p class="text-xs text-gray-400 mb-4">${prettyDate} · ${periodLabel}</p>
-                <div class="space-y-4">
+                <h3 class="text-xl font-bold mb-1">📝 Lesson Plan</h3>
+                <p class="text-xs text-gray-400 mb-1">${prettyDate}</p>
+                <p class="text-xs font-bold text-[#82BDC3] mb-4">${periodLabel} &nbsp;·&nbsp; <span style="color:#9A958C">${typeChip}</span></p>
+                <div class="space-y-3">
                     <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Class Section Select</label>
-                        <select id="bcLabel" class="w-full border p-2.5 rounded-lg text-xs outline-none">
-                            <option value="">-- Choose Class Group --</option>
-                            ${sectionOptions}
-                            <option value="Planning Period" ${current.label === 'Planning Period' ? 'selected' : ''}>Planning Period</option>
-                            <option value="Lunch Block" ${current.label === 'Lunch Block' ? 'selected' : ''}>Lunch Block</option>
-                            <option value="Duty Assignment" ${current.label === 'Duty Assignment' ? 'selected' : ''}>Duty Assignment</option>
-                        </select>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Lesson Focus / Activity</label>
+                        <input id="bcNotes" type="text" value="${current.notes || ''}" placeholder="e.g. Quadratic equations intro, group activity" class="w-full border p-2.5 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#82BDC3]">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Specific Lesson Focus Type</label>
-                        <input id="bcType" type="text" value="${current.type || ''}" placeholder="e.g. Science Lab Investigation" class="w-full border p-2.5 rounded-lg text-xs outline-none">
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Materials / Resources</label>
+                        <input id="bcType" type="text" value="${current.type || ''}" placeholder="e.g. Textbook pp. 42-48, worksheet" class="w-full border p-2.5 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#82BDC3]">
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="saveBlockCell('${dateStr}', '${periodNum}')" class="flex-1 py-2 bg-[#7EC8A4] text-white text-xs font-bold rounded-lg shadow-sm hover:opacity-90">Save Assignment</button>
-                        ${current.label ? `<button onclick="deleteBlockCell('${dateStr}', '${periodNum}')" class="px-4 py-2 bg-red-400 text-white text-xs font-bold rounded-lg">Clear</button>` : ''}
+                        <button onclick="saveBlockCell('${dateStr}', '${periodNum}')" class="flex-1 py-2 bg-[#7EC8A4] text-white text-xs font-bold rounded-lg shadow-sm hover:opacity-90">Save Plan</button>
+                        ${(current.notes || current.type) ? `<button onclick="deleteBlockCell('${dateStr}', '${periodNum}')" class="px-4 py-2 bg-red-400 text-white text-xs font-bold rounded-lg">Clear</button>` : ''}
                     </div>
                 </div>
             `);
         }
 
-        function saveBlockCell(dateStr, period) {
-            const label = document.getElementById('bcLabel').value;
-            const type = document.getElementById('bcType').value.trim() || 'Instructional Block';
-            const key = `${dateStr}_${period}`;
+        function saveBlockCell(dateStr, periodNum) {
+            const notes = document.getElementById('bcNotes').value.trim();
+            const type  = document.getElementById('bcType').value.trim();
+            const key   = `${dateStr}_${periodNum}`;
 
-            if (!label) return;
-
-            state.schedule[key] = { label, type };
+            state.schedule[key] = { notes, type, label: getPeriodLabel(periodNum) };
             saveToStorage();
             closeModal();
             renderBlockSchedule();
             renderDashTodaySchedule();
-            showToast('Day Block saved to schedule.');
+            showToast('Lesson plan saved.');
         }
 
-        function deleteBlockCell(dateStr, period) {
-            const key = `${dateStr}_${period}`;
+        function deleteBlockCell(dateStr, periodNum) {
+            const key = `${dateStr}_${periodNum}`;
             delete state.schedule[key];
             saveToStorage();
             closeModal();
             renderBlockSchedule();
             renderDashTodaySchedule();
-            showToast('Assignment cleared.');
+            showToast('Lesson plan cleared.');
         }
 
         function clearSchedule() {
@@ -4341,10 +4330,39 @@
             saveToStorage();
         }
 
+        function getPeriodType(num) {
+            return ((state.periodTypes || {})[String(num)] || 'class');
+        }
+
+        function savePeriodType(num, type) {
+            if (!state.periodTypes) state.periodTypes = {};
+            state.periodTypes[String(num)] = type;
+            saveToStorage();
+            renderPeriodTypeButtons(num);
+            renderBlockSchedule();
+        }
+
+        function renderPeriodTypeButtons(num) {
+            const container = document.getElementById('period-type-' + num);
+            if (!container) return;
+            const current = getPeriodType(num);
+            const types = [
+                { key: 'class', label: 'Class', activeStyle: 'background:#82BDC3;color:white;border-color:#82BDC3;' },
+                { key: 'plan',  label: 'Plan',  activeStyle: 'background:#0284c7;color:white;border-color:#0284c7;' },
+                { key: 'duty',  label: 'Duty',  activeStyle: 'background:#7c3aed;color:white;border-color:#7c3aed;' },
+            ];
+            container.innerHTML = types.map(t => {
+                const isActive = current === t.key;
+                const style = isActive ? t.activeStyle : 'background:#f5f5f5;color:#9A958C;border-color:#e5e7eb;';
+                return `<button onclick="savePeriodType('${num}','${t.key}')" style="flex:1;padding:4px 2px;font-size:10px;font-weight:700;border:1.5px solid;border-radius:6px;cursor:pointer;${style}">${t.label}</button>`;
+            }).join('');
+        }
+
         function populatePeriodLabelSettings() {
             for (let i = 1; i <= 7; i++) {
                 const el = document.getElementById('period-label-' + i);
                 if (el) el.value = getPeriodLabel(i);
+                renderPeriodTypeButtons(i);
             }
         }
 
