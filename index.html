@@ -831,46 +831,37 @@
 
         <!-- Tab: Standards Tracker -->
         <section id="tab-standards" class="tab-content hidden">
-            <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+
+            <!-- Header row -->
+            <div class="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
                     <h3 class="text-2xl font-bold mb-1">🎯 Academic Standards Hub</h3>
-                    <p class="text-sm text-[#9A958C]">Select, search, and manage standard lists mapped directly inside lesson outlines.</p>
+                    <p class="text-sm text-[#9A958C]">Browse and copy standards by subject. Click any standard code to copy it.</p>
                 </div>
-                <div class="flex gap-2">
-                    <select id="standards-set-selector" onchange="changeStandardsSet(this.value)" class="border p-2.5 rounded-xl text-xs font-bold outline-none bg-white">
-                        <option value="CUSTOM">⚙️ Custom Standards Set</option>
-                        <optgroup label="── Louisiana Core Subjects ──">
-                            <option value="LA_MATH">📐 Mathematics (LSSM — HS Algebra, Geo, Stats)</option>
-                            <option value="LA_ELA">📖 English Language Arts (LSS — Grades 9-12)</option>
-                            <option value="LA_SCIENCE">🔬 Science (Louisiana/NGSS — HS)</option>
-                        </optgroup>
-                        <optgroup label="── Louisiana Electives & Specials ──">
-                            <option value="LA_CS">💻 Computer Science (CSTA 3B — Grades 9-12)</option>
-                            <option value="LA_RELIGION">✝️ Religion (Archdiocese of New Orleans)</option>
-                            <option value="LA_SS">🌍 Social Studies (US History, World, Civics, Econ, Geo)</option>
-                            <option value="LA_HEALTH">❤️ Health Education (Louisiana — HS)</option>
-                            <option value="LA_FINE_ARTS">🎨 Fine Arts (Visual Art & Music — HS)</option>
-                            <option value="LA_PSYCHOLOGY">🧠 Psychology (APA — HS)</option>
-                            <option value="LA_BUSINESS">💼 Business & Marketing (Louisiana — HS)</option>
-                        </optgroup>
-                        <optgroup label="── World & Classical Languages ──">
-                            <option value="LA_SPANISH">🇪🇸 Spanish (ACTFL — Louisiana)</option>
-                            <option value="LA_FRENCH">🇫🇷 French (ACTFL — Louisiana / Francophone)</option>
-                            <option value="LA_LATIN">🏛️ Latin (ACL/ACTFL — Classical)</option>
-                        </optgroup>
-                    </select>
-                </div>
+                <button onclick="openClassPickerModal()"
+                    class="self-start flex items-center gap-2 px-4 py-2.5 bg-[#E67F76] text-white rounded-xl text-sm font-bold hover:opacity-90 transition shrink-0">
+                    📚 Edit My Classes
+                </button>
             </div>
 
-            <div class="space-y-6">
-                <div class="card p-6">
-                    <input id="stdSearch" type="text" placeholder="🔍 Search curriculum standard items..." oninput="filterStandards()" class="w-full border p-3 rounded-xl focus:ring-1 focus:ring-[#82BDC3] outline-none text-sm">
-                </div>
-
-                <div id="standardsList" class="space-y-6">
-                    <!-- Loaded dynamically via state map -->
-                </div>
+            <!-- Subject tabs — shows My Classes or a prompt if none selected -->
+            <div class="mb-5">
+                <div id="std-subject-tabs" class="flex gap-2 overflow-x-auto pb-2" style="scrollbar-width:none;-webkit-overflow-scrolling:touch"></div>
             </div>
+
+            <!-- Search bar -->
+            <div class="bg-white rounded-2xl border shadow-sm px-4 py-3 mb-5 flex items-center gap-3">
+                <span class="text-gray-300 text-base shrink-0">🔍</span>
+                <input id="stdSearch" type="text" placeholder="Search by code or keyword…"
+                    oninput="renderStandards()"
+                    class="flex-1 outline-none text-sm placeholder-gray-300 bg-transparent">
+                <button onclick="document.getElementById('stdSearch').value=''; renderStandards();"
+                    class="text-gray-300 hover:text-gray-500 text-xs font-bold px-1 transition">✕</button>
+            </div>
+
+            <!-- Standards list rendered here -->
+            <div id="standardsList" class="space-y-3"></div>
+
         </section>
 
         <!-- Tab: Canvas Calendar (MCA) -->
@@ -1171,6 +1162,26 @@
 
     <!-- Javascript Logical State System -->
     <script>
+        // Subject metadata — display names, icons, and groups for the standards picker
+        const STANDARDS_META = {
+            CUSTOM:        { label: 'Custom Standards',      shortLabel: 'Custom',       icon: '⚙️',  group: 'Custom' },
+            LA_MATH:       { label: 'Mathematics',           shortLabel: 'Math',         icon: '📐',  group: 'Core' },
+            LA_ELA:        { label: 'English Language Arts', shortLabel: 'ELA',          icon: '📖',  group: 'Core' },
+            LA_SCIENCE:    { label: 'Science',               shortLabel: 'Science',      icon: '🔬',  group: 'Core' },
+            LA_SS:         { label: 'Social Studies',        shortLabel: 'Soc. Studies', icon: '🌍',  group: 'Core' },
+            LA_HEALTH:     { label: 'Health Education',      shortLabel: 'Health',       icon: '❤️', group: 'Electives' },
+            LA_PE:         { label: 'Physical Education',    shortLabel: 'P.E.',         icon: '🏃',  group: 'Electives' },
+            LA_FINE_ARTS:  { label: 'Fine Arts',             shortLabel: 'Fine Arts',    icon: '🎨',  group: 'Electives' },
+            LA_DRAMA:      { label: 'Theatre Arts',          shortLabel: 'Theatre',      icon: '🎭',  group: 'Electives' },
+            LA_PSYCHOLOGY: { label: 'Psychology',            shortLabel: 'Psychology',   icon: '🧠',  group: 'Electives' },
+            LA_BUSINESS:   { label: 'Business & Marketing',  shortLabel: 'Business',     icon: '💼',  group: 'Electives' },
+            LA_CS:         { label: 'Computer Science',      shortLabel: 'CS',           icon: '💻',  group: 'Electives' },
+            LA_RELIGION:   { label: 'Religion / Theology',   shortLabel: 'Religion',     icon: '✝️', group: 'Electives' },
+            LA_SPANISH:    { label: 'Spanish',               shortLabel: 'Spanish',      icon: '🇪🇸', group: 'Languages' },
+            LA_FRENCH:     { label: 'French',                shortLabel: 'French',       icon: '🇫🇷', group: 'Languages' },
+            LA_LATIN:      { label: 'Latin',                 shortLabel: 'Latin',        icon: '🏛️', group: 'Languages' },
+        };
+
         // Academic Standards Libraries Dataset Database
         const STANDARDS_LIBRARIES = {
             CUSTOM: [],  // add your own standards via Settings > Standards
@@ -2194,6 +2205,93 @@
                     { code: "BUS.LAW.3", desc: "Examine intellectual property law (patents, trademarks, copyrights, trade secrets) and its importance in protecting innovation and creativity." }
                 ]
             }
+        ],
+
+        // ── Physical Education ─────────────────────────────────────────────────
+        LA_PE: [
+            {
+                strand: "Motor Skills & Movement",
+                items: [
+                    { code: "PE.MS.1", desc: "Demonstrate competency in a variety of motor skills and movement patterns through individual, dual, and team activities appropriate to a physically active lifestyle." },
+                    { code: "PE.MS.2", desc: "Apply movement concepts (space, effort, relationships) and tactical strategies to physical activities, adapting performance based on environmental and situational demands." },
+                    { code: "PE.MS.3", desc: "Demonstrate transferable skills across multiple movement contexts, recognizing similarities and differences between activities that support skill development and adaptability." }
+                ]
+            },
+            {
+                strand: "Health-Related Fitness",
+                items: [
+                    { code: "PE.HRF.1", desc: "Assess personal fitness using health-related components (cardiorespiratory endurance, muscular strength/endurance, flexibility, body composition) and interpret results using appropriate fitness standards (FitnessGram)." },
+                    { code: "PE.HRF.2", desc: "Design, implement, and evaluate a personal fitness plan that incorporates FITT principles (Frequency, Intensity, Time, Type) and applies principles of overload, progression, and specificity." },
+                    { code: "PE.HRF.3", desc: "Analyze the relationship between physical activity, nutrition, rest, and overall health, and apply this understanding to support lifelong wellness habits." },
+                    { code: "PE.HRF.4", desc: "Identify the components of the warm-up, workout, and cool-down phases of exercise and explain the physiological rationale for each in preventing injury and maximizing performance." }
+                ]
+            },
+            {
+                strand: "Knowledge & Application",
+                items: [
+                    { code: "PE.KA.1", desc: "Apply knowledge of anatomy, biomechanics, and exercise physiology principles to analyze and improve personal movement efficiency and sport-specific performance." },
+                    { code: "PE.KA.2", desc: "Evaluate physical activity opportunities in the school, community, and digital environment, and identify strategies for maintaining an active lifestyle throughout adulthood." },
+                    { code: "PE.KA.3", desc: "Analyze the role of physical activity in stress management, mental health, and overall quality of life, citing current research and personal experience." }
+                ]
+            },
+            {
+                strand: "Personal & Social Responsibility",
+                items: [
+                    { code: "PE.PSR.1", desc: "Demonstrate responsible personal behavior — self-management, goal setting, ethical decision-making — in physical activity settings." },
+                    { code: "PE.PSR.2", desc: "Demonstrate positive social behaviors — respect, inclusion, cooperation, conflict resolution — in both competitive and cooperative physical activity contexts." },
+                    { code: "PE.PSR.3", desc: "Recognize the value of physical activity for health, enjoyment, self-expression, and social connection, articulating a personal philosophy of active living." }
+                ]
+            }
+        ],
+
+        // ── Theatre Arts / Drama ───────────────────────────────────────────────
+        LA_DRAMA: [
+            {
+                strand: "Creating — Playwriting & Devising",
+                items: [
+                    { code: "TH.CR.1", desc: "Generate and develop original dramatic ideas and scripts through individual and collaborative devising processes, incorporating conflict, character, and theatrical structure." },
+                    { code: "TH.CR.2", desc: "Write or adapt scenes and short plays, applying dialogue, stage directions, dramatic tension, and thematic development appropriate to the intended audience." },
+                    { code: "TH.CR.3", desc: "Refine dramatic work through rehearsal, feedback, and revision, making intentional artistic choices that clarify meaning and strengthen theatrical impact." }
+                ]
+            },
+            {
+                strand: "Performing — Acting & Character",
+                items: [
+                    { code: "TH.PR.ACT.1", desc: "Create believable and nuanced characters using Stanislavski-based methods — given circumstances, objectives, obstacles, and actions — to motivate truthful stage behavior." },
+                    { code: "TH.PR.ACT.2", desc: "Analyze a script to identify character arc, subtext, and relationships, using script analysis to inform and deepen performance choices." },
+                    { code: "TH.PR.ACT.3", desc: "Demonstrate ensemble-based performance skills including active listening, building on partner choices, and maintaining character integrity in scene work and full productions." }
+                ]
+            },
+            {
+                strand: "Performing — Voice, Body & Stage",
+                items: [
+                    { code: "TH.PR.VBS.1", desc: "Develop vocal presence through work on breath, resonance, articulation, pitch, tempo, and projection to communicate character and text with clarity and intentionality." },
+                    { code: "TH.PR.VBS.2", desc: "Use the body expressively — posture, gesture, movement, physical characterization — to communicate emotion, status, and narrative in performance." },
+                    { code: "TH.PR.VBS.3", desc: "Apply stage geography (areas, levels, blocking conventions) and movement principles to create visually compelling and dramatically effective stage pictures." }
+                ]
+            },
+            {
+                strand: "Design & Production",
+                items: [
+                    { code: "TH.DP.1", desc: "Analyze how the design elements of a production (set, lighting, costume, sound, props) contribute to mood, theme, and storytelling, making evidence-based design choices." },
+                    { code: "TH.DP.2", desc: "Collaborate in a production crew role (stage manager, director's assistant, technical crew, house management) demonstrating professional theater practices and teamwork." }
+                ]
+            },
+            {
+                strand: "Responding & Critiquing",
+                items: [
+                    { code: "TH.RE.1", desc: "Evaluate live and recorded theatrical performances using an established critical framework (Elements of Drama, Four-Point Critique), supporting interpretations with specific textual and performance evidence." },
+                    { code: "TH.RE.2", desc: "Articulate the personal and aesthetic impact of theatre on an audience, distinguishing between individual emotional response and craft-based artistic evaluation." }
+                ]
+            },
+            {
+                strand: "Connecting — History, Culture & Career",
+                items: [
+                    { code: "TH.CO.1", desc: "Trace the development of theatre from ancient Greek and Roman drama through Elizabethan, Neoclassical, Realistic, and Contemporary theatre, analyzing how historical context shapes dramatic form." },
+                    { code: "TH.CO.2", desc: "Examine how theatre reflects and influences cultural values, social justice issues, and community identity, with particular attention to diverse theatrical traditions and playwrights." },
+                    { code: "TH.CO.3", desc: "Identify and explore professional pathways in theatre (acting, directing, design, arts administration, education, film/TV) and the transferable skills theatre develops for any career." }
+                ]
+            }
         ]
         };
 
@@ -2212,6 +2310,8 @@
             ],
             activeTheme: 'earthy',
             activeStandardsSet: 'CUSTOM',
+            activeStandardsSubject: 'CUSTOM',
+            myClasses: [],
             customStandards: [],
             tasks: {
                 teacher: [],
@@ -2365,7 +2465,7 @@
             if (tabId === 'schedule') renderBlockSchedule();
             if (tabId === 'unit') renderUnits();
             if (tabId === 'lessons') showLessonList();
-            if (tabId === 'standards') renderStandards();
+            if (tabId === 'standards') { renderStdSubjectTabs(); renderStandards(); }
             if (tabId === 'gradebook') mca_renderGradebook();
             if (tabId === 'attendance') mca_renderAttendance();
             if (tabId === 'calendar') mca_renderCalendarTab();
@@ -2459,6 +2559,8 @@
             }
             if (!state.activeTheme) state.activeTheme = 'earthy';
             if (!state.activeStandardsSet) state.activeStandardsSet = 'CUSTOM';
+            if (!state.activeStandardsSubject) state.activeStandardsSubject = state.activeStandardsSet || 'CUSTOM';
+            if (!state.myClasses) state.myClasses = [];
             if (!state.customStandards) state.customStandards = [];
 
             // Safe translation of old static keys to new dynamic references
@@ -3260,12 +3362,139 @@
 
         /* --- STREAMING_CHUNK: Managing standards trackers locally... --> */
         /* --- STANDARDS HUB MANAGEMENT --- */
-        function changeStandardsSet(val) {
-            state.activeStandardsSet = val;
+        // ── Standards Hub: class picker & navigation ───────────────────────────
+
+        function openClassPickerModal() {
+            renderClassPickerGrid();
+            document.getElementById('class-picker-modal').classList.remove('hidden');
+        }
+
+        function closeClassPickerModal() {
+            document.getElementById('class-picker-modal').classList.add('hidden');
+            // Default active tab to first class if none set
+            if (!state.myClasses.includes(state.activeStandardsSubject) && state.activeStandardsSubject !== '__all__') {
+                state.activeStandardsSubject = state.myClasses[0] || 'CUSTOM';
+                state.activeStandardsSet = state.activeStandardsSubject;
+            }
+            renderStdSubjectTabs();
+            renderStandards();
+        }
+
+        function renderClassPickerGrid() {
+            const grid = document.getElementById('class-picker-grid');
+            if (!grid) return;
+            const selected = new Set(state.myClasses || []);
+            const groups = {};
+            Object.entries(STANDARDS_META).forEach(([key, meta]) => {
+                if (key === 'CUSTOM') return;
+                if (!groups[meta.group]) groups[meta.group] = [];
+                groups[meta.group].push({ key, meta });
+            });
+            grid.innerHTML = Object.entries(groups).map(([groupName, subjects]) => `
+                <div class="mb-5">
+                    <p class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-2">${groupName}</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        ${subjects.map(({ key, meta }) => {
+                            const on = selected.has(key);
+                            return `<button onclick="toggleMyClass('${key}')" id="class-chip-${key}"
+                                class="flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition
+                                    ${on ? 'border-[#E67F76] bg-[#E67F76]/8 text-[#E67F76]' : 'border-gray-100 bg-gray-50 text-gray-600 hover:border-gray-200'}">
+                                <span class="text-lg leading-none">${meta.icon}</span>
+                                <span class="text-xs font-bold flex-1">${meta.label}</span>
+                                ${on ? '<span class="shrink-0 w-5 h-5 rounded-full bg-[#E67F76] text-white text-[10px] flex items-center justify-center font-black">✓</span>' : '<span class="shrink-0 w-5 h-5 rounded-full border-2 border-gray-200"></span>'}
+                            </button>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleMyClass(key) {
+            if (!state.myClasses) state.myClasses = [];
+            const idx = state.myClasses.indexOf(key);
+            if (idx === -1) {
+                state.myClasses.push(key);
+                // Auto-switch to the newly added class
+                if (state.myClasses.length === 1) {
+                    state.activeStandardsSubject = key;
+                    state.activeStandardsSet = key;
+                }
+            } else {
+                state.myClasses.splice(idx, 1);
+            }
             saveToStorage();
+            renderClassPickerGrid();
+        }
+
+        function selectAllClasses() {
+            state.myClasses = Object.keys(STANDARDS_META).filter(k => k !== 'CUSTOM');
+            if (!STANDARDS_META[state.activeStandardsSubject]) {
+                state.activeStandardsSubject = state.myClasses[0] || 'CUSTOM';
+                state.activeStandardsSet = state.activeStandardsSubject;
+            }
+            saveToStorage();
+            renderClassPickerGrid();
+        }
+
+        function clearAllClasses() {
+            state.myClasses = [];
+            state.activeStandardsSubject = 'CUSTOM';
+            state.activeStandardsSet = 'CUSTOM';
+            saveToStorage();
+            renderClassPickerGrid();
+        }
+
+        function setStdSubject(key) {
+            state.activeStandardsSubject = key;
+            if (key !== '__all__') {
+                state.activeStandardsSet = key;
+            }
+            saveToStorage();
+            renderStdSubjectTabs();
             renderStandards();
             refreshDashboard();
-            showToast(`Standards aligned to standard database: ${val}`);
+        }
+
+        // Keep old function name for any legacy calls
+        function changeStandardsSet(val) { setStdSubject(val); }
+        function filterStandards() { renderStandards(); }
+
+        function renderStdSubjectTabs() {
+            const container = document.getElementById('std-subject-tabs');
+            if (!container) return;
+            const active = state.activeStandardsSubject || 'CUSTOM';
+            const classes = state.myClasses || [];
+
+            if (classes.length === 0) {
+                container.innerHTML = `
+                    <div class="flex items-center gap-3 py-2 px-1">
+                        <span class="text-2xl">👆</span>
+                        <p class="text-sm text-gray-400">Click <strong class="text-[#E67F76]">Edit My Classes</strong> above to select your subjects — they'll appear here as quick-access tabs.</p>
+                    </div>`;
+                return;
+            }
+
+            const tabBtn = (key, label, icon) => {
+                const isActive = active === key;
+                return `<button onclick="setStdSubject('${key}')"
+                    class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition shrink-0
+                        ${isActive ? 'bg-[#E67F76] text-white shadow-sm' : 'bg-white border text-[#4A4540] hover:bg-[#FAF7F2]'}">
+                    ${icon} ${label}
+                </button>`;
+            };
+
+            const tabs = classes.map(k => {
+                const m = STANDARDS_META[k];
+                return m ? tabBtn(k, m.shortLabel, m.icon) : '';
+            }).join('');
+
+            const allTab = classes.length > 1
+                ? tabBtn('__all__', 'All My Classes', '🗂️')
+                : '';
+
+            const customTab = tabBtn('CUSTOM', 'My Custom', '⚙️');
+
+            container.innerHTML = tabs + (classes.length > 1 ? allTab : '') + customTab;
         }
 
         function renderStandards() {
@@ -3273,59 +3502,109 @@
             if (!container) return;
             container.innerHTML = '';
 
-            const q = document.getElementById('stdSearch').value.toLowerCase();
-            const activeSet = state.activeStandardsSet;
-            
-            let itemsToUse = [];
-            if (activeSet === 'CUSTOM') {
-                itemsToUse = state.customStandards;
+            const q = (document.getElementById('stdSearch')?.value || '').toLowerCase().trim();
+            const active = state.activeStandardsSubject || state.activeStandardsSet || 'CUSTOM';
+
+            // Determine which subjects to render
+            let subjects = [];
+            if (active === '__all__') {
+                subjects = (state.myClasses || []).map(key => ({
+                    key, label: STANDARDS_META[key]?.label || key,
+                    icon: STANDARDS_META[key]?.icon || '📋',
+                    strands: STANDARDS_LIBRARIES[key] || []
+                }));
+            } else if (active === 'CUSTOM') {
+                subjects = [{ key: 'CUSTOM', label: 'Custom Standards', icon: '⚙️', strands: state.customStandards || [] }];
             } else {
-                itemsToUse = STANDARDS_LIBRARIES[activeSet] || [];
+                subjects = [{ key: active, label: STANDARDS_META[active]?.label || active,
+                    icon: STANDARDS_META[active]?.icon || '📋',
+                    strands: STANDARDS_LIBRARIES[active] || [] }];
             }
 
-            if (itemsToUse.length === 0) {
+            // Empty state
+            const hasContent = subjects.some(s => s.strands.length > 0);
+            if (!hasContent) {
                 container.innerHTML = `
-                    <div class="card p-8 text-center text-gray-400">
-                        No standards configured in this dataset.
-                    </div>
-                `;
+                    <div class="card p-12 text-center">
+                        <div class="text-5xl mb-4">${(state.myClasses||[]).length === 0 ? '📚' : '⚙️'}</div>
+                        <p class="font-bold text-gray-600 mb-1">${(state.myClasses||[]).length === 0 ? 'No classes selected yet' : 'No custom standards yet'}</p>
+                        <p class="text-sm text-gray-400">${(state.myClasses||[]).length === 0
+                            ? 'Click <strong>Edit My Classes</strong> to choose your subjects.'
+                            : 'Add custom standards in Settings → Standards.'}</p>
+                    </div>`;
                 return;
             }
 
-            itemsToUse.forEach(category => {
-                const matchedItems = category.items.filter(item => 
-                    item.code.toLowerCase().includes(q) || 
-                    item.desc.toLowerCase().includes(q) ||
-                    category.strand.toLowerCase().includes(q)
-                );
+            subjects.forEach(({ key, label, icon, strands }) => {
+                if (!strands.length) return;
 
-                if (matchedItems.length === 0) return;
+                // Subject header when showing "All"
+                if (active === '__all__') {
+                    const hdr = document.createElement('div');
+                    hdr.className = 'flex items-center gap-2 pt-4 pb-1 first:pt-0';
+                    hdr.innerHTML = `
+                        <span class="text-xl leading-none">${icon}</span>
+                        <h4 class="font-extrabold text-[#4A4540]">${label}</h4>
+                        <div class="flex-1 h-px bg-gray-200 ml-1"></div>`;
+                    container.appendChild(hdr);
+                }
 
-                const section = document.createElement('div');
-                section.className = 'space-y-3';
-                section.innerHTML = `<h4 class="text-sm font-extrabold text-[#4A4540] bg-[#EBCCBD]/30 px-4 py-2 rounded-lg">${category.strand}</h4>`;
-                
-                matchedItems.forEach(item => {
-                    const row = document.createElement('div');
-                    row.className = 'std-item bg-white flex justify-between items-start';
-                    row.onclick = () => {
-                        copyToClipboard(item.code);
-                    };
-                    row.innerHTML = `
-                        <div>
-                            <span class="text-xs font-bold text-[#E67F76]">${item.code}</span>
-                            <p class="text-xs text-gray-500 mt-1">${item.desc}</p>
-                        </div>
-                        <span class="text-[10px] uppercase font-bold text-gray-300 ml-4 shrink-0 mt-1">Copy</span>
-                    `;
-                    section.appendChild(row);
+                strands.forEach((strand, i) => {
+                    const matchedItems = strand.items.filter(item =>
+                        !q ||
+                        item.code.toLowerCase().includes(q) ||
+                        item.desc.toLowerCase().includes(q) ||
+                        strand.strand.toLowerCase().includes(q)
+                    );
+                    if (!matchedItems.length) return;
+
+                    // Expand first strand, or all strands when searching
+                    const expanded = q ? true : (i === 0 && active !== '__all__');
+
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-2xl border shadow-sm overflow-hidden';
+                    card.innerHTML = `
+                        <button class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-[#FAF7F2] transition"
+                            onclick="toggleStrand(this)">
+                            <span class="font-bold text-sm text-[#4A4540]">${strand.strand}</span>
+                            <span class="flex items-center gap-3 shrink-0 ml-4">
+                                <span class="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">${matchedItems.length}</span>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="${expanded ? '' : 'hidden'} divide-y divide-gray-50">
+                            ${matchedItems.map(item => `
+                                <div class="flex items-start gap-4 px-5 py-3.5 hover:bg-[#FAF7F2] transition group cursor-pointer"
+                                    onclick="copyStdCode('${item.code.replace(/'/g,"\\'")}')">
+                                    <span class="shrink-0 mt-0.5 px-2 py-0.5 bg-[#EBCCBD]/60 text-[#E67F76] text-[11px] font-extrabold rounded font-mono tracking-wide">${item.code}</span>
+                                    <p class="text-xs text-gray-500 flex-1 leading-relaxed">${item.desc}</p>
+                                    <span class="shrink-0 opacity-0 group-hover:opacity-100 text-[10px] font-bold text-[#82BDC3] uppercase tracking-wide transition mt-0.5 whitespace-nowrap">📋 Copy</span>
+                                </div>`).join('')}
+                        </div>`;
+                    container.appendChild(card);
                 });
-                container.appendChild(section);
             });
         }
 
-        function filterStandards() {
-            renderStandards();
+        function toggleStrand(btn) {
+            const body = btn.nextElementSibling;
+            const chevron = btn.querySelector('svg');
+            body.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180');
+        }
+
+        function copyStdCode(code) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(code).then(() => showToast(`Copied ${code}`));
+            } else {
+                const el = document.createElement('textarea');
+                el.value = code; document.body.appendChild(el); el.select();
+                document.execCommand('copy'); document.body.removeChild(el);
+                showToast(`Copied ${code}`);
+            }
         }
 
         /* --- STREAMING_CHUNK: Drafting classroom gradebook grids... --> */
@@ -10364,5 +10643,32 @@ function dashResetOrder() {
 })();
 
     </script>
+
+    <!-- Modal: My Classes Picker -->
+    <div id="class-picker-modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onclick="if(event.target===this) closeClassPickerModal()">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[85vh] flex flex-col">
+            <div class="p-5 border-b flex items-start justify-between gap-4">
+                <div>
+                    <h3 class="font-bold text-base">📚 My Classes</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">Select the subjects you teach — they'll appear as quick-access tabs in the Standards Hub.</p>
+                </div>
+                <button onclick="closeClassPickerModal()" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold transition text-sm">✕</button>
+            </div>
+            <div id="class-picker-grid" class="p-5 overflow-y-auto flex-1">
+                <!-- Rendered by renderClassPickerGrid() -->
+            </div>
+            <div class="p-4 border-t flex items-center justify-between">
+                <div class="flex gap-4">
+                    <button onclick="selectAllClasses()" class="text-xs font-bold text-[#82BDC3] hover:underline">Select all</button>
+                    <button onclick="clearAllClasses()" class="text-xs font-bold text-gray-400 hover:underline">Clear all</button>
+                </div>
+                <button onclick="closeClassPickerModal()"
+                    class="px-5 py-2.5 bg-[#E67F76] text-white rounded-xl text-sm font-bold hover:opacity-90 transition">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
