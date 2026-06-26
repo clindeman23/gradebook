@@ -1,0 +1,14 @@
+# ══════════════════════════════════════════════════════════════════════════
+#  Admin panel security
+# ══════════════════════════════════════════════════════════════════════════
+
+# Prevent directory listing
+Options -Indexes
+
+# OPTIONAL: Restrict admin panel to school IP addresses only.
+# Uncomment and replace with your school's actual IP range to lock this
+# page down so only people on school wifi/network can access it.
+#
+# <RequireAll>
+#     Require ip 192.168.1.0/24
+# </RequireAll>

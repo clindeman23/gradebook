@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+
+# Claude session data
+.claude/
+
+# Runtime / data files
+server.log
+sync_data.json

@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCA Planner — Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Lora:wght@600&display=swap');
+        body { font-family:'Nunito',sans-serif; background:#F5F4F2; color:#2D2926; }
+        h1,h2,.serif { font-family:'Lora',serif; }
+        .card { background:#fff; border-radius:1.25rem; box-shadow:0 2px 12px rgba(0,0,0,.06); border:1px solid rgba(0,0,0,.06); }
+        .stat-card { background:#fff; border-radius:1rem; box-shadow:0 2px 8px rgba(0,0,0,.05); border:1px solid rgba(0,0,0,.06); }
+        .badge { display:inline-flex; align-items:center; padding:2px 10px; border-radius:999px; font-size:11px; font-weight:700; }
+        .badge-green  { background:#DCFCE7; color:#15803D; }
+        .badge-amber  { background:#FEF3C7; color:#B45309; }
+        .badge-gray   { background:#F3F4F6; color:#6B7280; }
+        .badge-red    { background:#FEE2E2; color:#B91C1C; }
+        .btn { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; transition:opacity .15s; border:none; }
+        .btn:hover { opacity:.85; }
+        .btn:disabled { opacity:.4; cursor:not-allowed; }
+        .btn-coral  { background:#E67F76; color:#fff; }
+        .btn-teal   { background:#82BDC3; color:#fff; }
+        .btn-sage   { background:#99A59A; color:#fff; }
+        .btn-red    { background:#EF4444; color:#fff; }
+        .btn-outline { background:#fff; border:1.5px solid #D1D5DB; color:#4B5563; }
+        .tr-hover:hover { background:#FAF9F7; }
+        input[type=text], input[type=password], input[type=search] {
+            border:1.5px solid #E5E7EB; border-radius:8px; padding:8px 12px;
+            font-size:13px; font-weight:600; outline:none; font-family:inherit;
+            background:#fff; color:#2D2926; transition:border-color .15s;
+        }
+        input:focus { border-color:#E67F76; }
+        .toast-anim { animation: fadein .2s ease, fadeout .3s ease 2.5s forwards; }
+        @keyframes fadein  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+        @keyframes fadeout { from{opacity:1} to{opacity:0} }
+        #loginScreen { background:linear-gradient(135deg,#FAF7F2 0%,#E8DDD4 100%); }
+    </style>
+</head>
+<body class="min-h-screen">
+
+<!-- ── Login Screen ─────────────────────────────────────────────────────── -->
+<div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="card p-10 w-full max-w-sm">
+        <div class="text-center mb-8">
+            <div class="text-4xl mb-3">🐾</div>
+            <h1 class="text-2xl font-bold text-[#2D2926] mb-1">Admin Dashboard</h1>
+            <p class="text-sm text-gray-400">Mount Carmel Academy · Student Planner</p>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Admin Password</label>
+                <input id="login-pw" type="password" placeholder="Enter admin password"
+                    class="w-full" onkeydown="if(event.key==='Enter') doAdminLogin()">
+            </div>
+            <div id="login-error" class="hidden text-xs text-red-500 font-bold bg-red-50 px-3 py-2 rounded-lg"></div>
+            <button onclick="doAdminLogin()" id="login-btn"
+                class="btn btn-coral w-full justify-center py-3 text-sm rounded-xl">
+                Sign In →
+            </button>
+        </div>
+        <p class="text-center text-[11px] text-gray-300 mt-6">
+            Admin password is set in <code>api/config.php</code>
+        </p>
+    </div>
+</div>
+
+<!-- ── Main App ─────────────────────────────────────────────────────────── -->
+<div id="app" class="hidden min-h-screen">
+
+    <!-- Top nav -->
+    <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl">🐾</span>
+            <div>
+                <h1 class="text-base font-bold text-[#2D2926] leading-tight">MCA Planner Admin</h1>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Mount Carmel Academy</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="admin-session-label" class="text-xs text-gray-400 hidden sm:block">Session active</span>
+            <button onclick="doAdminLogout()" class="btn btn-outline text-xs">Sign Out</button>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8 space-y-8">
+
+        <!-- Stats row -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="stat-card p-5">
+                <div class="text-2xl font-bold text-[#E67F76]" id="stat-total">—</div>
+                <div class="text-xs font-bold text-gray-400 mt-1 uppercase tracking-wide">Total Students</div>
+            </div>
+            <div class="stat-card p-5">
+                <div class="text-2xl font-bold text-[#82BDC3]" id="stat-today">—</div>
+                <div class="text-xs font-bold text-gray-400 mt-1 uppercase tracking-wide">Active Today</div>
+            </div>
+            <div class="stat-card p-5">
+                <div class="text-2xl font-bold text-[#99A59A]" id="stat-week">—</div>
+                <div class="text-xs font-bold text-gray-400 mt-1 uppercase tracking-wide">Active This Week</div>
+            </div>
+            <div class="stat-card p-5">
+                <div class="text-2xl font-bold text-[#E7A445]" id="stat-grades">—</div>
+                <div class="text-xs font-bold text-gray-400 mt-1 uppercase tracking-wide">Grade Levels</div>
+            </div>
+        </div>
+
+        <!-- Students table -->
+        <div class="card overflow-hidden">
+            <div class="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+                <h2 class="text-lg font-bold text-[#2D2926]">All Students</h2>
+                <div class="flex gap-3 items-center">
+                    <input type="search" id="search-input" placeholder="Search by name, grade, or homeroom…"
+                        oninput="filterStudents()" class="w-64">
+                    <select id="grade-filter" onchange="filterStudents()"
+                        class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold bg-white outline-none">
+                        <option value="">All Grades</option>
+                    </select>
+                    <button onclick="loadStudents()" class="btn btn-outline">↻ Refresh</button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" id="students-table">
+                    <thead>
+                        <tr class="border-b border-gray-100 bg-gray-50/60">
+                            <th class="text-left px-6 py-3 text-[11px] font-extrabold text-gray-400 uppercase tracking-wide">Student</th>
+                            <th class="text-left px-4 py-3 text-[11px] font-extrabold text-gray-400 uppercase tracking-wide">Grade</th>
+                            <th class="text-left px-4 py-3 text-[11px] font-extrabold text-gray-400 uppercase tracking-wide">Homeroom</th>
+                            <th class="text-left px-4 py-3 text-[11px] font-extrabold text-gray-400 uppercase tracking-wide">Registered</th>
+                            <th class="text-left px-4 py-3 text-[11px] font-extrabold text-gray-400 uppercase tracking-wide">Last Login</th>
+                            <th class="text-left px-4 py-3 text-[11px] font-extrabold text-gray-400 uppercase tracking-wide">Status</th>
+                            <th class="text-right px-6 py-3 text-[11px] font-extrabold text-gray-400 uppercase tracking-wide">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="students-tbody">
+                        <tr><td colspan="7" class="text-center py-12 text-gray-400 text-sm italic">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="students-empty" class="hidden text-center py-12 text-gray-400 text-sm italic">
+                No students match your search.
+            </div>
+        </div>
+
+        <!-- Audit log -->
+        <div class="card p-6">
+            <h2 class="text-lg font-bold text-[#2D2926] mb-4">Recent Admin Actions</h2>
+            <div id="audit-log" class="space-y-2">
+                <p class="text-xs text-gray-400 italic">No actions recorded yet.</p>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- ── Reset Password Modal ─────────────────────────────────────────────── -->
+<div id="reset-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+    <div class="card p-8 w-full max-w-md mx-4">
+        <h3 class="text-lg font-bold mb-1">Reset Password</h3>
+        <p class="text-sm text-gray-500 mb-5">Set a temporary password for <strong id="reset-student-name"></strong>.<br>
+        They will be signed out of all devices and must log in with this new password.</p>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">New Password</label>
+                <input id="reset-pw" type="text" placeholder="e.g. MCA2025! or their student ID"
+                    class="w-full" onkeydown="if(event.key==='Enter') confirmReset()">
+                <p class="text-[10px] text-gray-400 mt-1">Minimum 4 characters. Write it down to give to the student.</p>
+            </div>
+            <div id="reset-error" class="hidden text-xs text-red-500 font-bold bg-red-50 px-3 py-2 rounded-lg"></div>
+            <div class="flex gap-3 pt-2">
+                <button onclick="confirmReset()" id="reset-confirm-btn" class="btn btn-coral flex-1 justify-center py-2.5 rounded-xl">Set Password</button>
+                <button onclick="closeResetModal()" class="btn btn-outline px-6 py-2.5 rounded-xl">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Delete Confirm Modal ─────────────────────────────────────────────── -->
+<div id="delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+    <div class="card p-8 w-full max-w-md mx-4">
+        <h3 class="text-lg font-bold mb-1 text-red-600">Delete Account</h3>
+        <p class="text-sm text-gray-500 mb-2">You are about to permanently delete the account for:</p>
+        <p class="text-base font-bold text-[#2D2926] mb-4" id="delete-student-name"></p>
+        <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-5">
+            <p class="text-xs text-red-700 font-semibold">
+                ⚠️ This will permanently delete all their assignments, grades, notes, and settings. This cannot be undone. Their name will be freed up so they can re-register.
+            </p>
+        </div>
+        <div id="delete-error" class="hidden text-xs text-red-500 font-bold bg-red-50 px-3 py-2 rounded-lg mb-3"></div>
+        <div class="flex gap-3">
+            <button onclick="confirmDelete()" id="delete-confirm-btn" class="btn btn-red flex-1 justify-center py-2.5 rounded-xl">Yes, Delete Permanently</button>
+            <button onclick="closeDeleteModal()" class="btn btn-outline px-6 py-2.5 rounded-xl">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────────────────────── -->
+<div id="toast-container" class="fixed bottom-6 right-6 z-[9999] space-y-2 pointer-events-none"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<script>
+// ── Config ─────────────────────────────────────────────────────────────────
+// Adjust this path if your api folder is at a different URL
+const API = '../api';
+
+let adminToken   = sessionStorage.getItem('admin_token') || '';
+let allStudents  = [];
+let resetTarget  = null;   // { id, name } for the reset modal
+let deleteTarget = null;   // { id, name } for the delete modal
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+window.onload = async function() {
+    if (adminToken) {
+        // Try to use the stored token
+        const ok = await loadStudents();
+        if (ok) {
+            showApp();
+            return;
+        }
+        // Token expired
+        adminToken = '';
+        sessionStorage.removeItem('admin_token');
+    }
+    // Show login screen
+    document.getElementById('loginScreen').classList.remove('hidden');
+    setTimeout(() => document.getElementById('login-pw')?.focus(), 100);
+};
+
+// ── Login / Logout ─────────────────────────────────────────────────────────
+async function doAdminLogin() {
+    const pw    = document.getElementById('login-pw').value;
+    const errEl = document.getElementById('login-error');
+    const btn   = document.getElementById('login-btn');
+    if (!pw) { showEl(errEl, 'Enter the admin password.'); return; }
+
+    btn.disabled = true; btn.innerText = 'Signing in…';
+    errEl.classList.add('hidden');
+
+    try {
+        const res  = await apiPost('/admin_login.php', { password: pw });
+        const json = await res.json();
+        if (!res.ok || !json.token) {
+            showEl(errEl, json.error || '❌ Incorrect password.');
+            btn.disabled = false; btn.innerText = 'Sign In →';
+            document.getElementById('login-pw').value = '';
+            return;
+        }
+        adminToken = json.token;
+        sessionStorage.setItem('admin_token', adminToken);
+        await loadStudents();
+        showApp();
+    } catch(e) {
+        showEl(errEl, '⚠ Could not reach the server. Check your connection.');
+        btn.disabled = false; btn.innerText = 'Sign In →';
+    }
+}
+
+async function doAdminLogout() {
+    adminToken = '';
+    sessionStorage.removeItem('admin_token');
+    location.reload();
+}
+
+function showApp() {
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+}
+
+// ── Load Students ──────────────────────────────────────────────────────────
+async function loadStudents() {
+    try {
+        const res  = await apiGet('/admin_students.php');
+        if (res.status === 401) return false;
+        const json = await res.json();
+
+        allStudents = json.students || [];
+
+        // Stats
+        document.getElementById('stat-total').innerText = json.stats.total;
+        document.getElementById('stat-today').innerText = json.stats.activeToday;
+        document.getElementById('stat-week').innerText  = json.stats.activeWeek;
+        const grades = [...new Set(allStudents.map(s => s.grade).filter(Boolean))].length;
+        document.getElementById('stat-grades').innerText = grades || '—';
+
+        // Populate grade filter
+        const gradeSet = [...new Set(allStudents.map(s => s.grade).filter(Boolean))].sort();
+        const gf = document.getElementById('grade-filter');
+        gf.innerHTML = '<option value="">All Grades</option>' +
+            gradeSet.map(g => `<option>${escHtml(g)}</option>`).join('');
+
+        // Render table
+        renderStudentTable(allStudents);
+
+        // Audit log
+        renderAuditLog(json.audit_log || []);
+
+        return true;
+    } catch(e) {
+        console.error(e);
+        return false;
+    }
+}
+
+// ── Render Table ───────────────────────────────────────────────────────────
+function renderStudentTable(students) {
+    const tbody = document.getElementById('students-tbody');
+    const empty = document.getElementById('students-empty');
+
+    if (!students.length) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+    }
+    empty.classList.add('hidden');
+
+    const today   = new Date().toISOString().slice(0, 10);
+    const weekAgo = new Date(Date.now() - 7*86400000).toISOString().slice(0, 10);
+
+    tbody.innerHTML = students.map(s => {
+        const lastLogin = s.last_login ? s.last_login.slice(0, 10) : null;
+        let statusBadge;
+        if (lastLogin === today)           statusBadge = '<span class="badge badge-green">Active Today</span>';
+        else if (lastLogin >= weekAgo)     statusBadge = '<span class="badge badge-amber">This Week</span>';
+        else if (lastLogin)                statusBadge = '<span class="badge badge-gray">Inactive</span>';
+        else                               statusBadge = '<span class="badge badge-gray">Never Logged In</span>';
+
+        const activeSessions = parseInt(s.active_sessions) || 0;
+        const registeredDate = s.created_at ? fmtDate(s.created_at) : '—';
+        const lastLoginFmt   = lastLogin ? fmtDate(s.last_login) : 'Never';
+
+        return `<tr class="tr-hover border-b border-gray-50">
+            <td class="px-6 py-4">
+                <div class="font-bold text-sm text-[#2D2926]">${escHtml(s.name)}</div>
+                ${activeSessions ? `<div class="text-[10px] text-green-500 font-bold mt-0.5">● ${activeSessions} active session${activeSessions>1?'s':''}</div>` : ''}
+            </td>
+            <td class="px-4 py-4 text-xs text-gray-500 font-semibold">${escHtml(s.grade||'—')}</td>
+            <td class="px-4 py-4 text-xs text-gray-500">${escHtml(s.homeroom||'—')}</td>
+            <td class="px-4 py-4 text-xs text-gray-400">${registeredDate}</td>
+            <td class="px-4 py-4 text-xs text-gray-400">${lastLoginFmt}</td>
+            <td class="px-4 py-4">${statusBadge}</td>
+            <td class="px-6 py-4 text-right">
+                <div class="flex gap-2 justify-end flex-wrap">
+                    <button onclick="openResetModal(${s.id}, '${escHtml(s.name)}')"
+                        class="btn btn-teal text-[11px] px-3 py-1.5">🔑 Reset Password</button>
+                    <button onclick="forceSignOut(${s.id}, '${escHtml(s.name)}')"
+                        class="btn btn-sage text-[11px] px-3 py-1.5" ${!activeSessions ? 'style="opacity:.4" title="No active sessions"' : ''}>
+                        ⏏ Sign Out</button>
+                    <button onclick="openDeleteModal(${s.id}, '${escHtml(s.name)}')"
+                        class="btn btn-outline text-red-400 hover:bg-red-50 text-[11px] px-3 py-1.5">🗑 Delete</button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// ── Filter ─────────────────────────────────────────────────────────────────
+function filterStudents() {
+    const q = document.getElementById('search-input').value.toLowerCase().trim();
+    const g = document.getElementById('grade-filter').value;
+    const filtered = allStudents.filter(s => {
+        const matchQ = !q || s.name.toLowerCase().includes(q) ||
+            (s.grade||'').toLowerCase().includes(q) ||
+            (s.homeroom||'').toLowerCase().includes(q);
+        const matchG = !g || s.grade === g;
+        return matchQ && matchG;
+    });
+    renderStudentTable(filtered);
+}
+
+// ── Reset Password Modal ───────────────────────────────────────────────────
+function openResetModal(id, name) {
+    resetTarget = { id, name };
+    document.getElementById('reset-student-name').innerText = name;
+    document.getElementById('reset-pw').value = '';
+    document.getElementById('reset-error').classList.add('hidden');
+    document.getElementById('reset-confirm-btn').disabled = false;
+    document.getElementById('reset-confirm-btn').innerText = 'Set Password';
+    showModal('reset-modal');
+    setTimeout(() => document.getElementById('reset-pw')?.focus(), 100);
+}
+
+async function confirmReset() {
+    const pw    = document.getElementById('reset-pw').value.trim();
+    const errEl = document.getElementById('reset-error');
+    const btn   = document.getElementById('reset-confirm-btn');
+    if (!pw) { showEl(errEl, 'Enter a new password.'); return; }
+    if (pw.length < 4) { showEl(errEl, 'Password must be at least 4 characters.'); return; }
+    btn.disabled = true; btn.innerText = 'Resetting…';
+    errEl.classList.add('hidden');
+    try {
+        const res  = await apiPost('/admin_students.php', {
+            action: 'reset_password', account_id: resetTarget.id, new_password: pw
+        });
+        const json = await res.json();
+        if (!res.ok) { showEl(errEl, json.error || 'Failed.'); btn.disabled=false; btn.innerText='Set Password'; return; }
+        closeResetModal();
+        toast(`✓ Password reset for ${resetTarget.name}`, 'green');
+        await loadStudents();
+    } catch(e) {
+        showEl(errEl, '⚠ Server error.'); btn.disabled=false; btn.innerText='Set Password';
+    }
+}
+
+function closeResetModal() {
+    hideModal('reset-modal'); resetTarget = null;
+}
+
+// ── Force Sign Out ─────────────────────────────────────────────────────────
+async function forceSignOut(id, name) {
+    if (!confirm(`Sign ${name} out of all devices now?`)) return;
+    try {
+        const res  = await apiPost('/admin_students.php', { action: 'force_signout', account_id: id });
+        const json = await res.json();
+        if (!res.ok) { toast(json.error || 'Failed.', 'red'); return; }
+        toast(`✓ ${name} signed out of all devices`, 'green');
+        await loadStudents();
+    } catch(e) { toast('⚠ Server error.', 'red'); }
+}
+
+// ── Delete Account Modal ───────────────────────────────────────────────────
+function openDeleteModal(id, name) {
+    deleteTarget = { id, name };
+    document.getElementById('delete-student-name').innerText = name;
+    document.getElementById('delete-error').classList.add('hidden');
+    document.getElementById('delete-confirm-btn').disabled = false;
+    document.getElementById('delete-confirm-btn').innerText = 'Yes, Delete Permanently';
+    showModal('delete-modal');
+}
+
+async function confirmDelete() {
+    const errEl = document.getElementById('delete-error');
+    const btn   = document.getElementById('delete-confirm-btn');
+    btn.disabled = true; btn.innerText = 'Deleting…';
+    errEl.classList.add('hidden');
+    try {
+        const res  = await apiPost('/admin_students.php', { action: 'delete_account', account_id: deleteTarget.id });
+        const json = await res.json();
+        if (!res.ok) { showEl(errEl, json.error || 'Failed.'); btn.disabled=false; btn.innerText='Yes, Delete Permanently'; return; }
+        closeDeleteModal();
+        toast(`✓ ${deleteTarget.name}'s account deleted`, 'green');
+        await loadStudents();
+    } catch(e) {
+        showEl(errEl, '⚠ Server error.'); btn.disabled=false; btn.innerText='Yes, Delete Permanently';
+    }
+}
+
+function closeDeleteModal() {
+    hideModal('delete-modal'); deleteTarget = null;
+}
+
+// ── Audit Log ──────────────────────────────────────────────────────────────
+function renderAuditLog(logs) {
+    const el = document.getElementById('audit-log');
+    if (!logs.length) {
+        el.innerHTML = '<p class="text-xs text-gray-400 italic">No actions recorded yet.</p>';
+        return;
+    }
+    const actionLabel = { reset_password:'🔑 Reset Password', force_signout:'⏏ Force Sign Out', delete_account:'🗑 Deleted Account' };
+    el.innerHTML = logs.map(l => `
+        <div class="flex items-center gap-3 py-2 border-b border-gray-50 text-xs">
+            <span class="font-bold text-gray-500 w-40 shrink-0">${actionLabel[l.action] || l.action}</span>
+            <span class="font-bold text-[#2D2926] flex-1">${escHtml(l.target_name||'')}</span>
+            <span class="text-gray-400 shrink-0">${fmtDate(l.performed_at)}</span>
+        </div>`).join('');
+}
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+function apiGet(path) {
+    return fetch(API + path, { headers: { 'Authorization': 'Bearer ' + adminToken } });
+}
+function apiPost(path, body) {
+    return fetch(API + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+        body: JSON.stringify(body)
+    });
+}
+
+function showModal(id) {
+    const el = document.getElementById(id);
+    el.classList.remove('hidden'); el.classList.add('flex');
+}
+function hideModal(id) {
+    const el = document.getElementById(id);
+    el.classList.add('hidden'); el.classList.remove('flex');
+}
+function showEl(el, msg) { el.innerText = msg; el.classList.remove('hidden'); }
+
+function escHtml(str) {
+    return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(dt) {
+    if (!dt) return '—';
+    return new Date(dt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' });
+}
+
+function toast(msg, color = 'green') {
+    const bg = { green:'#15803D', red:'#DC2626', blue:'#1D4ED8' }[color] || '#374151';
+    const el = document.createElement('div');
+    el.className = 'toast-anim px-5 py-3 rounded-xl text-white text-xs font-bold shadow-lg pointer-events-auto';
+    el.style.background = bg;
+    el.innerText = msg;
+    document.getElementById('toast-container').appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+}
+</script>
+</body>
+</html>

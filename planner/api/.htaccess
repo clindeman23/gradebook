@@ -1,0 +1,17 @@
+# ══════════════════════════════════════════════════════════════════════════
+#  Apache security rules for the /api folder
+#  These prevent students from accidentally (or intentionally) reading
+#  config.php or db.php directly in a browser.
+# ══════════════════════════════════════════════════════════════════════════
+
+# Block direct browser access to helper files that contain credentials
+<FilesMatch "^(config|db)\.php$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Prevent directory listing
+Options -Indexes
+
+# Force all PHP files to be handled by PHP (belt-and-suspenders)
+AddHandler application/x-httpd-php .php

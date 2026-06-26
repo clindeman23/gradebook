@@ -1,0 +1,2657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCA Student Planner 🐾</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Nunito:wght@300;400;500;600;700;800;900&display=swap');
+
+        :root {
+            --coral:       #E67F76;
+            --aqua:        #A1CDCE;
+            --sage:        #99A59A;
+            --mustard:     #E7A445;
+            --peach:       #FAB69D;
+            --dusty-mauve: #9F5F67;
+            --warm-teal:   #82BDC3;
+            --cream:       #FAF7F2;
+            --light-beige: #EBCCBD;
+            --warm-gray:   #9A958C;
+            --dark-taupe:  #4A4540;
+            --banner-bg:   #E1D4C7;
+        }
+        .theme-coastal { --coral:#FF7E5F;--aqua:#4EA1A3;--sage:#75928C;--mustard:#E2B13C;--peach:#FFD2C1;--dusty-mauve:#8A4F7D;--warm-teal:#3B7A57;--cream:#F5F7F8;--light-beige:#D5E1E1;--warm-gray:#778B8D;--dark-taupe:#212C32;--banner-bg:#C9D9D9; }
+        .theme-forest  { --coral:#C85C46;--aqua:#709180;--sage:#4E594A;--mustard:#C08D5B;--peach:#EFE5CD;--dusty-mauve:#5B4031;--warm-teal:#364F3F;--cream:#FBF9F4;--light-beige:#DBD1BD;--warm-gray:#837F73;--dark-taupe:#232B25;--banner-bg:#D4CDBC; }
+        .theme-royal   { --coral:#B94B69;--aqua:#8794E8;--sage:#5A4B6B;--mustard:#E8A187;--peach:#E55C6C;--dusty-mauve:#234B6E;--warm-teal:#33A183;--cream:#FAF4FA;--light-beige:#DDBFDF;--warm-gray:#7B718D;--dark-taupe:#281C30;--banner-bg:#D2C2D4; }
+
+        body { font-family:'Nunito',sans-serif; background-color:var(--cream); color:var(--dark-taupe); overflow-x:clip; transition:background-color .3s ease; }
+        main { min-width:0; }
+        h1,h2,.font-serif { font-family:'Lora',serif; }
+
+        .sidebar { background-color:#fff; border-right:1px solid rgba(154,149,140,.15); width:16rem; transition:transform .3s ease; }
+        .nav-item { color:var(--warm-gray); transition:all .15s; border-radius:.75rem; }
+        .nav-item:hover { background:var(--cream); color:var(--dark-taupe); }
+        .nav-item.active { background:linear-gradient(135deg,var(--coral),var(--peach)); color:#fff; font-weight:700; }
+
+        .card { background:#fff; border-radius:1.25rem; box-shadow:0 2px 12px rgba(74,69,64,.06); border:1px solid rgba(154,149,140,.12); }
+        .accent-coral   { border-left:4px solid var(--coral); }
+        .accent-teal    { border-left:4px solid var(--warm-teal); }
+        .accent-sage    { border-left:4px solid var(--sage); }
+        .accent-mustard { border-left:4px solid var(--mustard); }
+        .accent-mauve   { border-left:4px solid var(--dusty-mauve); }
+
+        .tab-content { display:none; }
+        .tab-content.block { display:block; }
+
+        .pill { display:inline-flex; align-items:center; gap:4px; padding:2px 10px; border-radius:999px; font-size:11px; font-weight:700; }
+        .pill-red    { background:#FEE2E2; color:#B91C1C; }
+        .pill-amber  { background:#FEF3C7; color:#B45309; }
+        .pill-green  { background:#DCFCE7; color:#15803D; }
+        .pill-blue   { background:#DBEAFE; color:#1D4ED8; }
+        .pill-gray   { background:#F3F4F6; color:#6B7280; }
+
+        .assignment-row { border-radius:.75rem; border:1px solid rgba(154,149,140,.15); padding:.85rem 1rem; transition:all .15s; cursor:pointer; }
+        .assignment-row:hover { border-color:var(--coral); background:#fff; }
+        .assignment-row.done { opacity:.55; }
+        .assignment-row.done .asgn-title { text-decoration:line-through; }
+
+        .custom-scrollbar::-webkit-scrollbar { width:5px; height:5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background:transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background:rgba(154,149,140,.35); border-radius:4px; }
+
+        /* Pomodoro timer ring */
+        .timer-ring { width:180px; height:180px; position:relative; }
+        .timer-ring svg { transform:rotate(-90deg); }
+        .timer-ring circle.bg  { stroke:#F3F4F6; stroke-width:12; fill:none; }
+        .timer-ring circle.fg  { stroke:var(--coral); stroke-width:12; fill:none; stroke-linecap:round; transition:stroke-dashoffset .5s linear; }
+        #timer-label { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
+
+        .grade-bar { height:8px; border-radius:4px; background:#F3F4F6; overflow:hidden; }
+        .grade-bar-fill { height:100%; border-radius:4px; transition:width .6s ease; }
+
+        #modalOverlay { background:rgba(0,0,0,.4); }
+
+        @media(max-width:1024px){
+            .sidebar { transform:translateX(-100%); position:fixed; inset-y:0; left:0; z-index:100; }
+            .sidebar.open { transform:translateX(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex theme-earthy" id="planner-body">
+
+<!-- ── Sidebar ──────────────────────────────────────────────────────────────── -->
+<aside id="sidebar" class="sidebar fixed inset-y-0 left-0 w-64 p-6 flex flex-col gap-2 overflow-y-auto custom-scrollbar shadow-md z-50">
+    <div class="mb-8 px-2 flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-[#4A4540] flex items-center gap-2">
+            <span class="text-3xl">🐾</span> Student.
+        </h1>
+        <button onclick="toggleSidebar()" class="lg:hidden text-2xl font-bold">✕</button>
+    </div>
+
+    <nav class="flex-1 space-y-1">
+        <div class="text-[10px] uppercase tracking-wider font-extrabold text-[#9A958C] mb-2 px-4">MY PLANNER</div>
+        <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-item active w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
+            <span>🏠</span> Dashboard
+        </button>
+        <button onclick="switchTab('assignments')" id="btn-assignments" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
+            <span>📚</span> My Assignments
+        </button>
+        <button onclick="switchTab('calendar')" id="btn-calendar" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
+            <span>📅</span> Canvas Calendar
+        </button>
+        <button onclick="switchTab('grades')" id="btn-grades" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
+            <span>📊</span> Grade Tracker
+        </button>
+        <button onclick="switchTab('notes')" id="btn-notes" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
+            <span>📝</span> Notes & Study Pad
+        </button>
+
+        <div class="text-[10px] uppercase tracking-wider font-extrabold text-[#9A958C] mt-6 mb-2 px-4">TOOLS</div>
+        <button onclick="switchTab('timer')" id="btn-timer" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
+            <span>⏱️</span> Study Timer
+        </button>
+        <button onclick="switchTab('resources')" id="btn-resources" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
+            <span>📌</span> Resources
+        </button>
+    </nav>
+
+    <div class="mt-auto pt-4 border-t border-gray-200/60 space-y-1">
+        <button onclick="switchTab('settings')" id="btn-settings" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
+            <span>⚙️</span> Settings
+        </button>
+        <button onclick="signOut()" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium text-[#9F5F67] hover:bg-red-50">
+            <span>🚪</span> Sign Out
+        </button>
+        <div id="sidebar-quote" class="p-3 bg-white/40 rounded-xl mt-4 text-[11px] leading-relaxed text-[#4A4540]/80 italic">
+            "The secret of getting ahead is getting started." ✝
+        </div>
+    </div>
+</aside>
+
+<!-- ── Main Content ─────────────────────────────────────────────────────────── -->
+<main class="flex-1 lg:ml-64 p-6 lg:p-10 transition-all duration-300">
+
+    <!-- Mobile header -->
+    <div class="flex items-center justify-between lg:hidden mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+        <h1 class="text-xl font-bold text-[#4A4540]">Student Planner.</h1>
+        <button onclick="toggleSidebar()" class="p-2.5 bg-gray-100 rounded-xl text-xl">☰</button>
+    </div>
+
+    <!-- Banner -->
+    <header id="welcome-banner" class="mb-10 p-8 rounded-3xl shadow-sm relative overflow-hidden transition-all duration-300" style="background-color:var(--banner-bg);">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+                <h2 id="banner-greeting" class="text-3xl font-bold mb-2 text-[#4A4540]">Hi, Scholar! 👋</h2>
+                <div class="flex flex-wrap items-center gap-3 text-sm font-semibold opacity-90 text-[#4A4540]">
+                    <span id="current-date" class="bg-white/35 px-4 py-1.5 rounded-full">—</span>
+                    <span id="assignments-due-today" class="bg-white/35 px-4 py-1.5 rounded-full">Loading…</span>
+                    <button onclick="openProfileModal()" class="bg-white/50 text-xs font-bold text-[#4A4540] px-3.5 py-1.5 rounded-full shadow-sm hover:opacity-95">Edit Profile ⚙️</button>
+                </div>
+                <p id="banner-quote" class="mt-6 italic max-w-2xl text-sm leading-relaxed text-[#4A4540]/90">
+                    "The fear of the Lord is the beginning of wisdom."
+                    <span id="banner-quote-author" class="font-semibold block mt-1.5 not-italic">✝ Proverbs 9:10</span>
+                </p>
+            </div>
+            <!-- Quick Stats -->
+            <div class="bg-white/95 p-4 rounded-2xl border border-white/20 shadow-sm max-w-xs text-[#4A4540] self-start md:self-auto flex flex-col gap-2 shrink-0">
+                <div class="text-xs font-bold text-[#9A958C] uppercase tracking-wide">This Week</div>
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div><div id="stat-pending" class="text-xl font-bold text-[#E67F76]">0</div><div class="text-[10px] text-gray-500">Pending</div></div>
+                    <div><div id="stat-done" class="text-xl font-bold text-[#82BDC3]">0</div><div class="text-[10px] text-gray-500">Done</div></div>
+                    <div><div id="stat-overdue" class="text-xl font-bold text-[#9F5F67]">0</div><div class="text-[10px] text-gray-500">Overdue</div></div>
+                </div>
+            </div>
+        </div>
+        <div class="absolute -top-10 -right-10 w-44 h-44 bg-white/10 rounded-full"></div>
+        <div class="absolute bottom-[-40px] left-[30%] w-32 h-32 bg-[#E67F76]/15 rounded-full blur-xl"></div>
+    </header>
+
+    <!-- ── Tab: Dashboard ──────────────────────────────────────────────────── -->
+    <section id="tab-dashboard" class="tab-content block">
+        <div class="mb-8">
+            <h3 class="text-2xl font-bold mb-1">Your Dashboard</h3>
+            <p class="text-sm text-[#9A958C]">Today's assignments, upcoming deadlines, and a quick-capture pad.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- Due Today -->
+            <div class="card p-6 accent-coral lg:col-span-2">
+                <h4 class="font-bold text-sm mb-4 text-[#E67F76] uppercase tracking-wide">📌 Due Today</h4>
+                <div id="dash-due-today" class="space-y-2">
+                    <p class="text-xs text-gray-400 italic">Nothing due today — enjoy the peace! ✝</p>
+                </div>
+            </div>
+
+            <!-- Quick Pad -->
+            <div class="card p-6 accent-mustard flex flex-col justify-between">
+                <div>
+                    <h4 class="font-bold text-sm mb-3 text-[#E7A445] uppercase tracking-wide">📝 Quick Pad</h4>
+                    <textarea id="quick-pad-dash" rows="6" placeholder="Jot down a thought, reminder, or prayer intention…"
+                        oninput="saveQuickPad()"
+                        class="w-full text-xs resize-none border-0 bg-transparent outline-none leading-relaxed text-[#4A4540]"></textarea>
+                </div>
+                <p class="text-[10px] text-gray-400 mt-2">Auto-saved locally.</p>
+            </div>
+
+            <!-- Upcoming This Week -->
+            <div class="card p-6 accent-teal lg:col-span-2">
+                <h4 class="font-bold text-sm mb-4 text-[#82BDC3] uppercase tracking-wide">📅 Upcoming This Week</h4>
+                <div id="dash-upcoming" class="space-y-2">
+                    <p class="text-xs text-gray-400 italic">Sync your Canvas calendar in Settings to see upcoming assignments.</p>
+                </div>
+            </div>
+
+            <!-- Canvas Sync Status -->
+            <div class="card p-6 accent-sage flex flex-col justify-between">
+                <div>
+                    <h4 class="font-bold text-sm mb-2 text-[#99A59A] uppercase tracking-wide">☁️ Canvas Sync</h4>
+                    <p id="canvas-sync-status" class="text-xs text-gray-500 leading-relaxed">Not synced yet. Add your Canvas ICS URL in Settings.</p>
+                </div>
+                <button onclick="syncCanvas()" class="mt-4 w-full py-2 bg-[#99A59A] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">🔄 Sync Now</button>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ── Tab: Assignments ────────────────────────────────────────────────── -->
+    <section id="tab-assignments" class="tab-content hidden">
+        <div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h3 class="text-2xl font-bold mb-1">📚 My Assignments</h3>
+                <p class="text-sm text-[#9A958C]">Track all assignments — from Canvas or added manually.</p>
+            </div>
+            <div class="flex gap-2">
+                <select id="asgn-filter" onchange="renderAssignments()" class="border p-2 rounded-xl text-xs font-bold outline-none bg-white">
+                    <option value="all">All</option>
+                    <option value="today">Due Today</option>
+                    <option value="week">This Week</option>
+                    <option value="pending">Pending</option>
+                    <option value="overdue">Overdue</option>
+                    <option value="done">Completed</option>
+                </select>
+                <button onclick="openAddAssignment()" class="px-4 py-2 bg-[#E67F76] text-white text-xs font-bold rounded-xl hover:opacity-90 transition">+ Add</button>
+            </div>
+        </div>
+        <div id="assignments-list" class="space-y-2"></div>
+    </section>
+
+    <!-- ── Tab: Calendar ──────────────────────────────────────────────────── -->
+    <section id="tab-calendar" class="tab-content hidden">
+        <div class="mb-8">
+            <h3 class="text-2xl font-bold mb-1">📅 Canvas Calendar</h3>
+            <p class="text-sm text-[#9A958C]">Assignments and events pulled directly from your Canvas ICS feed.</p>
+        </div>
+        <div class="card p-6">
+            <div id="calendar-content">
+                <p class="text-sm text-gray-400 italic text-center py-8">Add your Canvas ICS URL in Settings, then sync to see your calendar.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Tab: Grade Tracker ─────────────────────────────────────────────── -->
+    <section id="tab-grades" class="tab-content hidden">
+        <div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h3 class="text-2xl font-bold mb-1">📊 Grade Tracker</h3>
+                <p class="text-sm text-[#9A958C]">Log your grades and track your running averages per class.</p>
+            </div>
+            <button onclick="openAddClass()" class="px-4 py-2 bg-[#82BDC3] text-white text-xs font-bold rounded-xl hover:opacity-90 transition">+ Add Class</button>
+        </div>
+        <div id="grades-list" class="space-y-6"></div>
+    </section>
+
+    <!-- ── Tab: Notes ─────────────────────────────────────────────────────── -->
+    <section id="tab-notes" class="tab-content hidden">
+        <div class="mb-6">
+            <h3 class="text-2xl font-bold mb-1">📝 Notes & Study</h3>
+            <p class="text-sm text-[#9A958C]">Class notes, Drive links, and a quick scratch pad — all in one place.</p>
+        </div>
+
+        <div class="flex gap-5" style="min-height:640px">
+
+            <!-- ── LEFT: Class sidebar ──────────────────────────────────── -->
+            <div class="flex flex-col gap-3 shrink-0" style="width:220px">
+
+                <!-- Class list card -->
+                <div class="card p-4 flex flex-col gap-1">
+                    <div class="text-[10px] uppercase tracking-wider font-extrabold text-[#9A958C] mb-2 px-1">My Classes</div>
+                    <div id="subject-list" class="space-y-0.5"></div>
+
+                    <div class="border-t border-gray-100 mt-2 pt-2 space-y-0.5">
+                        <button onclick="selectSubject('all')" id="sub-btn-all"
+                            class="sub-nav w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs font-semibold text-[#9A958C] hover:bg-gray-50 transition">
+                            📋 All Notes
+                        </button>
+                        <button onclick="selectSubject('pad')" id="sub-btn-pad"
+                            class="sub-nav w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs font-semibold text-[#9A958C] hover:bg-gray-50 transition">
+                            ✏️ Quick Pad
+                        </button>
+                    </div>
+
+                    <button onclick="openAddSubject()"
+                        class="mt-2 w-full py-2 border-2 border-dashed border-gray-200 rounded-xl text-[11px] font-bold text-gray-400 hover:border-[#E67F76] hover:text-[#E67F76] transition">
+                        + Add Class
+                    </button>
+                </div>
+
+                <!-- Notes in selected class -->
+                <div id="notes-in-subject" class="flex flex-col gap-2 overflow-y-auto flex-1 custom-scrollbar pr-0.5"></div>
+            </div>
+
+            <!-- ── RIGHT: Content area ──────────────────────────────────── -->
+            <div class="flex-1 flex flex-col gap-4 min-w-0">
+
+                <!-- Drive Links bar (shown when a class is selected) -->
+                <div id="drive-links-section" class="hidden card p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-[10px] uppercase tracking-wider font-extrabold text-[#9A958C]">📁 Class Materials &amp; Drive Links</div>
+                        <button onclick="openAddDriveLink()" class="text-[11px] font-bold text-[#82BDC3] hover:underline">+ Add Link</button>
+                    </div>
+                    <div id="drive-links-list" class="flex flex-wrap gap-2 min-h-[24px]">
+                        <span class="text-xs text-gray-300 italic">No links yet — paste a Google Drive or Classroom URL.</span>
+                    </div>
+                </div>
+
+                <!-- Note editor (main writing area) -->
+                <div id="note-editor-section" class="hidden flex-1 card p-6 flex flex-col">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <input id="note-title-edit" type="text" placeholder="Note title…"
+                            class="text-lg font-bold border-0 outline-none bg-transparent flex-1 text-[#4A4540]"
+                            oninput="autoSaveNote()">
+                        <button onclick="openAddNote()"
+                            class="shrink-0 px-4 py-1.5 bg-[#9F5F67] text-white text-[11px] font-bold rounded-lg hover:opacity-90 transition">
+                            + New Note
+                        </button>
+                    </div>
+                    <textarea id="note-body-edit" rows="20"
+                        placeholder="Start writing your notes here…"
+                        class="flex-1 resize-none border-0 outline-none bg-transparent text-sm leading-relaxed text-[#4A4540]"
+                        oninput="autoSaveNote()"></textarea>
+                    <div class="flex justify-between items-center mt-4 pt-3 border-t border-gray-100">
+                        <span id="note-saved-label" class="text-[10px] text-gray-400">—</span>
+                        <button onclick="deleteActiveNote()" class="text-xs text-red-400 hover:text-red-600 font-bold">🗑 Delete Note</button>
+                    </div>
+                </div>
+
+                <!-- Quick Pad -->
+                <div id="quick-pad-section" class="hidden flex-1 card p-6 flex flex-col">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h4 class="font-bold text-base text-[#4A4540]">✏️ Quick Study Pad</h4>
+                            <p class="text-[10px] text-gray-400 mt-0.5">Scratch space — formulas, brainstorming, quick ideas. Not organized into a class.</p>
+                        </div>
+                        <button onclick="clearQuickPad()" class="text-xs text-gray-400 hover:text-red-400 font-bold transition">🗑 Clear</button>
+                    </div>
+                    <textarea id="quick-pad" rows="22"
+                        placeholder="Type anything here — equations, vocab, bullet points, ideas…"
+                        class="flex-1 resize-none border-0 outline-none bg-transparent text-sm leading-relaxed text-[#4A4540] font-mono"
+                        oninput="state.quickPad=this.value; saveLocal();"
+                        onblur="save()"></textarea>
+                </div>
+
+                <!-- Empty / welcome state -->
+                <div id="notes-empty-state" class="flex-1 card p-12 flex flex-col items-center justify-center text-center">
+                    <div class="text-5xl mb-4">📚</div>
+                    <h4 class="font-bold text-base mb-2 text-[#4A4540]">Organize by class</h4>
+                    <p class="text-xs text-gray-400 mb-6 max-w-xs leading-relaxed">Add a class to keep your notes, study guides, and Google Drive links organized by subject.</p>
+                    <button onclick="openAddSubject()"
+                        class="px-6 py-2.5 bg-[#E67F76] text-white text-xs font-bold rounded-xl hover:opacity-90 transition">
+                        + Add Your First Class
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Tab: Study Timer ───────────────────────────────────────────────── -->
+    <section id="tab-timer" class="tab-content hidden">
+        <div class="mb-8">
+            <h3 class="text-2xl font-bold mb-1">⏱️ Study Timer</h3>
+            <p class="text-sm text-[#9A958C]">Pomodoro-style focus sessions. Work 25 min, rest 5 min.</p>
+        </div>
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Timer -->
+            <div class="card p-10 flex flex-col items-center gap-6 flex-1">
+                <div class="flex gap-2 mb-1 flex-wrap justify-center">
+                    <button onclick="setMode('work')" id="mode-work"
+                        class="px-4 py-2 text-xs font-bold rounded-full bg-[#E67F76] text-white">🎯 Focus</button>
+                    <button onclick="setMode('short')" id="mode-short"
+                        class="px-4 py-2 text-xs font-bold rounded-full bg-white border text-[#4A4540]">☕ Short Break</button>
+                    <button onclick="setMode('long')" id="mode-long"
+                        class="px-4 py-2 text-xs font-bold rounded-full bg-white border text-[#4A4540]">🌿 Long Break</button>
+                    <button onclick="setMode('custom')" id="mode-custom"
+                        class="px-4 py-2 text-xs font-bold rounded-full bg-white border text-[#4A4540]">⚙️ Custom</button>
+                </div>
+                <!-- Custom time picker — shown only when Custom mode is active -->
+                <div id="custom-timer-row" class="hidden flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">Minutes</label>
+                    <input id="custom-minutes" type="number" min="1" max="180" value="30"
+                        class="w-16 text-center border border-gray-200 rounded-lg p-1.5 text-sm font-bold outline-none focus:border-[#E67F76] bg-white"
+                        onkeydown="if(event.key==='Enter') applyCustomTime()">
+                    <span class="text-gray-300 font-bold">:</span>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase">Seconds</label>
+                    <input id="custom-seconds" type="number" min="0" max="59" value="00"
+                        class="w-16 text-center border border-gray-200 rounded-lg p-1.5 text-sm font-bold outline-none focus:border-[#E67F76] bg-white"
+                        onkeydown="if(event.key==='Enter') applyCustomTime()">
+                    <button onclick="applyCustomTime()"
+                        class="px-3 py-1.5 bg-[#E67F76] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">Set ↵</button>
+                </div>
+
+                <div class="timer-ring">
+                    <svg width="180" height="180" viewBox="0 0 180 180">
+                        <circle class="bg" cx="90" cy="90" r="80"/>
+                        <circle class="fg" id="timer-circle" cx="90" cy="90" r="80"
+                            stroke-dasharray="502.65" stroke-dashoffset="0"/>
+                    </svg>
+                    <div id="timer-label">
+                        <div id="timer-display" class="text-4xl font-bold text-[#4A4540]">25:00</div>
+                        <div id="timer-mode-label" class="text-xs text-[#9A958C] font-semibold mt-1">Focus</div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="timerStart()" id="timer-start-btn"
+                        class="px-8 py-3 bg-[#E67F76] text-white font-bold rounded-xl hover:opacity-90 transition">▶ Start</button>
+                    <button onclick="timerReset()"
+                        class="px-6 py-3 bg-white border font-bold rounded-xl hover:bg-gray-50 transition text-[#4A4540]">↺ Reset</button>
+                </div>
+
+                <div class="text-center">
+                    <div class="text-sm font-semibold text-[#9A958C]">Sessions completed today</div>
+                    <div id="sessions-count" class="text-3xl font-bold text-[#E67F76] mt-1">0</div>
+                </div>
+            </div>
+
+            <!-- Session log -->
+            <div class="card p-6 w-full lg:w-72 flex flex-col">
+                <h4 class="font-bold text-sm mb-4 text-[#9A958C] uppercase tracking-wide">Session Log</h4>
+                <div id="session-log" class="space-y-2 flex-1 overflow-y-auto custom-scrollbar text-xs text-gray-500">
+                    <p class="italic">No sessions yet.</p>
+                </div>
+                <button onclick="clearSessionLog()" class="mt-4 text-xs text-gray-400 hover:text-red-400 font-bold text-left">🗑 Clear Log</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Tab: Resources ─────────────────────────────────────────────────── -->
+    <section id="tab-resources" class="tab-content hidden">
+        <div class="mb-8">
+            <h3 class="text-2xl font-bold mb-1">📌 Student Resources</h3>
+            <p class="text-sm text-[#9A958C]">Quick access to study tools and academic resources.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="card p-6 accent-coral flex flex-col justify-between">
+                <div>
+                    <h4 class="font-bold text-sm mb-2 text-[#E67F76]">Khan Academy</h4>
+                    <p class="text-xs text-gray-500 mb-4">Free practice exercises, instructional videos, and a personalized learning dashboard across all subjects.</p>
+                </div>
+                <button onclick="window.open('https://www.khanacademy.org','_blank')" class="w-full py-2 bg-[#E67F76] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">Open →</button>
+            </div>
+            <div class="card p-6 accent-teal flex flex-col justify-between">
+                <div>
+                    <h4 class="font-bold text-sm mb-2 text-[#82BDC3]">Purdue OWL</h4>
+                    <p class="text-xs text-gray-500 mb-4">The go-to writing lab for MLA, APA, and Chicago citation formats, grammar guides, and essay structure.</p>
+                </div>
+                <button onclick="window.open('https://owl.purdue.edu','_blank')" class="w-full py-2 bg-[#82BDC3] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">Open →</button>
+            </div>
+            <div class="card p-6 accent-sage flex flex-col justify-between">
+                <div>
+                    <h4 class="font-bold text-sm mb-2 text-[#99A59A]">Quizlet</h4>
+                    <p class="text-xs text-gray-500 mb-4">Create flashcard sets, study guides, and practice tests for any subject.</p>
+                </div>
+                <button onclick="window.open('https://quizlet.com','_blank')" class="w-full py-2 bg-[#99A59A] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">Open →</button>
+            </div>
+            <div class="card p-6 accent-mustard flex flex-col justify-between">
+                <div>
+                    <h4 class="font-bold text-sm mb-2 text-[#E7A445]">CommonLit</h4>
+                    <p class="text-xs text-gray-500 mb-4">Free reading passages and literacy resources for English Language Arts.</p>
+                </div>
+                <button onclick="window.open('https://www.commonlit.org','_blank')" class="w-full py-2 bg-[#E7A445] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">Open →</button>
+            </div>
+            <div class="card p-6 accent-mauve flex flex-col justify-between">
+                <div>
+                    <h4 class="font-bold text-sm mb-2 text-[#9F5F67]">Desmos Graphing</h4>
+                    <p class="text-xs text-gray-500 mb-4">Free online graphing calculator for math class — functions, equations, and data analysis.</p>
+                </div>
+                <button onclick="window.open('https://www.desmos.com/calculator','_blank')" class="w-full py-2 bg-[#9F5F67] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">Open →</button>
+            </div>
+            <div class="card p-6 accent-teal flex flex-col justify-between">
+                <div>
+                    <h4 class="font-bold text-sm mb-2 text-[#82BDC3]">USCCB — Catholic Resources</h4>
+                    <p class="text-xs text-gray-500 mb-4">Official Catholic resources, the daily readings, and the New American Bible online.</p>
+                </div>
+                <button onclick="window.open('https://www.usccb.org','_blank')" class="w-full py-2 bg-[#82BDC3] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">Open →</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Tab: Settings ──────────────────────────────────────────────────── -->
+    <section id="tab-settings" class="tab-content hidden">
+        <div class="mb-8">
+            <h3 class="text-2xl font-bold mb-1">⚙️ Planner Settings</h3>
+            <p class="text-sm text-[#9A958C]">Customize your planner, connect Canvas, and manage sync.</p>
+        </div>
+        <div class="space-y-6 max-w-2xl">
+
+            <!-- Profile -->
+            <div class="card p-6 accent-coral">
+                <h4 class="font-bold text-base mb-4">👤 My Profile</h4>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Your Name</label>
+                        <input id="set-name" type="text" placeholder="e.g. Smith, John"
+                            class="w-full border p-2.5 rounded-lg text-xs font-semibold outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Grade Level</label>
+                        <select id="set-grade" class="w-full border p-2.5 rounded-lg text-xs font-semibold outline-none bg-white">
+                            <option value="">Select grade…</option>
+                            <option>8th Grade</option>
+                            <option>9th Grade (Freshman)</option>
+                            <option>10th Grade (Sophomore)</option>
+                            <option>11th Grade (Junior)</option>
+                            <option>12th Grade (Senior)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Homeroom / Advisory</label>
+                        <input id="set-homeroom" type="text" placeholder="e.g. Ms. Johnson — Room 204"
+                            class="w-full border p-2.5 rounded-lg text-xs font-semibold outline-none">
+                    </div>
+                    <button onclick="saveProfile()" class="px-5 py-2.5 bg-[#E67F76] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">💾 Save Profile</button>
+                </div>
+            </div>
+
+            <!-- Canvas ICS -->
+            <div class="card p-6 accent-teal">
+                <h4 class="font-bold text-base mb-2">📅 Canvas Calendar Sync</h4>
+                <p class="text-xs text-gray-500 mb-4 leading-relaxed">Paste your Canvas ICS feed URL to automatically import assignments and due dates. In Canvas: Calendar → Click the calendar icon (⋯) → Copy the feed URL.</p>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Canvas ICS URL</label>
+                        <input id="set-canvas-url" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
+                            placeholder="https://yourschool.instructure.com/feeds/calendars/…"
+                            class="w-full border p-2.5 rounded-lg text-xs font-semibold outline-none">
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="saveAndSync()" class="px-5 py-2.5 bg-[#82BDC3] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">💾 Save & Sync</button>
+                        <button onclick="syncCanvas()" class="px-5 py-2.5 bg-white border text-xs font-bold rounded-lg hover:bg-gray-50 transition">🔄 Sync Now</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MCA School Calendar -->
+            <div class="card p-6 accent-sage">
+                <h4 class="font-bold text-base mb-2">🏫 MCA School Calendar</h4>
+                <p class="text-xs text-gray-500 mb-4 leading-relaxed">The Mount Carmel Academy school calendar — rotation days, school events, and no-school days — syncs automatically in the background.</p>
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" id="school-cal-toggle" onchange="toggleSchoolCal(this.checked)"
+                            class="w-4 h-4 rounded accent-[#99A59A]">
+                        <span class="text-xs font-bold text-[#4A4540]">Sync MCA calendar automatically</span>
+                    </label>
+                    <span id="school-cal-status" class="text-[10px] font-semibold text-gray-400"></span>
+                </div>
+            </div>
+
+            <!-- Additional Personal Calendars -->
+            <div class="card p-6 accent-sage">
+                <h4 class="font-bold text-base mb-2">📆 Additional Calendars</h4>
+                <p class="text-xs text-gray-500 mb-4 leading-relaxed">Add personal ICS feeds — Google Calendar, Apple Calendar, sports schedules, church calendars, etc. — so all your events appear in one place.</p>
+                <div id="personal-cal-list" class="space-y-2 mb-4">
+                    <p class="text-xs text-gray-400 italic">No additional calendars added yet.</p>
+                </div>
+                <div class="border-t border-gray-100 pt-4 space-y-2">
+                    <p class="text-xs font-bold text-gray-400 uppercase mb-1">Add Calendar</p>
+                    <input id="new-cal-name" type="text" placeholder="Name (e.g. Basketball Schedule)"
+                        class="w-full border p-2.5 rounded-lg text-xs font-semibold outline-none">
+                    <input id="new-cal-url" type="text" placeholder="ICS Feed URL (https://…)"
+                        autocomplete="off" autocorrect="off" spellcheck="false"
+                        class="w-full border p-2.5 rounded-lg text-xs font-semibold outline-none mt-2">
+                    <button onclick="addPersonalCal()"
+                        class="mt-2 px-5 py-2.5 bg-[#99A59A] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">➕ Add Calendar</button>
+                </div>
+            </div>
+
+            <!-- Theme -->
+            <div class="card p-6 accent-mustard">
+                <h4 class="font-bold text-base mb-4">🎨 Theme</h4>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <button onclick="setTheme('earthy')"   class="py-3 px-2 rounded-xl border-2 border-transparent hover:border-[#E67F76] text-xs font-bold transition" style="background:#FAF7F2;color:#4A4540;">🌾 Earthy</button>
+                    <button onclick="setTheme('coastal')"  class="py-3 px-2 rounded-xl border-2 border-transparent hover:border-[#4EA1A3] text-xs font-bold transition" style="background:#F5F7F8;color:#212C32;">🌊 Coastal</button>
+                    <button onclick="setTheme('forest')"   class="py-3 px-2 rounded-xl border-2 border-transparent hover:border-[#C85C46] text-xs font-bold transition" style="background:#FBF9F4;color:#232B25;">🌲 Forest</button>
+                    <button onclick="setTheme('royal')"    class="py-3 px-2 rounded-xl border-2 border-transparent hover:border-[#B94B69] text-xs font-bold transition" style="background:#FAF4FA;color:#281C30;">👑 Royal</button>
+                </div>
+            </div>
+
+
+
+            <!-- Password Lock -->
+            <div id="password-lock-card" class="card p-6 accent-coral">
+                <h4 class="font-bold text-base mb-2">🔐 Planner Password</h4>
+                <!-- Shown in server mode -->
+                <div id="password-server-note" class="hidden text-xs text-gray-500 leading-relaxed bg-amber-50 border border-amber-200 p-3 rounded-lg">
+                    🏫 Your password is managed by the <strong>Mount Carmel Academy server</strong>. To change your password, contact your teacher or IT department.
+                </div>
+                <!-- Shown in local-only mode -->
+                <div id="password-local-form">
+                    <p class="text-xs text-gray-500 mb-4 leading-relaxed">Set a password to lock your planner. Leave blank to disable the lock screen. Passwords are hashed with SHA-256 — never stored in plain text.</p>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">New Password</label>
+                            <input id="set-password" type="password" placeholder="Leave blank to remove lock"
+                                class="w-full border p-2.5 rounded-lg text-xs font-semibold outline-none"
+                                onkeydown="if(event.key==='Enter') savePasswordLock()">
+                        </div>
+                        <button onclick="savePasswordLock()" class="px-5 py-2.5 bg-[#E67F76] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">🔐 Save Password</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+</main><!-- /main -->
+
+<!-- ── Sign-In / First-Run Screen ──────────────────────────────────────────── -->
+<div id="signInScreen" class="fixed inset-0 z-[10000] hidden flex-col" style="background-color:var(--cream);">
+
+    <!-- Top bar -->
+    <div class="flex items-center gap-3 px-8 py-5 border-b border-gray-200/60 bg-white/80">
+        <span class="text-3xl">🐾</span>
+        <div>
+            <h1 class="text-lg font-bold text-[#4A4540]">MCA Student Planner</h1>
+            <p class="text-[10px] text-[#9A958C] font-bold uppercase tracking-widest">Mount Carmel Academy</p>
+        </div>
+    </div>
+
+    <div class="flex flex-1 overflow-auto">
+
+        <!-- Left: brand panel (hidden on small screens) -->
+        <div class="hidden lg:flex flex-col justify-between w-[420px] shrink-0 p-12" style="background-color:var(--banner-bg);">
+            <div class="space-y-6">
+                <div class="text-5xl">✝️</div>
+                <h2 class="text-3xl font-bold text-[#4A4540] leading-tight">Your academic life,<br>organized with faith.</h2>
+                <p class="text-sm text-[#4A4540]/70 leading-relaxed">
+                    Track assignments, monitor grades, study smarter, and start each day with a reflection from Scripture and the saints.
+                </p>
+                <div class="space-y-3 pt-4">
+                    <div class="flex items-center gap-3 text-sm text-[#4A4540]/80">
+                        <span class="text-xl">📚</span> Canvas assignment sync
+                    </div>
+                    <div class="flex items-center gap-3 text-sm text-[#4A4540]/80">
+                        <span class="text-xl">📊</span> Grade tracker with letter averages
+                    </div>
+                    <div class="flex items-center gap-3 text-sm text-[#4A4540]/80">
+                        <span class="text-xl">⏱️</span> Pomodoro study timer
+                    </div>
+                    <div class="flex items-center gap-3 text-sm text-[#4A4540]/80">
+                        <span class="text-xl">🔐</span> Password-protected & private
+                    </div>
+                </div>
+            </div>
+            <div id="signin-reflection" class="p-4 bg-white/40 rounded-2xl text-xs italic text-[#4A4540]/80 leading-relaxed">
+                "The fear of the Lord is the beginning of wisdom." — Proverbs 9:10
+            </div>
+        </div>
+
+        <!-- Right: form panel -->
+        <div class="flex-1 flex items-center justify-center p-8">
+            <div class="w-full max-w-md space-y-6">
+
+                <!-- ── Sign In ── -->
+                <div id="panel-signin" class="hidden space-y-6">
+                    <div>
+                        <h2 id="signin-welcome" class="text-2xl font-bold text-[#4A4540]">Welcome back!</h2>
+                        <p class="text-sm text-[#9A958C] mt-1">Sign in to access your planner.</p>
+                    </div>
+
+                    <div class="card p-6 space-y-4">
+                        <!-- Name chip — shown when last-login name is cached -->
+                        <div id="signin-name-chip" class="hidden flex items-center gap-3 p-3 bg-[#FAF7F2] rounded-xl border border-gray-200">
+                            <div id="signin-avatar" class="w-10 h-10 rounded-full bg-[#E67F76] flex items-center justify-center text-white font-bold text-sm shrink-0">?</div>
+                            <div>
+                                <div id="signin-name-display" class="font-bold text-sm text-[#4A4540]">Student</div>
+                                <div id="signin-grade-display" class="text-[10px] text-[#9A958C]">MCA</div>
+                            </div>
+                            <button onclick="clearCachedName()" class="ml-auto text-[10px] text-[#82BDC3] font-bold hover:underline">Not you?</button>
+                        </div>
+
+                        <!-- Name field — shown when no cached name -->
+                        <div id="signin-name-field">
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Your Name</label>
+                            <input id="si-name-input" type="text" placeholder="Last, First (e.g. Smith, Jane)"
+                                class="w-full border p-3 rounded-xl font-bold outline-none focus:ring-2 focus:ring-[#E67F76] text-sm"
+                                onkeydown="if(event.key==='Enter') document.getElementById('si-password').focus()">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Password</label>
+                            <input id="si-password" type="password" placeholder="Enter your password"
+                                class="w-full border p-3 rounded-xl font-bold outline-none focus:ring-2 focus:ring-[#E67F76] text-sm"
+                                onkeydown="if(event.key==='Enter') doSignIn()">
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <input id="si-remember" type="checkbox" class="w-4 h-4 accent-[#E67F76] cursor-pointer">
+                            <label for="si-remember" class="text-xs font-bold text-gray-500 cursor-pointer select-none">Stay signed in on this device</label>
+                        </div>
+
+                        <div id="si-error" class="hidden text-xs text-red-500 font-bold bg-red-50 px-3 py-2 rounded-lg">
+                            ❌ Incorrect name or password.
+                        </div>
+
+                        <button id="si-btn" onclick="doSignIn()"
+                            class="w-full py-3 bg-[#E67F76] text-white font-bold text-sm rounded-xl hover:opacity-90 transition shadow-sm">
+                            Sign In →
+                        </button>
+                    </div>
+
+                    <div class="text-center space-y-1">
+                        <p class="text-[11px] text-gray-400">New student? <button onclick="showPanel('setup')" class="text-[#82BDC3] font-bold hover:underline">Create an account</button></p>
+                        <p class="text-[11px] text-gray-400">Forgot your password? Ask your teacher to reset your account.</p>
+                    </div>
+                </div>
+
+                <!-- ── First-time: Setup ── -->
+                <div id="panel-setup" class="hidden space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-[#4A4540]">Let's get you set up!</h2>
+                        <p class="text-sm text-[#9A958C] mt-1">Create your student profile to get started.</p>
+                    </div>
+
+                    <div class="card p-6 space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Full Name <span class="text-red-400">*</span></label>
+                            <input id="su-name" type="text" placeholder="e.g. Smith, John"
+                                class="w-full border p-3 rounded-xl font-bold outline-none focus:ring-2 focus:ring-[#E67F76] text-sm">
+                            <p class="text-[10px] text-gray-400 mt-1">Use Last, First format (matches your school records).</p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Grade Level <span class="text-red-400">*</span></label>
+                                <select id="su-grade" class="w-full border p-3 rounded-xl font-bold outline-none bg-white text-sm focus:ring-2 focus:ring-[#E67F76]">
+                                    <option value="">Select…</option>
+                                    <option>8th Grade</option>
+                                    <option>9th Grade (Freshman)</option>
+                                    <option>10th Grade (Sophomore)</option>
+                                    <option>11th Grade (Junior)</option>
+                                    <option>12th Grade (Senior)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Homeroom</label>
+                                <input id="su-homeroom" type="text" placeholder="e.g. Room 204"
+                                    class="w-full border p-3 rounded-xl font-bold outline-none focus:ring-2 focus:ring-[#E67F76] text-sm">
+                            </div>
+                        </div>
+
+                        <hr class="border-gray-100">
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Create a Password <span class="text-red-400">*</span></label>
+                            <input id="su-password" type="password" placeholder="Choose a secure password"
+                                class="w-full border p-3 rounded-xl font-bold outline-none focus:ring-2 focus:ring-[#E67F76] text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Confirm Password <span class="text-red-400">*</span></label>
+                            <input id="su-password2" type="password" placeholder="Re-enter your password"
+                                class="w-full border p-3 rounded-xl font-bold outline-none focus:ring-2 focus:ring-[#E67F76] text-sm"
+                                onkeydown="if(event.key==='Enter') doSetup()">
+                        </div>
+
+                        <div id="su-error" class="hidden text-xs text-red-500 font-bold bg-red-50 px-3 py-2 rounded-lg"></div>
+
+                        <button id="su-btn" onclick="doSetup()" class="w-full py-3 bg-[#E67F76] text-white font-bold text-sm rounded-xl hover:opacity-90 transition shadow-sm">
+                            Create My Planner →
+                        </button>
+                    </div>
+
+                    <p id="su-already" class="text-center text-[11px] text-gray-400 hidden">
+                        Already have a profile? <button onclick="showPanel('signin')" class="text-[#82BDC3] font-bold hover:underline">Sign in instead</button>
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal ───────────────────────────────────────────────────────────────── -->
+<div id="modalOverlay" onclick="if(event.target===this)closeModal()" class="fixed inset-0 z-[999] hidden items-center justify-center">
+    <div id="modalBox" class="bg-white p-6 rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto relative custom-scrollbar mx-4">
+        <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg">✕</button>
+        <div id="modalContent"></div>
+    </div>
+</div>
+
+<!-- ── Toast ───────────────────────────────────────────────────────────────── -->
+<div id="toast" class="fixed bottom-6 right-6 z-[9999] pointer-events-none">
+    <div id="toast-inner" class="bg-[#4A4540] text-white text-xs font-bold px-5 py-3 rounded-xl shadow-lg opacity-0 transition-opacity duration-300"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!--  APPLICATION SCRIPT                                                       -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<script>
+// ══════════════════════════════════════════════════════════════════════════
+// SERVER CONFIG — edit these two lines to connect to your school's server
+// ══════════════════════════════════════════════════════════════════════════
+//
+//  API_BASE: the URL path to the /api folder on your web server.
+//    - Leave it as '' (empty string) to run in local-only mode (no server needed).
+//    - Set it to something like '/planner/api' or 'https://yourschool.edu/planner/api'
+//      once your IT department has set up the PHP files.
+//
+const API_BASE = ''; // ← IT: change this once the server is set up
+
+let authToken = null; // filled in after login; cleared on sign-out
+
+// ── State ──────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'mca-student-planner-v1';
+
+const defaultState = () => ({
+    profile: { name: '', grade: '', homeroom: '' },
+    activeTheme: 'earthy',
+    assignments: [],          // { id, title, subject, dueDate, priority, status, source, notes }
+    canvasEvents: [],         // imported from ICS
+    grades: [],               // { id, className, entries: [{id, label, score, max, date}] }
+    notes: [],                // { id, title, body, updatedAt }
+    quickPad: '',
+    sessionLog: [],
+    sessionsToday: 0,
+    lastSessionDate: '',
+    canvasUrl: '',
+    appPassword: '',
+    dashboardOrder: null,
+    schoolCalendarEnabled: true,
+    schoolEvents: [],
+    personalCalendars: [],
+    personalCalendarEvents: [],
+    subjects: [],         // [{ id, name, color, driveLinks:[{id,title,url}] }]
+    customTimerMinutes: 30
+});
+
+let state = defaultState();
+let activeNoteId = null;
+
+// ── Catholic Reflections ───────────────────────────────────────────────────
+const CATHOLIC_REFLECTIONS = [
+    { text: "The fear of the Lord is the beginning of wisdom.", author: "Proverbs 9:10" },
+    { text: "I can do all things through Christ who strengthens me.", author: "Philippians 4:13" },
+    { text: "Trust in the Lord with all your heart, and do not lean on your own understanding.", author: "Proverbs 3:5" },
+    { text: "For I know the plans I have for you, declares the Lord, plans to prosper you and not to harm you.", author: "Jeremiah 29:11" },
+    { text: "Whatever you do, work heartily, as for the Lord and not for men.", author: "Colossians 3:23" },
+    { text: "Study is a form of prayer; the one who studies learns to love God more.", author: "St. Thomas Aquinas" },
+    { text: "You are the light of the world. A city set on a hill cannot be hidden.", author: "Matthew 5:14" },
+    { text: "Do not be conformed to this world, but be transformed by the renewal of your mind.", author: "Romans 12:2" },
+    { text: "The soul is made for God and it cannot rest until it rests in Him.", author: "St. Augustine" },
+    { text: "Knowledge puffs up, but love builds up.", author: "1 Corinthians 8:1" },
+    { text: "Give me the grace, Lord, to see Thee in all things and all things in Thee.", author: "St. Elizabeth Ann Seton" },
+    { text: "Ask and it will be given to you; seek and you will find; knock and the door will be opened.", author: "Matthew 7:7" },
+    { text: "Preach the Gospel at all times; when necessary, use words.", author: "St. Francis of Assisi" },
+    { text: "Nothing is sweeter than the calm of conscience, nothing safer than the purity of soul.", author: "St. Thomas à Kempis" },
+    { text: "The rosary is the weapon for these times.", author: "St. Padre Pio" },
+    { text: "Be who God meant you to be and you will set the world on fire.", author: "St. Catherine of Siena" },
+    { text: "To do two things at once is to do neither.", author: "Publius Syrus (classical wisdom)" },
+    { text: "God is glorified not by our sighs but by our thanks.", author: "St. Bernard of Clairvaux" },
+    { text: "Every day is a gift of God: use it for His glory.", author: "St. John Bosco" },
+    { text: "No one can study with a troubled mind. First seek peace, then knowledge.", author: "St. Thomas Aquinas" },
+    { text: "All shall be well, and all shall be well, and all manner of thing shall be well.", author: "Julian of Norwich" },
+    { text: "Lord, make me an instrument of your peace.", author: "Prayer of St. Francis" },
+    { text: "The future starts today, not tomorrow.", author: "Pope St. John Paul II" },
+    { text: "What does it profit a man to gain the whole world, yet forfeit his soul?", author: "Mark 8:36" },
+    { text: "A single act of kindness throws out roots in all directions.", author: "Amelia Earhart / Catholic tradition" },
+    { text: "Start by doing what's necessary, then what's possible, and suddenly you are doing the impossible.", author: "St. Francis of Assisi" },
+    { text: "Our greatest glory is not in never failing, but in rising every time we fall.", author: "Confucius / Benedictine wisdom" },
+    { code: "PS.119:105", text: "Your word is a lamp for my feet, a light on my path.", author: "Psalm 119:105" },
+    { text: "Have I not commanded you? Be strong and courageous. Do not be afraid.", author: "Joshua 1:9" },
+    { text: "Come to me, all you who are weary and burdened, and I will give you rest.", author: "Matthew 11:28" },
+    { text: "Work as if everything depends on you; pray as if everything depends on God.", author: "St. Ignatius of Loyola" },
+    { text: "The greatest among you shall be your servant.", author: "Matthew 23:11" },
+    { text: "Haste is the mother of imperfection.", author: "St. Francis de Sales" },
+    { text: "You were made by God and for God, and until you understand that, life will never make sense.", author: "Dr. Rick Warren / Catholic tradition" },
+    { text: "In everything give thanks; for this is the will of God in Christ Jesus for you.", author: "1 Thessalonians 5:18" },
+    { text: "Grace is given not to those who speak it, but to those who live it.", author: "Thomas à Kempis" },
+    { text: "Do small things with great love.", author: "St. Teresa of Calcutta" },
+    { text: "Pray, hope, and don't worry.", author: "St. Padre Pio" },
+    { text: "To one who has faith, no explanation is necessary. To one without faith, no explanation is possible.", author: "St. Thomas Aquinas" },
+    { text: "Let us always meet each other with a smile, for the smile is the beginning of love.", author: "St. Teresa of Calcutta" },
+];
+
+function getDailyReflection() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 0);
+    const day = Math.floor((now - start) / 86400000);
+    return CATHOLIC_REFLECTIONS[day % CATHOLIC_REFLECTIONS.length];
+}
+
+// ── Storage ────────────────────────────────────────────────────────────────
+
+// Always cache locally as fast/offline backup
+function saveLocal() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// Load from local cache (used on startup and as offline fallback)
+function loadLocal() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+            const saved = JSON.parse(raw);
+            state = { ...defaultState(), ...saved };
+            state.profile = { ...defaultState().profile, ...(saved.profile || {}) };
+        }
+    } catch(e) { console.warn('loadLocal error', e); }
+}
+
+// Main save: local cache + server (if configured and logged in)
+async function save() {
+    saveLocal();
+    if (API_BASE && authToken) {
+        try {
+            await fetch(API_BASE + '/data.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + authToken
+                },
+                body: JSON.stringify(state)
+            });
+        } catch(e) {
+            console.warn('Server save failed (offline?), local cache used:', e);
+        }
+    }
+}
+
+// Load from server. Returns true on success, false if token is invalid.
+async function loadFromServer(token) {
+    try {
+        const res = await fetch(API_BASE + '/data.php', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.status === 401) {
+            clearAuth(false);   // token expired — go back to sign-in
+            return false;
+        }
+        if (res.ok) {
+            const json = await res.json();
+            const saved = json.data || {};
+            state = { ...defaultState(), ...saved };
+            // Always trust the server's profile fields
+            if (json.profile) {
+                state.profile = { ...defaultState().profile, ...json.profile };
+            } else {
+                state.profile = { ...defaultState().profile, ...(saved.profile || {}) };
+            }
+            saveLocal(); // keep local cache in sync
+            return true;
+        }
+    } catch(e) {
+        console.warn('Server load failed, falling back to local cache:', e);
+        loadLocal(); // offline — use what we have
+        return true; // let the user in with cached data
+    }
+    return false;
+}
+
+// Convenience: apply loaded state to the UI
+function renderAll() {
+    const body = document.getElementById('planner-body');
+    ['earthy','coastal','forest','royal'].forEach(t => body.classList.remove('theme-' + t));
+    body.classList.add('theme-' + (state.activeTheme || 'earthy'));
+    updateBanner();
+    renderDashboard();
+    populateSettings();
+    applyReflection();
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+const TABS = ['dashboard','assignments','calendar','grades','notes','timer','resources','settings'];
+
+function switchTab(id) {
+    TABS.forEach(t => {
+        document.getElementById('tab-' + t)?.classList.replace('block', 'hidden');
+        document.getElementById('btn-' + t)?.classList.remove('active');
+    });
+    document.getElementById('tab-' + id)?.classList.replace('hidden', 'block');
+    document.getElementById('btn-' + id)?.classList.add('active');
+
+    if (id === 'dashboard')   renderDashboard();
+    if (id === 'assignments') renderAssignments();
+    if (id === 'calendar')    renderCalendar();
+    if (id === 'grades')      renderGrades();
+    if (id === 'notes')       openNotesTab();
+    if (id === 'settings')    populateSettings();
+
+    // close mobile sidebar
+    document.getElementById('sidebar')?.classList.remove('open');
+}
+
+function toggleSidebar() {
+    document.getElementById('sidebar')?.classList.toggle('open');
+}
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+function setTheme(t) {
+    const body = document.getElementById('planner-body');
+    ['earthy','coastal','forest','royal'].forEach(x => body.classList.remove('theme-' + x));
+    body.classList.add('theme-' + t);
+    state.activeTheme = t;
+    save();
+    toast('Theme updated ✓');
+}
+
+// ── Daily Reflection ───────────────────────────────────────────────────────
+function applyReflection() {
+    const r = getDailyReflection();
+    const bq = document.getElementById('banner-quote');
+    const ba = document.getElementById('banner-quote-author');
+    const sq = document.getElementById('sidebar-quote');
+    if (bq) bq.innerHTML = `<em>${r.text}</em>`;
+    if (ba) ba.innerHTML = `✝ ${r.author}`;
+    if (sq) {
+        const short = r.text.length > 80 ? r.text.slice(0, 77) + '…' : r.text;
+        sq.innerHTML = `<span class="text-[#E67F76]">✝</span> <em>${short}</em><br><span class="font-semibold not-italic">— ${r.author}</span>`;
+    }
+}
+
+// ── Banner helpers ─────────────────────────────────────────────────────────
+function updateBanner() {
+    const name = state.profile.name;
+    const greet = document.getElementById('banner-greeting');
+    if (greet) greet.innerText = name ? `Hi, ${name.split(',')[1]?.trim() || name}! 👋` : 'Hi, Scholar! 👋';
+
+    const dateEl = document.getElementById('current-date');
+    if (dateEl) {
+        const d = new Date();
+        dateEl.innerText = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+    }
+
+    const today = todayStr();
+    const dueToday = state.assignments.filter(a => a.dueDate === today && a.status !== 'done');
+    const dueTodayEl = document.getElementById('assignments-due-today');
+    if (dueTodayEl) {
+        dueTodayEl.innerText = dueToday.length
+            ? `${dueToday.length} assignment${dueToday.length > 1 ? 's' : ''} due today`
+            : 'Nothing due today 🎉';
+    }
+
+    // mini stats
+    const now = new Date(); now.setHours(23,59,59,999);
+    const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7);
+    const allA = state.assignments;
+    const pending = allA.filter(a => a.status !== 'done' && a.dueDate >= today).length;
+    const done    = allA.filter(a => a.status === 'done').length;
+    const overdue = allA.filter(a => a.status !== 'done' && a.dueDate < today).length;
+    document.getElementById('stat-pending')?.innerText !== undefined && (document.getElementById('stat-pending').innerText = pending);
+    document.getElementById('stat-done')?.innerText !== undefined    && (document.getElementById('stat-done').innerText = done);
+    document.getElementById('stat-overdue')?.innerText !== undefined && (document.getElementById('stat-overdue').innerText = overdue);
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────────────
+function renderDashboard() {
+    updateBanner();
+    const today = todayStr();
+
+    // Due today
+    const dueEl = document.getElementById('dash-due-today');
+    const dueToday = [...state.assignments]
+        .filter(a => a.dueDate === today && a.status !== 'done')
+        .sort((a,b) => priorityOrder(b.priority) - priorityOrder(a.priority));
+    if (dueEl) {
+        dueEl.innerHTML = dueToday.length
+            ? dueToday.map(a => miniAssignmentRow(a)).join('')
+            : '<p class="text-xs text-gray-400 italic">Nothing due today — enjoy the peace! ✝</p>';
+    }
+
+    // Upcoming (next 7 days, not today)
+    const upEl = document.getElementById('dash-upcoming');
+    const upcoming = [...state.assignments]
+        .filter(a => a.dueDate > today && a.status !== 'done')
+        .sort((a,b) => a.dueDate.localeCompare(b.dueDate))
+        .slice(0, 8);
+    if (upEl) {
+        upEl.innerHTML = upcoming.length
+            ? upcoming.map(a => miniAssignmentRow(a)).join('')
+            : '<p class="text-xs text-gray-400 italic">You\'re all caught up this week! ✝</p>';
+    }
+
+    // Quick pad (dashboard widget)
+    const qp = document.getElementById('quick-pad-dash');
+    if (qp) qp.value = state.quickPad || '';
+
+    // Canvas sync status
+    const syncEl = document.getElementById('canvas-sync-status');
+    if (syncEl) {
+        const canvasItems = state.assignments.filter(a => a.source === 'canvas');
+        syncEl.innerHTML = state.canvasUrl
+            ? (canvasItems.length
+                ? `<span class="text-green-600 font-bold">✓ Synced</span> — ${canvasItems.length} Canvas assignment${canvasItems.length > 1 ? 's' : ''} imported.`
+                : 'URL saved. Click <strong>Sync Now</strong> to import.')
+            : 'Add your Canvas ICS URL in Settings.';
+    }
+}
+
+function miniAssignmentRow(a) {
+    const pill = statusPill(a);
+    const dateLabel = formatDateShort(a.dueDate);
+    return `<div class="assignment-row flex items-center justify-between gap-3 ${a.status==='done'?'done':''}" onclick="quickToggleDone('${a.id}')">
+        <div class="flex items-center gap-3 min-w-0">
+            <span class="text-base">${subjectEmoji(a.subject)}</span>
+            <div class="min-w-0">
+                <div class="asgn-title text-xs font-bold truncate">${escHtml(a.title)}</div>
+                <div class="text-[10px] text-gray-400">${escHtml(a.subject || '—')} · ${dateLabel}</div>
+            </div>
+        </div>
+        ${pill}
+    </div>`;
+}
+
+function saveQuickPad() {
+    state.quickPad = document.getElementById('quick-pad-dash')?.value || '';
+    save();
+}
+
+function saveAndSyncInline() {
+    const url = document.getElementById('inline-canvas-url')?.value.trim();
+    if (!url) { toast('Paste your Canvas ICS URL first.'); return; }
+    state.canvasUrl = url;
+    save();
+    // Also update the Settings field so it stays in sync
+    const settingsInput = document.getElementById('set-canvas-url');
+    if (settingsInput) settingsInput.value = url;
+    syncCanvas();
+}
+
+// ── Assignments ────────────────────────────────────────────────────────────
+function renderAssignments() {
+    const filter = document.getElementById('asgn-filter')?.value || 'all';
+    const today  = todayStr();
+    let list = [...state.assignments];
+
+    if (filter === 'today')   list = list.filter(a => a.dueDate === today);
+    if (filter === 'week') {
+        const week = new Date(); week.setDate(week.getDate() + 7);
+        list = list.filter(a => a.dueDate >= today && a.dueDate <= fmtDate(week));
+    }
+    if (filter === 'pending') list = list.filter(a => a.status !== 'done' && a.dueDate >= today);
+    if (filter === 'overdue') list = list.filter(a => a.status !== 'done' && a.dueDate < today);
+    if (filter === 'done')    list = list.filter(a => a.status === 'done');
+
+    list.sort((a,b) => {
+        if (a.status === 'done' && b.status !== 'done') return 1;
+        if (b.status === 'done' && a.status !== 'done') return -1;
+        return a.dueDate.localeCompare(b.dueDate) || priorityOrder(b.priority) - priorityOrder(a.priority);
+    });
+
+    const el = document.getElementById('assignments-list');
+    if (!el) return;
+    if (!list.length) {
+        const noCanvas  = !state.canvasUrl;
+        const hasManual = state.assignments.some(a => a.source !== 'canvas');
+        if (noCanvas && !hasManual) {
+            // Brand-new — nudge them to connect Canvas
+            el.innerHTML = `
+                <div class="card p-10 flex flex-col items-center text-center gap-5 max-w-lg mx-auto">
+                    <div class="text-6xl">📅</div>
+                    <div>
+                        <h4 class="text-lg font-bold text-[#4A4540] mb-1">No assignments yet</h4>
+                        <p class="text-sm text-[#9A958C] leading-relaxed">
+                            Connect your Canvas calendar to automatically pull in all your assignments and due dates — or add one manually to get started.
+                        </p>
+                    </div>
+                    <div class="w-full space-y-3">
+                        <div class="flex flex-col gap-2">
+                            <label class="block text-xs font-bold text-gray-400 uppercase text-left">Canvas ICS URL</label>
+                            <input id="inline-canvas-url" type="text" autocomplete="off" autocorrect="off" spellcheck="false"
+                                placeholder="https://mca.instructure.com/feeds/calendars/…"
+                                class="w-full border p-3 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-[#82BDC3]">
+                            <p class="text-[10px] text-gray-400 text-left leading-relaxed">
+                                Find this in Canvas → Calendar → click the <strong>calendar icon (⋯)</strong> at the bottom → <strong>Copy feed URL</strong>.
+                            </p>
+                        </div>
+                        <button onclick="saveAndSyncInline()" class="w-full py-3 bg-[#82BDC3] text-white font-bold text-sm rounded-xl hover:opacity-90 transition">
+                            📅 Connect Canvas & Sync
+                        </button>
+                        <div class="flex items-center gap-3 text-[11px] text-gray-400">
+                            <div class="flex-1 border-t border-gray-200"></div>
+                            <span>or</span>
+                            <div class="flex-1 border-t border-gray-200"></div>
+                        </div>
+                        <button onclick="openAddAssignment()" class="w-full py-3 bg-white border-2 border-dashed border-gray-300 text-[#4A4540] font-bold text-sm rounded-xl hover:border-[#E67F76] hover:text-[#E67F76] transition">
+                            + Add Assignment Manually
+                        </button>
+                    </div>
+                </div>`;
+        } else if (filter === 'done' || filter === 'overdue') {
+            el.innerHTML = `<div class="text-center py-12 text-gray-400 text-sm italic">Nothing here. ✝</div>`;
+        } else {
+            // Canvas is linked, just nothing due in this filter
+            el.innerHTML = `
+                <div class="text-center py-12 space-y-3">
+                    <div class="text-4xl">🎉</div>
+                    <p class="text-sm font-bold text-[#4A4540]">You're all caught up!</p>
+                    <p class="text-xs text-gray-400">No assignments match this filter. Enjoy the peace. ✝</p>
+                    <button onclick="syncCanvas()" class="mt-2 px-5 py-2 bg-white border text-xs font-bold rounded-xl hover:bg-gray-50 transition text-[#9A958C]">🔄 Re-sync Canvas</button>
+                </div>`;
+        }
+        return;
+    }
+    el.innerHTML = list.map(a => `
+        <div class="assignment-row flex items-center justify-between gap-3 ${a.status==='done'?'done':''}">
+            <div class="flex items-center gap-3 min-w-0 flex-1" onclick="quickToggleDone('${a.id}')">
+                <span class="text-xl">${subjectEmoji(a.subject)}</span>
+                <div class="min-w-0">
+                    <div class="asgn-title font-bold text-sm truncate">${escHtml(a.title)}</div>
+                    <div class="text-[11px] text-gray-400">${escHtml(a.subject || '—')} · Due ${formatDateShort(a.dueDate)}${a.source==='canvas'?' · <span class="text-[#82BDC3] font-bold">Canvas</span>':''}</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                ${priorityPill(a.priority)}
+                ${statusPill(a)}
+                <button onclick="openEditAssignment('${a.id}')" class="text-gray-300 hover:text-[#E67F76] text-sm">✏️</button>
+                <button onclick="deleteAssignment('${a.id}')" class="text-gray-300 hover:text-red-400 text-sm">🗑</button>
+            </div>
+        </div>`).join('');
+}
+
+function openAddAssignment(prefill) {
+    const a = prefill || { id:'', title:'', subject:'', dueDate:todayStr(), priority:'medium', status:'todo', notes:'' };
+    showModal(`
+        <h3 class="text-xl font-bold mb-4">${a.id ? '✏️ Edit Assignment' : '📚 Add Assignment'}</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Title</label>
+                <input id="m-title" type="text" value="${escHtml(a.title)}" placeholder="e.g. Chapter 5 Reading"
+                    class="w-full border p-2.5 rounded-lg text-xs outline-none font-semibold">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Subject / Class</label>
+                    <input id="m-subject" type="text" value="${escHtml(a.subject)}" placeholder="e.g. English III"
+                        class="w-full border p-2.5 rounded-lg text-xs outline-none font-semibold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Due Date</label>
+                    <input id="m-due" type="date" value="${a.dueDate}"
+                        class="w-full border p-2.5 rounded-lg text-xs outline-none font-semibold">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Priority</label>
+                    <select id="m-priority" class="w-full border p-2.5 rounded-lg text-xs outline-none bg-white font-semibold">
+                        <option value="high"   ${a.priority==='high'  ?'selected':''}>🔴 High</option>
+                        <option value="medium" ${a.priority==='medium'?'selected':''}>🟡 Medium</option>
+                        <option value="low"    ${a.priority==='low'   ?'selected':''}>🟢 Low</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Status</label>
+                    <select id="m-status" class="w-full border p-2.5 rounded-lg text-xs outline-none bg-white font-semibold">
+                        <option value="todo"        ${a.status==='todo'       ?'selected':''}>📋 To Do</option>
+                        <option value="in-progress" ${a.status==='in-progress'?'selected':''}>⚡ In Progress</option>
+                        <option value="done"        ${a.status==='done'       ?'selected':''}>✅ Done</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Notes</label>
+                <textarea id="m-notes" rows="3" placeholder="Any extra details…"
+                    class="w-full border p-2.5 rounded-lg text-xs outline-none resize-none">${escHtml(a.notes || '')}</textarea>
+            </div>
+            <button onclick="saveAssignment('${a.id}')" class="w-full py-3 bg-[#E67F76] text-white font-bold rounded-xl hover:opacity-90 transition">
+                ${a.id ? 'Save Changes' : '+ Add Assignment'}
+            </button>
+        </div>`);
+}
+
+function openEditAssignment(id) {
+    const a = state.assignments.find(x => x.id === id);
+    if (a) openAddAssignment(a);
+}
+
+function saveAssignment(id) {
+    const title   = document.getElementById('m-title')?.value.trim();
+    const subject = document.getElementById('m-subject')?.value.trim();
+    const due     = document.getElementById('m-due')?.value;
+    const priority= document.getElementById('m-priority')?.value;
+    const status  = document.getElementById('m-status')?.value;
+    const notes   = document.getElementById('m-notes')?.value.trim();
+    if (!title) { toast('Please enter a title.'); return; }
+    if (id) {
+        const a = state.assignments.find(x => x.id === id);
+        if (a) Object.assign(a, { title, subject, dueDate:due, priority, status, notes });
+    } else {
+        state.assignments.push({ id: uid(), title, subject, dueDate:due, priority, status, notes, source:'manual' });
+    }
+    save(); closeModal(); renderAssignments(); updateBanner();
+    toast(id ? 'Assignment updated ✓' : 'Assignment added ✓');
+}
+
+function deleteAssignment(id) {
+    if (!confirm('Delete this assignment?')) return;
+    state.assignments = state.assignments.filter(a => a.id !== id);
+    save(); renderAssignments(); updateBanner();
+    toast('Deleted.');
+}
+
+function quickToggleDone(id) {
+    const a = state.assignments.find(x => x.id === id);
+    if (!a) return;
+    a.status = a.status === 'done' ? 'todo' : 'done';
+    save(); renderAssignments(); renderDashboard();
+}
+
+// ── Canvas ICS Sync ────────────────────────────────────────────────────────
+async function syncCanvas() {
+    const url = state.canvasUrl;
+    if (!url) { toast('Add your Canvas ICS URL in Settings first.'); switchTab('settings'); return; }
+    toast('Syncing Canvas…');
+    try {
+        const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        const res = await fetch(proxy);
+        if (!res.ok) throw new Error('Fetch failed');
+        const ics = await res.text();
+        const events = parseICS(ics);
+        // Remove old canvas imports, add fresh ones
+        state.assignments = state.assignments.filter(a => a.source !== 'canvas');
+        events.forEach(e => {
+            if (!e.summary) return;
+            state.assignments.push({
+                id: 'canvas-' + uid(),
+                title: e.summary,
+                subject: e.categories || '',
+                dueDate: e.date || todayStr(),
+                priority: 'medium',
+                status: 'todo',
+                notes: e.description || '',
+                source: 'canvas'
+            });
+        });
+        state.canvasEvents = events;
+        save();
+        toast(`✓ Synced ${events.length} Canvas events`);
+        renderDashboard();
+        renderAssignments();
+        renderCalendar();
+        // Also refresh school and personal calendars in background
+        syncSchoolCalendar();
+        syncPersonalCalendars();
+    } catch(err) {
+        toast('Sync failed — check URL or network.');
+        console.error(err);
+    }
+}
+
+function parseICS(ics) {
+    const events = [];
+    const blocks = ics.split('BEGIN:VEVENT');
+    blocks.slice(1).forEach(block => {
+        const get = (key) => {
+            const m = block.match(new RegExp(key + '[^:]*:(.+)'));
+            return m ? m[1].replace(/\\n/g,' ').replace(/\\,/g,',').trim() : '';
+        };
+        const dtstart = get('DTSTART');
+        let date = '';
+        if (dtstart) {
+            const d = dtstart.replace(/T\d+Z?$/, '').replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+            date = d;
+        }
+        events.push({ summary: get('SUMMARY'), description: get('DESCRIPTION'), categories: get('CATEGORIES'), date });
+    });
+    return events;
+}
+
+// ── School Calendar (MCA) ─────────────────────────────────────────────────
+const SCHOOL_CAL_URL = 'https://www.mcacubs.com/calendar/calendar_323_gmt.ics';
+
+async function syncSchoolCalendar() {
+    if (state.schoolCalendarEnabled === false) return;
+    try {
+        const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(SCHOOL_CAL_URL)}`;
+        const res = await fetch(proxy);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const ics = await res.text();
+        state.schoolEvents = parseICS(ics);
+        save();
+        updateSchoolCalStatus();
+        renderCalendar();
+    } catch(err) {
+        console.warn('MCA calendar sync failed:', err);
+        updateSchoolCalStatus('⚠ Error');
+    }
+}
+
+function updateSchoolCalStatus(override) {
+    const el = document.getElementById('school-cal-status');
+    if (!el) return;
+    if (state.schoolCalendarEnabled === false) { el.textContent = 'Disabled'; return; }
+    if (override) { el.textContent = override; return; }
+    const count = state.schoolEvents?.length || 0;
+    el.textContent = count ? `✓ ${count} events` : 'Not yet synced';
+}
+
+function toggleSchoolCal(checked) {
+    state.schoolCalendarEnabled = checked;
+    save();
+    updateSchoolCalStatus();
+    if (checked) syncSchoolCalendar();
+    else renderCalendar();
+}
+
+// ── Personal Calendars ────────────────────────────────────────────────────
+async function syncPersonalCalendars() {
+    const cals = (state.personalCalendars || []).filter(c => c.enabled);
+    if (!cals.length) return;
+    const allEvents = [];
+    await Promise.all(cals.map(async cal => {
+        try {
+            const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(cal.url)}`;
+            const res = await fetch(proxy);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const ics = await res.text();
+            const events = parseICS(ics);
+            events.forEach(e => allEvents.push({ ...e, calName: cal.name, calId: cal.id }));
+        } catch(err) {
+            console.warn(`Personal cal "${cal.name}" failed:`, err);
+        }
+    }));
+    state.personalCalendarEvents = allEvents;
+    save();
+    renderCalendar();
+}
+
+function addPersonalCal() {
+    const name = document.getElementById('new-cal-name')?.value.trim();
+    const url  = document.getElementById('new-cal-url')?.value.trim();
+    if (!name) { toast('Give this calendar a name first.'); return; }
+    if (!url || !url.startsWith('http')) { toast('Enter a valid ICS feed URL (must start with https://).'); return; }
+    if (!state.personalCalendars) state.personalCalendars = [];
+    state.personalCalendars.push({ id: uid(), name, url, enabled: true });
+    save();
+    document.getElementById('new-cal-name').value = '';
+    document.getElementById('new-cal-url').value  = '';
+    renderPersonalCalList();
+    syncPersonalCalendars();
+    toast(`✓ "${name}" added — syncing now`);
+}
+
+function removePersonalCal(id) {
+    state.personalCalendars        = (state.personalCalendars || []).filter(c => c.id !== id);
+    state.personalCalendarEvents   = (state.personalCalendarEvents || []).filter(e => e.calId !== id);
+    save();
+    renderPersonalCalList();
+    renderCalendar();
+    toast('Calendar removed.');
+}
+
+function togglePersonalCal(id, checked) {
+    const cal = (state.personalCalendars || []).find(c => c.id === id);
+    if (cal) { cal.enabled = checked; save(); }
+    syncPersonalCalendars();
+}
+
+function renderPersonalCalList() {
+    const el = document.getElementById('personal-cal-list');
+    if (!el) return;
+    const cals = state.personalCalendars || [];
+    if (!cals.length) {
+        el.innerHTML = '<p class="text-xs text-gray-400 italic">No additional calendars added yet.</p>';
+        return;
+    }
+    el.innerHTML = cals.map(cal => `
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+            <input type="checkbox" ${cal.enabled ? 'checked' : ''}
+                onchange="togglePersonalCal('${cal.id}', this.checked)"
+                class="w-4 h-4 shrink-0 accent-[#99A59A] rounded">
+            <div class="flex-1 min-w-0">
+                <p class="text-xs font-bold truncate">${escHtml(cal.name)}</p>
+                <p class="text-[10px] text-gray-400 truncate">${escHtml(cal.url)}</p>
+            </div>
+            <button onclick="removePersonalCal('${cal.id}')"
+                class="text-gray-300 hover:text-red-400 transition text-lg leading-none shrink-0 px-1" title="Remove calendar">✕</button>
+        </div>`).join('');
+}
+
+// ── Calendar View ──────────────────────────────────────────────────────────
+function renderCalendar() {
+    const el = document.getElementById('calendar-content');
+    if (!el) return;
+
+    // ── Build a unified event list ──────────────────────────────────────────
+    const all = [];
+
+    // Assignments (canvas + manual)
+    state.assignments.filter(a => a.dueDate).forEach(a => {
+        all.push({ date: a.dueDate, type: 'assignment', data: a });
+    });
+
+    // MCA School Calendar events
+    if (state.schoolCalendarEnabled !== false) {
+        (state.schoolEvents || []).filter(e => e.date).forEach(e => {
+            all.push({ date: e.date, type: 'school', data: e });
+        });
+    }
+
+    // Personal calendar events
+    (state.personalCalendarEvents || []).filter(e => e.date).forEach(e => {
+        all.push({ date: e.date, type: 'personal', data: e });
+    });
+
+    // Sort by date
+    all.sort((a, b) => a.date.localeCompare(b.date));
+
+    if (!all.length) {
+        el.innerHTML = '<p class="text-sm text-gray-400 italic text-center py-8">No events yet. Sync Canvas or add assignments manually.</p>';
+        return;
+    }
+
+    // Group by month
+    const groups = {};
+    all.forEach(item => {
+        const key = item.date.slice(0, 7);
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(item);
+    });
+
+    el.innerHTML = Object.entries(groups).map(([month, items]) => {
+        const [y, m] = month.split('-');
+        const label = new Date(+y, +m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        return `<div class="mb-8">
+            <h4 class="font-bold text-sm text-[#9A958C] uppercase tracking-wide mb-3">${label}</h4>
+            <div class="space-y-2">
+                ${items.map(item => {
+                    const dayNum  = +item.date.slice(8, 10);
+                    const weekday = new Date(item.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' });
+
+                    if (item.type === 'assignment') {
+                        const a = item.data;
+                        return `<div class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-white hover:border-[#E67F76] transition ${a.status==='done'?'opacity-50':''}">
+                            <div class="text-center min-w-[36px]">
+                                <div class="text-lg font-bold text-[#E67F76]">${dayNum}</div>
+                                <div class="text-[9px] text-gray-400 uppercase">${weekday}</div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-bold text-xs ${a.status==='done'?'line-through':''} truncate">${escHtml(a.title)}</div>
+                                <div class="text-[10px] text-gray-400">${escHtml(a.subject||'—')}${a.source==='canvas'?' · Canvas':''}</div>
+                            </div>
+                            ${statusPill(a)}
+                        </div>`;
+                    }
+
+                    if (item.type === 'school') {
+                        const e = item.data;
+                        return `<div class="flex items-center gap-3 p-3 rounded-xl border border-[#99A59A]/30 bg-[#99A59A]/5 hover:border-[#99A59A] transition">
+                            <div class="text-center min-w-[36px]">
+                                <div class="text-lg font-bold text-[#99A59A]">${dayNum}</div>
+                                <div class="text-[9px] text-gray-400 uppercase">${weekday}</div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-bold text-xs truncate">${escHtml(e.summary || 'School Event')}</div>
+                                <div class="text-[10px] text-[#99A59A] font-bold">🏫 MCA Calendar</div>
+                            </div>
+                        </div>`;
+                    }
+
+                    if (item.type === 'personal') {
+                        const e = item.data;
+                        return `<div class="flex items-center gap-3 p-3 rounded-xl border border-[#82BDC3]/30 bg-[#82BDC3]/5 hover:border-[#82BDC3] transition">
+                            <div class="text-center min-w-[36px]">
+                                <div class="text-lg font-bold text-[#82BDC3]">${dayNum}</div>
+                                <div class="text-[9px] text-gray-400 uppercase">${weekday}</div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-bold text-xs truncate">${escHtml(e.summary || 'Event')}</div>
+                                <div class="text-[10px] text-[#82BDC3] font-bold">📆 ${escHtml(e.calName || 'Personal')}</div>
+                            </div>
+                        </div>`;
+                    }
+                    return '';
+                }).join('')}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── Grade Tracker ──────────────────────────────────────────────────────────
+function renderGrades() {
+    const el = document.getElementById('grades-list');
+    if (!el) return;
+    if (!state.grades.length) {
+        el.innerHTML = '<div class="text-center py-12 text-gray-400 text-sm italic">No classes yet. Click <strong>+ Add Class</strong> to start tracking your grades.</div>';
+        return;
+    }
+    el.innerHTML = state.grades.map(cls => {
+        const avg = calcAvg(cls.entries);
+        const letter = letterGrade(avg);
+        const color  = gradeColor(avg);
+        return `<div class="card p-6 accent-teal">
+            <div class="flex items-center justify-between mb-4 gap-4">
+                <div>
+                    <h4 class="font-bold text-base">${escHtml(cls.className)}</h4>
+                    <div class="text-xs text-gray-400">${cls.entries.length} grade${cls.entries.length!==1?'s':''} logged</div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="text-right">
+                        <div class="text-2xl font-bold" style="color:${color}">${letter}</div>
+                        <div class="text-xs text-gray-400">${avg !== null ? avg.toFixed(1) + '%' : '—'}</div>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <button onclick="openAddGradeEntry('${cls.id}')" class="px-3 py-1 bg-[#82BDC3] text-white text-[10px] font-bold rounded-lg hover:opacity-90">+ Grade</button>
+                        <button onclick="deleteClass('${cls.id}')" class="px-3 py-1 bg-gray-100 text-gray-500 text-[10px] font-bold rounded-lg hover:bg-red-50 hover:text-red-500">Delete</button>
+                    </div>
+                </div>
+            </div>
+            ${avg !== null ? `<div class="grade-bar mb-4"><div class="grade-bar-fill" style="width:${avg}%;background:${color}"></div></div>` : ''}
+            ${cls.entries.length ? `<div class="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar">
+                ${[...cls.entries].reverse().map(e => `
+                    <div class="flex items-center justify-between text-xs text-gray-600 py-1 border-b border-gray-50">
+                        <span class="font-semibold truncate max-w-[60%]">${escHtml(e.label)}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold" style="color:${gradeColor(e.score/e.max*100)}">${e.score}/${e.max}</span>
+                            <span class="text-gray-400">${((e.score/e.max)*100).toFixed(0)}%</span>
+                            <button onclick="deleteGradeEntry('${cls.id}','${e.id}')" class="text-gray-300 hover:text-red-400">×</button>
+                        </div>
+                    </div>`).join('')}
+            </div>` : '<p class="text-xs text-gray-400 italic">No grades yet — add your first grade above.</p>'}
+        </div>`;
+    }).join('');
+}
+
+function openAddClass() {
+    showModal(`
+        <h3 class="text-xl font-bold mb-4">📊 Add a Class</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Class Name</label>
+                <input id="m-classname" type="text" placeholder="e.g. English III, Algebra II"
+                    class="w-full border p-2.5 rounded-lg text-xs outline-none font-semibold">
+            </div>
+            <button onclick="saveClass()" class="w-full py-3 bg-[#82BDC3] text-white font-bold rounded-xl hover:opacity-90 transition">+ Add Class</button>
+        </div>`);
+}
+
+function saveClass() {
+    const name = document.getElementById('m-classname')?.value.trim();
+    if (!name) { toast('Enter a class name.'); return; }
+    state.grades.push({ id: uid(), className: name, entries: [] });
+    save(); closeModal(); renderGrades();
+    toast('Class added ✓');
+}
+
+function deleteClass(id) {
+    if (!confirm('Remove this class and all its grades?')) return;
+    state.grades = state.grades.filter(c => c.id !== id);
+    save(); renderGrades();
+    toast('Class removed.');
+}
+
+function openAddGradeEntry(classId) {
+    showModal(`
+        <h3 class="text-xl font-bold mb-4">📝 Log a Grade</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Assignment / Test Name</label>
+                <input id="m-glabel" type="text" placeholder="e.g. Chapter 5 Quiz"
+                    class="w-full border p-2.5 rounded-lg text-xs outline-none font-semibold">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Score</label>
+                    <input id="m-gscore" type="number" min="0" placeholder="e.g. 87"
+                        class="w-full border p-2.5 rounded-lg text-xs outline-none font-semibold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Out of</label>
+                    <input id="m-gmax" type="number" min="1" value="100"
+                        class="w-full border p-2.5 rounded-lg text-xs outline-none font-semibold">
+                </div>
+            </div>
+            <button onclick="saveGradeEntry('${classId}')" class="w-full py-3 bg-[#82BDC3] text-white font-bold rounded-xl hover:opacity-90 transition">Save Grade</button>
+        </div>`);
+}
+
+function saveGradeEntry(classId) {
+    const label = document.getElementById('m-glabel')?.value.trim();
+    const score = parseFloat(document.getElementById('m-gscore')?.value);
+    const max   = parseFloat(document.getElementById('m-gmax')?.value);
+    if (!label || isNaN(score) || isNaN(max) || max <= 0) { toast('Fill in all fields.'); return; }
+    const cls = state.grades.find(c => c.id === classId);
+    if (!cls) return;
+    cls.entries.push({ id: uid(), label, score, max, date: todayStr() });
+    save(); closeModal(); renderGrades();
+    toast('Grade saved ✓');
+}
+
+function deleteGradeEntry(classId, entryId) {
+    const cls = state.grades.find(c => c.id === classId);
+    if (!cls) return;
+    cls.entries = cls.entries.filter(e => e.id !== entryId);
+    save(); renderGrades();
+}
+
+function calcAvg(entries) {
+    if (!entries.length) return null;
+    const total = entries.reduce((s, e) => s + (e.score / e.max) * 100, 0);
+    return total / entries.length;
+}
+
+function letterGrade(avg) {
+    if (avg === null) return '—';
+    if (avg >= 93) return 'A';
+    if (avg >= 90) return 'A−';
+    if (avg >= 87) return 'B+';
+    if (avg >= 83) return 'B';
+    if (avg >= 80) return 'B−';
+    if (avg >= 77) return 'C+';
+    if (avg >= 73) return 'C';
+    if (avg >= 70) return 'C−';
+    if (avg >= 67) return 'D+';
+    if (avg >= 60) return 'D';
+    return 'F';
+}
+
+function gradeColor(avg) {
+    if (avg >= 90) return '#15803D';
+    if (avg >= 80) return '#82BDC3';
+    if (avg >= 70) return '#E7A445';
+    if (avg >= 60) return '#E67F76';
+    return '#9F5F67';
+}
+
+// ── Notes & Study — Class-organized system ─────────────────────────────────
+
+const SUBJECT_COLORS = [
+    { id:'coral',  dot:'#E67F76', bg:'#FEE2E2', text:'#B91C1C' },
+    { id:'teal',   dot:'#82BDC3', bg:'#CFFAFE', text:'#155E75' },
+    { id:'sage',   dot:'#99A59A', bg:'#DCFCE7', text:'#166534' },
+    { id:'gold',   dot:'#E7A445', bg:'#FEF3C7', text:'#92400E' },
+    { id:'mauve',  dot:'#9F5F67', bg:'#FCE7F3', text:'#9D174D' },
+    { id:'blue',   dot:'#6B8FD4', bg:'#DBEAFE', text:'#1E40AF' },
+    { id:'purple', dot:'#8B5CF6', bg:'#EDE9FE', text:'#5B21B6' },
+    { id:'amber',  dot:'#D97706', bg:'#FEF9C3', text:'#854D0E' },
+];
+
+function subjectColor(colorId) {
+    return SUBJECT_COLORS.find(c => c.id === colorId) || SUBJECT_COLORS[0];
+}
+
+let activeSubjectId = 'all'; // 'all' | 'pad' | <subject id>
+
+// ── Subject sidebar ────────────────────────────────────────────────────────
+function renderSubjectList() {
+    const el = document.getElementById('subject-list');
+    if (!el) return;
+    const subjects = state.subjects || [];
+    if (!subjects.length) {
+        el.innerHTML = '<p class="text-[10px] text-gray-300 italic px-3 pb-1">No classes yet.</p>';
+        return;
+    }
+    el.innerHTML = subjects.map(s => {
+        const c = subjectColor(s.color);
+        const active = activeSubjectId === s.id;
+        return `<div class="flex items-center gap-1 group">
+            <button onclick="selectSubject('${s.id}')"
+                class="sub-nav flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-left text-xs font-semibold transition ${active ? 'text-white' : 'text-[#4A4540] hover:bg-gray-50'}"
+                style="${active ? `background:${c.dot}` : ''}">
+                <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${c.dot}"></span>
+                <span class="truncate">${escHtml(s.name)}</span>
+            </button>
+            <button onclick="deleteSubject('${s.id}')"
+                class="opacity-0 group-hover:opacity-100 transition text-gray-300 hover:text-red-400 pr-1 text-sm leading-none" title="Remove class">✕</button>
+        </div>`;
+    }).join('');
+    // Sync special-view active states
+    syncSubNavActive();
+}
+
+function syncSubNavActive() {
+    document.querySelectorAll('.sub-nav').forEach(b => {
+        const sid = b.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+        if (!sid) return;
+        const subject = (state.subjects||[]).find(s => s.id === sid);
+        if (subject) return; // class buttons handled in renderSubjectList
+        const isActive = activeSubjectId === sid;
+        b.classList.toggle('bg-[#FAF7F2]', isActive);
+        b.classList.toggle('text-[#E67F76]', isActive);
+        b.classList.toggle('font-extrabold', isActive);
+    });
+}
+
+function selectSubject(id) {
+    activeSubjectId = id;
+    renderSubjectList();
+    renderNotesInSubject();
+    // Show/hide right-panel sections
+    const showEditor  = (id !== 'pad');
+    const showDrive   = (id !== 'all' && id !== 'pad');
+    const showPad     = (id === 'pad');
+    const showEmpty   = false;
+    document.getElementById('note-editor-section')?.classList.toggle('hidden', !showEditor);
+    document.getElementById('drive-links-section')?.classList.toggle('hidden', !showDrive);
+    document.getElementById('quick-pad-section')?.classList.toggle('hidden', !showPad);
+    document.getElementById('notes-empty-state')?.classList.toggle('hidden', true);
+    if (showDrive) renderDriveLinks(id);
+    if (showPad) {
+        const qp = document.getElementById('quick-pad');
+        if (qp) qp.value = state.quickPad || '';
+    }
+    if (showEditor) {
+        // If there are notes, auto-select the first one
+        const filtered = notesForSubject(id);
+        if (filtered.length) {
+            if (!activeNoteId || !filtered.find(n => n.id === activeNoteId)) {
+                selectNote(filtered[0].id);
+            }
+        } else {
+            clearNoteEditor();
+        }
+    }
+}
+
+function openAddSubject() {
+    const colors = SUBJECT_COLORS.map((c, i) =>
+        `<button type="button" onclick="document.querySelectorAll('.color-swatch').forEach(b=>b.classList.remove('ring-2','ring-offset-1','ring-[#4A4540]'));this.classList.add('ring-2','ring-offset-1','ring-[#4A4540]');document.getElementById('new-sub-color').value='${c.id}'"
+            class="color-swatch w-7 h-7 rounded-full transition" style="background:${c.dot}"
+            title="${c.id}"></button>`
+    ).join('');
+    showModal(`
+        <h3 class="text-lg font-bold text-[#4A4540] mb-4">Add a Class</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Class Name</label>
+                <input id="new-sub-name" type="text" placeholder="e.g. Algebra II, English III, AP Biology"
+                    class="w-full border p-2.5 rounded-lg text-sm font-semibold outline-none focus:ring-2 focus:ring-[#E67F76]"
+                    onkeydown="if(event.key==='Enter') saveNewSubject()">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Color</label>
+                <div class="flex gap-2 flex-wrap">${colors}</div>
+                <input type="hidden" id="new-sub-color" value="coral">
+            </div>
+            <div id="new-sub-error" class="hidden text-xs text-red-500 font-bold bg-red-50 px-3 py-2 rounded-lg"></div>
+            <div class="flex gap-3 pt-2">
+                <button onclick="saveNewSubject()" class="flex-1 py-2.5 bg-[#E67F76] text-white text-xs font-bold rounded-xl hover:opacity-90 transition">Save Class</button>
+                <button onclick="closeModal()" class="px-5 py-2.5 bg-white border text-xs font-bold rounded-xl hover:bg-gray-50 transition">Cancel</button>
+            </div>
+        </div>`);
+    setTimeout(() => {
+        document.getElementById('new-sub-name')?.focus();
+        // Pre-select first color swatch
+        document.querySelectorAll('.color-swatch')[0]?.classList.add('ring-2','ring-offset-1','ring-[#4A4540]');
+    }, 50);
+}
+
+function saveNewSubject() {
+    const name  = document.getElementById('new-sub-name')?.value.trim();
+    const color = document.getElementById('new-sub-color')?.value || 'coral';
+    const errEl = document.getElementById('new-sub-error');
+    if (!name) { errEl.innerText = 'Please enter a class name.'; errEl.classList.remove('hidden'); return; }
+    if (!state.subjects) state.subjects = [];
+    const id = uid();
+    state.subjects.push({ id, name, color, driveLinks: [] });
+    save();
+    closeModal();
+    renderSubjectList();
+    selectSubject(id);
+    toast(`✓ "${name}" added`);
+}
+
+function deleteSubject(id) {
+    const s = (state.subjects||[]).find(x => x.id === id);
+    if (!s) return;
+    if (!confirm(`Remove "${s.name}"? Notes in this class will move to "All Notes."`)) return;
+    // Orphan the notes (keep them, remove subjectId)
+    state.notes.forEach(n => { if (n.subjectId === id) n.subjectId = ''; });
+    state.subjects = state.subjects.filter(x => x.id !== id);
+    if (activeSubjectId === id) activeSubjectId = 'all';
+    save();
+    renderSubjectList();
+    renderNotesInSubject();
+    // Reset right panel to empty/all
+    selectSubject(activeSubjectId);
+    toast(`"${s.name}" removed.`);
+}
+
+// ── Note list in sidebar ───────────────────────────────────────────────────
+function notesForSubject(subjectId) {
+    const all = [...(state.notes||[])].sort((a,b) => b.updatedAt.localeCompare(a.updatedAt));
+    if (subjectId === 'all' || subjectId === 'pad') return all;
+    return all.filter(n => n.subjectId === subjectId);
+}
+
+function renderNotesInSubject() {
+    const el = document.getElementById('notes-in-subject');
+    if (!el) return;
+    if (activeSubjectId === 'pad') { el.innerHTML = ''; return; }
+
+    const notes = notesForSubject(activeSubjectId);
+    if (!notes.length) {
+        el.innerHTML = `<div class="text-center py-6 text-gray-300 text-xs italic">
+            No notes yet.<br>
+            <button onclick="openAddNote()" class="mt-2 text-[#E67F76] font-bold hover:underline">+ New Note</button>
+        </div>`;
+        return;
+    }
+    el.innerHTML = notes.map(n => {
+        const active = activeNoteId === n.id;
+        const subject = (state.subjects||[]).find(s => s.id === n.subjectId);
+        const dot = subject ? subjectColor(subject.color).dot : null;
+        return `<button onclick="selectNote('${n.id}')"
+            class="w-full text-left p-3 rounded-xl border transition text-xs ${active ? 'border-[#E67F76] bg-[#FFF5F5]' : 'border-gray-100 bg-white hover:border-[#E67F76]'}">
+            <div class="flex items-start gap-2">
+                ${dot && activeSubjectId === 'all' ? `<span class="w-2 h-2 rounded-full mt-1 shrink-0" style="background:${dot}"></span>` : ''}
+                <div class="min-w-0">
+                    <div class="font-bold truncate text-[#4A4540]">${escHtml(n.title) || '<span class="text-gray-300">Untitled</span>'}</div>
+                    <div class="text-gray-400 truncate mt-0.5">${escHtml((n.body||'').split('\n')[0].slice(0,55)) || '—'}</div>
+                    <div class="text-gray-300 mt-1">${formatDateShort(n.updatedAt.slice(0,10))}</div>
+                </div>
+            </div>
+        </button>`;
+    }).join('');
+}
+
+// ── Note editor ────────────────────────────────────────────────────────────
+function openAddNote() {
+    const n = { id: uid(), title: '', body: '', updatedAt: new Date().toISOString(),
+                subjectId: (activeSubjectId === 'all' || activeSubjectId === 'pad') ? '' : activeSubjectId };
+    if (!state.notes) state.notes = [];
+    state.notes.push(n);
+    activeNoteId = n.id;
+    // Make sure the editor is visible
+    if (activeSubjectId === 'pad') selectSubject('all');
+    document.getElementById('note-editor-section')?.classList.remove('hidden');
+    document.getElementById('notes-empty-state')?.classList.add('hidden');
+    save();
+    renderNotesInSubject();
+    selectNote(n.id);
+    document.getElementById('note-title-edit')?.focus();
+}
+
+function selectNote(id) {
+    activeNoteId = id;
+    const n = (state.notes||[]).find(x => x.id === id);
+    if (!n) return;
+    document.getElementById('note-title-edit').value = n.title || '';
+    document.getElementById('note-body-edit').value  = n.body  || '';
+    document.getElementById('note-saved-label').innerText = 'Last saved: ' + formatDateShort(n.updatedAt.slice(0,10));
+    document.getElementById('note-editor-section')?.classList.remove('hidden');
+    document.getElementById('notes-empty-state')?.classList.add('hidden');
+    renderNotesInSubject();
+}
+
+function autoSaveNote() {
+    if (!activeNoteId) return;
+    const n = (state.notes||[]).find(x => x.id === activeNoteId);
+    if (!n) return;
+    n.title = document.getElementById('note-title-edit')?.value || '';
+    n.body  = document.getElementById('note-body-edit')?.value  || '';
+    n.updatedAt = new Date().toISOString();
+    document.getElementById('note-saved-label').innerText = 'Saved ✓';
+    saveLocal();
+    clearTimeout(autoSaveNote._t);
+    autoSaveNote._t = setTimeout(() => { save(); renderNotesInSubject(); }, 1200);
+}
+
+function deleteActiveNote() {
+    if (!activeNoteId) return;
+    if (!confirm('Delete this note?')) return;
+    state.notes = (state.notes||[]).filter(n => n.id !== activeNoteId);
+    activeNoteId = null;
+    save();
+    clearNoteEditor();
+    renderNotesInSubject();
+    toast('Note deleted.');
+}
+
+function clearNoteEditor() {
+    const t = document.getElementById('note-title-edit');
+    const b = document.getElementById('note-body-edit');
+    const l = document.getElementById('note-saved-label');
+    if (t) t.value = '';
+    if (b) b.value = '';
+    if (l) l.innerText = '—';
+}
+
+function clearQuickPad() {
+    if (!confirm('Clear the Quick Pad?')) return;
+    state.quickPad = '';
+    const el = document.getElementById('quick-pad');
+    if (el) el.value = '';
+    save();
+}
+
+// ── Drive Links ────────────────────────────────────────────────────────────
+function driveIcon(url) {
+    if (!url) return '🔗';
+    if (url.includes('docs.google.com/document'))      return '📄';
+    if (url.includes('docs.google.com/spreadsheets'))  return '📊';
+    if (url.includes('docs.google.com/presentation'))  return '📋';
+    if (url.includes('docs.google.com/forms'))         return '📝';
+    if (url.includes('drive.google.com'))              return '📁';
+    if (url.includes('classroom.google.com'))          return '🏫';
+    if (url.includes('youtube.com') || url.includes('youtu.be')) return '▶️';
+    return '🔗';
+}
+
+function renderDriveLinks(subjectId) {
+    const el = document.getElementById('drive-links-list');
+    if (!el) return;
+    const subject = (state.subjects||[]).find(s => s.id === subjectId);
+    if (!subject) return;
+    const links = subject.driveLinks || [];
+    if (!links.length) {
+        el.innerHTML = '<span class="text-xs text-gray-300 italic">No links yet — paste a Google Drive or Classroom URL to add one.</span>';
+        return;
+    }
+    el.innerHTML = links.map(l => `
+        <div class="flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-3 py-1.5 hover:border-[#82BDC3] transition group">
+            <span class="text-sm">${driveIcon(l.url)}</span>
+            <a href="${escHtml(l.url)}" target="_blank" rel="noopener"
+                class="text-xs font-bold text-[#4A4540] hover:text-[#82BDC3] truncate max-w-[160px]">${escHtml(l.title)}</a>
+            <button onclick="removeDriveLink('${subjectId}','${l.id}')"
+                class="opacity-0 group-hover:opacity-100 transition text-gray-300 hover:text-red-400 ml-1 text-xs leading-none" title="Remove">✕</button>
+        </div>`).join('');
+}
+
+function openAddDriveLink() {
+    if (!activeSubjectId || activeSubjectId === 'all' || activeSubjectId === 'pad') return;
+    const s = (state.subjects||[]).find(x => x.id === activeSubjectId);
+    showModal(`
+        <h3 class="text-lg font-bold text-[#4A4540] mb-1">Add a Link</h3>
+        <p class="text-xs text-gray-400 mb-4">Paste any Google Drive, Docs, Slides, Classroom, or other URL for <strong>${escHtml(s?.name||'this class')}</strong>.</p>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Link Title</label>
+                <input id="new-link-title" type="text" placeholder="e.g. Unit 2 Notes, Class Folder, Syllabus"
+                    class="w-full border p-2.5 rounded-lg text-sm font-semibold outline-none focus:ring-2 focus:ring-[#82BDC3]">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">URL</label>
+                <input id="new-link-url" type="text" placeholder="https://drive.google.com/…"
+                    autocomplete="off" spellcheck="false"
+                    class="w-full border p-2.5 rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-[#82BDC3]"
+                    onkeydown="if(event.key==='Enter') saveDriveLink()">
+            </div>
+            <div id="new-link-error" class="hidden text-xs text-red-500 font-bold bg-red-50 px-3 py-2 rounded-lg"></div>
+            <div class="flex gap-3 pt-2">
+                <button onclick="saveDriveLink()" class="flex-1 py-2.5 bg-[#82BDC3] text-white text-xs font-bold rounded-xl hover:opacity-90 transition">Save Link</button>
+                <button onclick="closeModal()" class="px-5 py-2.5 bg-white border text-xs font-bold rounded-xl hover:bg-gray-50 transition">Cancel</button>
+            </div>
+        </div>`);
+    setTimeout(() => document.getElementById('new-link-title')?.focus(), 50);
+}
+
+function saveDriveLink() {
+    const title  = document.getElementById('new-link-title')?.value.trim();
+    const url    = document.getElementById('new-link-url')?.value.trim();
+    const errEl  = document.getElementById('new-link-error');
+    if (!title) { errEl.innerText = 'Give this link a name.'; errEl.classList.remove('hidden'); return; }
+    if (!url || !url.startsWith('http')) { errEl.innerText = 'Paste a valid URL (must start with https://).'; errEl.classList.remove('hidden'); return; }
+    const subject = (state.subjects||[]).find(s => s.id === activeSubjectId);
+    if (!subject) return;
+    if (!subject.driveLinks) subject.driveLinks = [];
+    subject.driveLinks.push({ id: uid(), title, url });
+    save();
+    closeModal();
+    renderDriveLinks(activeSubjectId);
+    toast(`✓ "${title}" added`);
+}
+
+function removeDriveLink(subjectId, linkId) {
+    const subject = (state.subjects||[]).find(s => s.id === subjectId);
+    if (!subject) return;
+    subject.driveLinks = (subject.driveLinks||[]).filter(l => l.id !== linkId);
+    save();
+    renderDriveLinks(subjectId);
+}
+
+// Called when the Notes tab is opened
+function openNotesTab() {
+    renderSubjectList();
+    const hasSubjects = (state.subjects||[]).length > 0;
+
+    if (!hasSubjects) {
+        // Show the welcome/empty state, hide everything else
+        document.getElementById('note-editor-section')?.classList.add('hidden');
+        document.getElementById('drive-links-section')?.classList.add('hidden');
+        document.getElementById('quick-pad-section')?.classList.add('hidden');
+        document.getElementById('notes-empty-state')?.classList.remove('hidden');
+        document.getElementById('notes-in-subject').innerHTML = '';
+        return;
+    }
+
+    // Restore the previously active view (or default to 'all')
+    if (!activeSubjectId) activeSubjectId = 'all';
+    selectSubject(activeSubjectId);
+}
+
+// ── Study Timer ────────────────────────────────────────────────────────────
+const TIMER_MODES = { work:25*60, short:5*60, long:15*60 };
+let timerMode = 'work', timerLeft = TIMER_MODES.work, timerRunning = false, timerInterval = null;
+let timerCustomTotal = 30 * 60; // seconds — updated by applyCustomTime()
+const CIRC = 2 * Math.PI * 80; // 502.65
+
+function timerTotal() {
+    return timerMode === 'custom' ? timerCustomTotal : TIMER_MODES[timerMode];
+}
+
+function setMode(mode) {
+    clearInterval(timerInterval); timerRunning = false;
+    timerMode = mode;
+    timerLeft = timerTotal();
+    const allModes = ['work','short','long','custom'];
+    allModes.forEach(m => {
+        const btn = document.getElementById('mode-' + m);
+        if (btn) { btn.className = m === mode
+            ? 'px-4 py-2 text-xs font-bold rounded-full bg-[#E67F76] text-white'
+            : 'px-4 py-2 text-xs font-bold rounded-full bg-white border text-[#4A4540]'; }
+    });
+    // Show/hide custom input row
+    const row = document.getElementById('custom-timer-row');
+    if (row) row.classList.toggle('hidden', mode !== 'custom');
+    updateTimerDisplay();
+    document.getElementById('timer-start-btn').innerText = '▶ Start';
+}
+
+function applyCustomTime() {
+    const mins = parseInt(document.getElementById('custom-minutes').value) || 0;
+    const secs = parseInt(document.getElementById('custom-seconds').value) || 0;
+    const total = mins * 60 + secs;
+    if (total < 10) { toast('Please set at least 10 seconds.'); return; }
+    timerCustomTotal = total;
+    // Save preference (minutes only) to state
+    state.customTimerMinutes = mins || 1;
+    save();
+    timerLeft = timerCustomTotal;
+    clearInterval(timerInterval); timerRunning = false;
+    document.getElementById('timer-start-btn').innerText = '▶ Start';
+    updateTimerDisplay();
+    toast(`Custom timer set to ${mins}m ${secs}s ✓`);
+}
+
+function timerStart() {
+    if (timerRunning) {
+        clearInterval(timerInterval); timerRunning = false;
+        document.getElementById('timer-start-btn').innerText = '▶ Resume';
+    } else {
+        timerRunning = true;
+        document.getElementById('timer-start-btn').innerText = '⏸ Pause';
+        timerInterval = setInterval(() => {
+            timerLeft--;
+            updateTimerDisplay();
+            if (timerLeft <= 0) {
+                clearInterval(timerInterval); timerRunning = false;
+                if (timerMode === 'work' || timerMode === 'custom') completeSession();
+                else { toast('Break over! Time to focus. ✝'); setMode('work'); }
+            }
+        }, 1000);
+    }
+}
+
+function timerReset() {
+    clearInterval(timerInterval); timerRunning = false;
+    timerLeft = timerTotal();
+    updateTimerDisplay();
+    document.getElementById('timer-start-btn').innerText = '▶ Start';
+}
+
+function updateTimerDisplay() {
+    const m = Math.floor(timerLeft / 60).toString().padStart(2,'0');
+    const s = (timerLeft % 60).toString().padStart(2,'0');
+    document.getElementById('timer-display').innerText = `${m}:${s}`;
+    const total = timerTotal();
+    const offset = total > 0 ? CIRC * (1 - timerLeft / total) : 0;
+    document.getElementById('timer-circle').style.strokeDashoffset = offset;
+    const labels = { work: 'Focus Session', short: 'Short Break', long: 'Long Break', custom: 'Custom Timer' };
+    document.getElementById('timer-mode-label').innerText = labels[timerMode] || 'Timer';
+}
+
+function completeSession() {
+    const today = todayStr();
+    if (state.lastSessionDate !== today) { state.sessionsToday = 0; state.lastSessionDate = today; }
+    state.sessionsToday++;
+    const time = new Date().toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+    const durMins = timerMode === 'custom'
+        ? Math.round(timerCustomTotal / 60)
+        : 25;
+    state.sessionLog.unshift(`${time} — ${durMins}-min focus session ✓`);
+    if (state.sessionLog.length > 30) state.sessionLog.pop();
+    save();
+    document.getElementById('sessions-count').innerText = state.sessionsToday;
+    renderSessionLog();
+    toast('Session complete! Rest 5 minutes. ✝');
+    timerRunning = false;
+    document.getElementById('timer-start-btn').innerText = '▶ Start';
+    timerLeft = timerTotal();
+    updateTimerDisplay();
+}
+
+function renderSessionLog() {
+    const el = document.getElementById('session-log');
+    if (!el) return;
+    el.innerHTML = state.sessionLog.length
+        ? state.sessionLog.map(l => `<div class="py-1 border-b border-gray-50">${l}</div>`).join('')
+        : '<p class="italic">No sessions yet.</p>';
+    document.getElementById('sessions-count').innerText = state.sessionsToday;
+}
+
+function clearSessionLog() {
+    state.sessionLog = []; state.sessionsToday = 0;
+    save(); renderSessionLog();
+}
+
+// ── Settings ───────────────────────────────────────────────────────────────
+function populateSettings() {
+    const p = state.profile;
+    document.getElementById('set-name').value     = p.name      || '';
+    document.getElementById('set-grade').value    = p.grade     || '';
+    document.getElementById('set-homeroom').value = p.homeroom  || '';
+    document.getElementById('set-canvas-url').value = state.canvasUrl || '';
+    // School calendar toggle
+    const schoolToggle = document.getElementById('school-cal-toggle');
+    if (schoolToggle) schoolToggle.checked = state.schoolCalendarEnabled !== false;
+    updateSchoolCalStatus();
+    // Personal calendars list
+    renderPersonalCalList();
+    // Show/hide password card depending on server mode
+    const serverNote = document.getElementById('password-server-note');
+    const localForm  = document.getElementById('password-local-form');
+    if (API_BASE) {
+        serverNote?.classList.remove('hidden');
+        localForm?.classList.add('hidden');
+    } else {
+        serverNote?.classList.add('hidden');
+        localForm?.classList.remove('hidden');
+    }
+}
+
+function saveProfile() {
+    state.profile.name     = document.getElementById('set-name')?.value.trim() || '';
+    state.profile.grade    = document.getElementById('set-grade')?.value || '';
+    state.profile.homeroom = document.getElementById('set-homeroom')?.value.trim() || '';
+    save(); updateBanner();
+    toast('Profile saved ✓');
+}
+
+function saveAndSync() {
+    state.canvasUrl = document.getElementById('set-canvas-url')?.value.trim() || '';
+    save(); syncCanvas();
+}
+
+function openProfileModal() { switchTab('settings'); }
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+function showModal(html) {
+    document.getElementById('modalContent').innerHTML = html;
+    const overlay = document.getElementById('modalOverlay');
+    overlay.classList.remove('hidden'); overlay.classList.add('flex');
+}
+function closeModal() {
+    const overlay = document.getElementById('modalOverlay');
+    overlay.classList.add('hidden'); overlay.classList.remove('flex');
+    document.getElementById('modalContent').innerHTML = '';
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+let _toastTimer;
+function toast(msg) {
+    const inner = document.getElementById('toast-inner');
+    inner.innerText = msg; inner.style.opacity = '1';
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => { inner.style.opacity = '0'; }, 2600);
+}
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+function uid() { return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+function todayStr() { return fmtDate(new Date()); }
+function fmtDate(d) { return d.toISOString().slice(0,10); }
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function formatDateShort(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+}
+
+function priorityOrder(p) { return p === 'high' ? 3 : p === 'medium' ? 2 : 1; }
+
+function priorityPill(p) {
+    if (p === 'high')   return '<span class="pill pill-red">🔴 High</span>';
+    if (p === 'medium') return '<span class="pill pill-amber">🟡 Med</span>';
+    return '<span class="pill pill-green">🟢 Low</span>';
+}
+
+function statusPill(a) {
+    if (a.status === 'done')        return '<span class="pill pill-green">✅ Done</span>';
+    if (a.status === 'in-progress') return '<span class="pill pill-blue">⚡ WIP</span>';
+    const today = todayStr();
+    if (a.dueDate < today)          return '<span class="pill pill-red">⚠ Overdue</span>';
+    if (a.dueDate === today)        return '<span class="pill pill-amber">📌 Due Today</span>';
+    return '<span class="pill pill-gray">📋 To Do</span>';
+}
+
+function subjectEmoji(subj) {
+    if (!subj) return '📄';
+    const s = subj.toLowerCase();
+    if (s.includes('math') || s.includes('algebra') || s.includes('calc') || s.includes('geo')) return '📐';
+    if (s.includes('english') || s.includes('ela') || s.includes('lit') || s.includes('read') || s.includes('writ')) return '📖';
+    if (s.includes('sci') || s.includes('bio') || s.includes('chem') || s.includes('phys')) return '🔬';
+    if (s.includes('religion') || s.includes('theo')) return '✝️';
+    if (s.includes('cs') || s.includes('comp') || s.includes('code') || s.includes('tech')) return '💻';
+    if (s.includes('spanish') || s.includes('french') || s.includes('latin') || s.includes('lang')) return '🌐';
+    if (s.includes('history') || s.includes('social') || s.includes('gov') || s.includes('econ')) return '📜';
+    if (s.includes('art') || s.includes('music') || s.includes('band')) return '🎨';
+    if (s.includes('pe') || s.includes('sport')) return '⚽';
+    return '📄';
+}
+
+// ── Sign-In System ─────────────────────────────────────────────────────────
+
+function showSignInScreen() {
+    const screen = document.getElementById('signInScreen');
+    screen.classList.remove('hidden');
+    screen.classList.add('flex');
+    const r = getDailyReflection();
+    const ref = document.getElementById('signin-reflection');
+    if (ref) ref.innerHTML = `<em>"${r.text}"</em><br><span class="font-semibold not-italic mt-1 block">— ${r.author}</span>`;
+}
+
+function hideSignInScreen() {
+    const screen = document.getElementById('signInScreen');
+    screen.classList.add('hidden');
+    screen.classList.remove('flex');
+}
+
+// ── Shared helper: get display first name from "Last, First" format ──────
+function firstName(name) {
+    if (!name) return 'Scholar';
+    return name.includes(',') ? name.split(',')[1].trim() : name;
+}
+
+// ── Panel switcher ────────────────────────────────────────────────────────
+function showPanel(which) {
+    document.getElementById('panel-signin').classList.add('hidden');
+    document.getElementById('panel-setup').classList.add('hidden');
+    document.getElementById('panel-' + which).classList.remove('hidden');
+
+    if (which === 'signin') {
+        // Decide whether to show the name chip or the name input
+        const cachedName  = API_BASE ? localStorage.getItem('sp_last_name') : state.profile.name;
+        const cachedGrade = state.profile.grade;
+        const chip  = document.getElementById('signin-name-chip');
+        const field = document.getElementById('signin-name-field');
+
+        document.getElementById('si-error').classList.add('hidden');
+        document.getElementById('si-password').value = '';
+
+        if (cachedName) {
+            chip.classList.remove('hidden');
+            field.classList.add('hidden');
+            // Pre-fill the hidden input so doSignIn() can always read from it
+            document.getElementById('si-name-input').value = cachedName;
+            const init = cachedName.includes(',') ? cachedName.split(',')[1].trim()[0].toUpperCase() : cachedName[0].toUpperCase();
+            document.getElementById('signin-avatar').innerText   = init;
+            document.getElementById('signin-name-display').innerText = cachedName;
+            document.getElementById('signin-grade-display').innerText = cachedGrade || 'MCA';
+            document.getElementById('signin-welcome').innerText  = `Welcome back, ${firstName(cachedName)}!`;
+            setTimeout(() => document.getElementById('si-password')?.focus(), 50);
+        } else {
+            chip.classList.add('hidden');
+            field.classList.remove('hidden');
+            document.getElementById('si-name-input').value = '';
+            document.getElementById('signin-welcome').innerText = 'Sign In';
+            setTimeout(() => document.getElementById('si-name-input')?.focus(), 50);
+        }
+    } else {
+        // Setup panel
+        const hasExisting = API_BASE ? !!localStorage.getItem('sp_last_name') : !!state.profile.name;
+        document.getElementById('su-already')?.classList.toggle('hidden', !hasExisting);
+        document.getElementById('su-error').classList.add('hidden');
+        setTimeout(() => document.getElementById('su-name')?.focus(), 50);
+    }
+}
+
+// Clears the cached "last logged-in name" so the name chip disappears
+function clearCachedName() {
+    localStorage.removeItem('sp_last_name');
+    state.profile = { ...defaultState().profile };
+    showPanel('signin');
+}
+
+// ── Authentication: SERVER mode ──────────────────────────────────────────
+async function checkLock() {
+    if (!API_BASE) {
+        // LOCAL-ONLY mode: use original localStorage auth
+        checkLockLocal();
+        return;
+    }
+    // SERVER mode: look for a saved auth token
+    const token = sessionStorage.getItem('sp_token') || localStorage.getItem('sp_token');
+    if (token) {
+        authToken = token;
+        const ok = await loadFromServer(token);
+        if (ok) {
+            hideSignInScreen();
+            renderAll();
+            syncSchoolCalendar();
+            syncPersonalCalendars();
+            return;
+        }
+        // Token was invalid — clearAuth() already called inside loadFromServer
+    }
+    // No valid token → show sign-in
+    showSignInScreen();
+    showPanel('signin');
+}
+
+async function doSignIn() {
+    if (!API_BASE) { doSignInLocal(); return; }
+
+    const name    = document.getElementById('si-name-input')?.value.trim() || '';
+    const pw      = document.getElementById('si-password')?.value || '';
+    const remember = document.getElementById('si-remember')?.checked;
+    const errorEl  = document.getElementById('si-error');
+    const btn      = document.getElementById('si-btn');
+
+    if (!name) { showError(errorEl, 'Enter your name.'); return; }
+    if (!pw)   { showError(errorEl, 'Enter your password.'); return; }
+
+    btn.disabled = true; btn.innerText = 'Signing in…';
+    errorEl.classList.add('hidden');
+
+    try {
+        const res  = await fetch(API_BASE + '/login.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, password: pw })
+        });
+        const json = await res.json();
+        if (!res.ok || !json.token) {
+            showError(errorEl, json.error || '❌ Incorrect name or password.');
+            document.getElementById('si-password').value = '';
+            document.getElementById('si-password').focus();
+            btn.disabled = false; btn.innerText = 'Sign In →';
+            return;
+        }
+        // ✓ Logged in
+        authToken = json.token;
+        remember
+            ? localStorage.setItem('sp_token', authToken)
+            : sessionStorage.setItem('sp_token', authToken);
+        localStorage.setItem('sp_last_name', name);
+        await loadFromServer(authToken);
+        hideSignInScreen();
+        renderAll();
+        syncSchoolCalendar();
+        syncPersonalCalendars();
+        toast(`Welcome back, ${firstName(name)}! 👋`);
+    } catch(e) {
+        showError(errorEl, '⚠ Could not reach the server. Check your connection.');
+        btn.disabled = false; btn.innerText = 'Sign In →';
+    }
+}
+
+async function doSetup() {
+    if (!API_BASE) { doSetupLocal(); return; }
+
+    const name     = document.getElementById('su-name')?.value.trim();
+    const grade    = document.getElementById('su-grade')?.value;
+    const homeroom = document.getElementById('su-homeroom')?.value.trim();
+    const pw       = document.getElementById('su-password')?.value;
+    const pw2      = document.getElementById('su-password2')?.value;
+    const errorEl  = document.getElementById('su-error');
+    const btn      = document.getElementById('su-btn');
+
+    if (!name)            { showError(errorEl, 'Please enter your full name.'); return; }
+    if (!grade)           { showError(errorEl, 'Please select your grade level.'); return; }
+    if (!pw)              { showError(errorEl, 'Please create a password.'); return; }
+    if (pw !== pw2)       { showError(errorEl, 'Passwords do not match.'); return; }
+    if (pw.length < 4)    { showError(errorEl, 'Password must be at least 4 characters.'); return; }
+
+    btn.disabled = true; btn.innerText = 'Creating account…';
+    errorEl.classList.add('hidden');
+
+    try {
+        const res  = await fetch(API_BASE + '/register.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, grade, homeroom, password: pw })
+        });
+        const json = await res.json();
+        if (!res.ok || !json.token) {
+            showError(errorEl, json.error || '❌ Could not create account. That name may already be taken.');
+            btn.disabled = false; btn.innerText = 'Create My Planner →';
+            return;
+        }
+        // ✓ Account created
+        authToken = json.token;
+        sessionStorage.setItem('sp_token', authToken);
+        localStorage.setItem('sp_last_name', name);
+        state.profile = { name, grade, homeroom };
+        await save(); // push initial empty state to server
+        hideSignInScreen();
+        renderAll();
+        toast(`Welcome, ${firstName(name)}! 🎉`);
+    } catch(e) {
+        showError(errorEl, '⚠ Could not reach the server. Check your connection.');
+        btn.disabled = false; btn.innerText = 'Create My Planner →';
+    }
+}
+
+async function signOut() {
+    if (!confirm('Sign out of your planner?')) return;
+    if (API_BASE && authToken) {
+        try {
+            await fetch(API_BASE + '/logout.php', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+        } catch(e) { /* ignore — token will just expire */ }
+    }
+    clearAuth(true);
+    toast('Signed out.');
+}
+
+// Clears auth tokens and returns to the sign-in screen.
+// keepName=true: leave the name chip so returning users only need a password.
+function clearAuth(keepName = true) {
+    authToken = null;
+    sessionStorage.removeItem('sp_token');
+    localStorage.removeItem('sp_token');
+    sessionStorage.removeItem('sp_unlocked');
+    localStorage.removeItem('sp_unlocked_local');
+    if (!keepName) {
+        localStorage.removeItem('sp_last_name');
+        state.profile = { ...defaultState().profile };
+    }
+    showSignInScreen();
+    showPanel('signin');
+}
+
+// Small helper to show an error message
+function showError(el, msg) {
+    el.innerText = msg;
+    el.classList.remove('hidden');
+}
+
+// ── LOCAL-ONLY mode auth (no API_BASE set) ───────────────────────────────
+function checkLockLocal() {
+    const hasProfile  = !!state.profile.name;
+    const hasPassword = !!state.appPassword;
+    const sessionOk   = sessionStorage.getItem('sp_unlocked') === 'true';
+    const localOk     = localStorage.getItem('sp_unlocked_local') === state.appPassword;
+    if (!hasProfile)                            { showSignInScreen(); showPanel('setup');  return; }
+    if (!hasPassword || sessionOk || localOk)  { hideSignInScreen();                      return; }
+    showSignInScreen(); showPanel('signin');
+}
+
+function doSignInLocal() {
+    const pw      = document.getElementById('si-password')?.value || '';
+    const hashed  = CryptoJS.SHA256(pw).toString();
+    const errorEl = document.getElementById('si-error');
+    if (hashed === state.appPassword) {
+        sessionStorage.setItem('sp_unlocked', 'true');
+        if (document.getElementById('si-remember')?.checked) {
+            localStorage.setItem('sp_unlocked_local', state.appPassword);
+        }
+        errorEl.classList.add('hidden');
+        hideSignInScreen();
+        toast('Welcome back! 👋');
+    } else {
+        showError(errorEl, '❌ Incorrect password. Please try again.');
+        document.getElementById('si-password').value = '';
+        document.getElementById('si-password').focus();
+    }
+}
+
+function doSetupLocal() {
+    const name     = document.getElementById('su-name')?.value.trim();
+    const grade    = document.getElementById('su-grade')?.value;
+    const homeroom = document.getElementById('su-homeroom')?.value.trim();
+    const pw       = document.getElementById('su-password')?.value;
+    const pw2      = document.getElementById('su-password2')?.value;
+    const errorEl  = document.getElementById('su-error');
+    if (!name)         { showError(errorEl, 'Please enter your full name.'); return; }
+    if (!grade)        { showError(errorEl, 'Please select your grade level.'); return; }
+    if (!pw)           { showError(errorEl, 'Please create a password.'); return; }
+    if (pw !== pw2)    { showError(errorEl, 'Passwords do not match.'); return; }
+    if (pw.length < 4) { showError(errorEl, 'Password must be at least 4 characters.'); return; }
+    state.profile = { name, grade, homeroom };
+    state.appPassword = CryptoJS.SHA256(pw).toString();
+    sessionStorage.setItem('sp_unlocked', 'true');
+    save();
+    hideSignInScreen();
+    updateBanner();
+    toast(`Welcome, ${firstName(name)}! 🎉`);
+}
+
+// ── Password lock (local-only — server mode manages passwords differently) ─
+function savePasswordLock() {
+    if (API_BASE) {
+        toast('⚠ Passwords are managed by the school server. Contact IT to change your password.');
+        return;
+    }
+    const raw = document.getElementById('set-password')?.value.trim();
+    if (raw) {
+        state.appPassword = CryptoJS.SHA256(raw).toString();
+        sessionStorage.removeItem('sp_unlocked');
+        localStorage.removeItem('sp_unlocked_local');
+        toast('🔐 Password updated. Sign in again to confirm.');
+        setTimeout(() => checkLockLocal(), 1200);
+    } else {
+        state.appPassword = '';
+        sessionStorage.removeItem('sp_unlocked');
+        localStorage.removeItem('sp_unlocked_local');
+        toast('Password removed — planner is now open access.');
+    }
+    document.getElementById('set-password').value = '';
+    save();
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+window.onload = async function() {
+    // Load local cache first (instant render while server responds)
+    loadLocal();
+
+    // Apply theme immediately so the screen doesn't flash
+    const body = document.getElementById('planner-body');
+    ['earthy','coastal','forest','royal'].forEach(t => body.classList.remove('theme-' + t));
+    body.classList.add('theme-' + (state.activeTheme || 'earthy'));
+
+    // Apply reflection
+    applyReflection();
+
+    // Init study timer — restore saved custom duration
+    timerCustomTotal = (state.customTimerMinutes || 30) * 60;
+    if (document.getElementById('custom-minutes'))
+        document.getElementById('custom-minutes').value = state.customTimerMinutes || 30;
+    updateTimerDisplay();
+
+    // Reset session count if it's a new day
+    if (state.lastSessionDate !== todayStr()) {
+        state.sessionsToday = 0;
+        state.lastSessionDate = todayStr();
+        saveLocal();
+    }
+    document.getElementById('sessions-count').innerText = state.sessionsToday || 0;
+    renderSessionLog();
+    renderDashboard();
+    populateSettings();
+
+    // Check authentication — will show sign-in screen if needed,
+    // or load server data and enter the app.
+    await checkLock();
+};
+</script>
+</body>
+</html>
