@@ -15,6 +15,7 @@
     --pale:    #E8DDD0;
     --coral:   #E67F76;
     --peach:   #EBCCBD;
+    --green:   #4ade80;
     --text:    #4A4540;
     --muted:   #9A958C;
     --surface: #ffffff;
@@ -26,44 +27,50 @@
   /* ── Layout ── */
   #app { display: flex; flex-direction: column; height: 100%; }
   #top-bar {
-    flex-shrink: 0;
-    background: var(--surface);
-    border-bottom: 1px solid var(--pale);
+    flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--pale);
     padding: 12px 16px 10px;
     padding-top: max(12px, env(safe-area-inset-top, 12px));
+    display: flex; align-items: center; justify-content: space-between;
   }
   #top-bar h1 { font-size: 13px; font-weight: 800; color: var(--brown); letter-spacing: .04em; text-transform: uppercase; }
   #top-bar .sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
   #content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   #bottom-nav {
-    flex-shrink: 0;
-    display: flex;
-    background: var(--surface);
+    flex-shrink: 0; display: flex; background: var(--surface);
     border-top: 1px solid var(--pale);
-    padding-bottom: max(8px, var(--safe-bottom));
+    padding-bottom: max(6px, var(--safe-bottom));
   }
   .nav-btn {
-    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
-    padding: 10px 4px 8px; cursor: pointer; border: none; background: none;
-    font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: .02em; text-transform: uppercase;
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 8px 2px 6px; cursor: pointer; border: none; background: none;
+    font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .02em;
     transition: color .15s;
   }
   .nav-btn.active { color: var(--brown); }
-  .nav-btn svg { width: 22px; height: 22px; }
+  .nav-btn svg { width: 20px; height: 20px; }
 
   /* ── Panels ── */
-  .panel { display: none; padding: 16px; padding-bottom: 24px; }
+  .panel { display: none; padding: 14px 14px 28px; }
   .panel.active { display: block; }
 
   /* ── Cards ── */
-  .card { background: var(--surface); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+  .card { background: var(--surface); border-radius: 14px; padding: 14px 15px; margin-bottom: 11px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
   .card-title { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 10px; }
+
+  /* ── Section chips ── */
+  .section-chips { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 2px; scrollbar-width: none; }
+  .section-chips::-webkit-scrollbar { display: none; }
+  .sec-chip {
+    flex-shrink: 0; padding: 7px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;
+    border: 1.5px solid var(--pale); background: var(--surface); color: var(--muted); cursor: pointer;
+  }
+  .sec-chip.active { background: var(--brown); border-color: var(--brown); color: white; }
 
   /* ── Period cells ── */
   .period-cell {
     border-radius: 10px; padding: 11px 13px; margin-bottom: 8px; cursor: pointer;
     border: 1.5px solid var(--pale); background: var(--surface);
-    transition: border-color .15s, background .15s; position: relative;
+    transition: border-color .15s; position: relative;
   }
   .period-cell:active { opacity: .85; }
   .period-cell.has-notes { background: rgba(130,189,195,.1); border-color: var(--teal); }
@@ -84,24 +91,61 @@
   .day-chip {
     flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
     padding: 7px 10px; border-radius: 10px; cursor: pointer; border: 1.5px solid var(--pale);
-    background: var(--surface); min-width: 48px;
+    background: var(--surface); min-width: 46px;
   }
   .day-chip .dn { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
   .day-chip .dd { font-size: 17px; font-weight: 800; color: var(--text); }
   .day-chip.active { background: var(--brown); border-color: var(--brown); }
   .day-chip.active .dn, .day-chip.active .dd { color: white; }
-  .day-chip.has-events .dd { position: relative; }
-  .day-chip.has-events::after { content:''; display:block; width:5px; height:5px; border-radius:50%; background:var(--teal); margin: 0 auto; }
+  .day-chip.has-events::after { content:''; display:block; width:5px; height:5px; border-radius:50%; background:var(--teal); margin:0 auto; }
 
   /* ── Rotation badge ── */
   .rotation-badge {
-    background: rgba(90,45,12,.08); border: 1px solid rgba(90,45,12,.15);
-    border-radius: 8px; padding: 7px 12px; font-size: 10px; font-weight: 800;
-    color: var(--brown); margin-bottom: 14px; line-height: 1.5; word-break: break-all;
+    background: rgba(90,45,12,.07); border: 1px solid rgba(90,45,12,.15);
+    border-radius: 8px; padding: 7px 12px; font-size: 9px; font-weight: 800;
+    color: var(--brown); margin-bottom: 12px; line-height: 1.5; word-break: break-all;
   }
   .no-rotation-badge {
     background: #f8f8f8; border: 1px dashed #ddd; border-radius: 8px;
-    padding: 7px 12px; font-size: 10px; color: #bbb; text-align: center; margin-bottom: 14px;
+    padding: 7px 12px; font-size: 10px; color: #bbb; text-align: center; margin-bottom: 12px;
+  }
+
+  /* ── Attendance badges ── */
+  .att-btns { display: flex; gap: 6px; }
+  .att-btn {
+    width: 36px; height: 36px; border-radius: 9px; font-size: 13px; font-weight: 900;
+    border: 2px solid; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all .12s;
+  }
+  .att-btn.P { border-color: #86efac; color: #166534; background: #f0fdf4; }
+  .att-btn.A { border-color: #fca5a5; color: #991b1b; background: #fef2f2; }
+  .att-btn.T { border-color: #fcd34d; color: #92400e; background: #fffbeb; }
+  .att-btn.E { border-color: #93c5fd; color: #1e3a8a; background: #eff6ff; }
+  .att-btn.active.P { background: #16a34a; border-color: #16a34a; color: white; }
+  .att-btn.active.A { background: #dc2626; border-color: #dc2626; color: white; }
+  .att-btn.active.T { background: #d97706; border-color: #d97706; color: white; }
+  .att-btn.active.E { background: #2563eb; border-color: #2563eb; color: white; }
+
+  .att-student-row {
+    display: flex; align-items: center; gap: 10px; padding: 11px 0;
+    border-bottom: 1px solid var(--pale);
+  }
+  .att-student-row:last-child { border-bottom: none; }
+  .att-student-name { flex: 1; font-size: 13px; font-weight: 700; color: var(--text); }
+  .att-student-rate { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Grades ── */
+  .student-grade-card {
+    display: flex; align-items: center; padding: 12px 14px; border-radius: 12px;
+    background: var(--surface); border: 1.5px solid var(--pale); margin-bottom: 8px; cursor: pointer;
+    transition: border-color .15s;
+  }
+  .student-grade-card:active { opacity: .85; }
+  .student-grade-card .sname { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; }
+  .student-grade-card .spct  { font-size: 12px; font-weight: 700; color: var(--muted); }
+  .grade-badge {
+    width: 40px; height: 40px; border-radius: 10px; font-size: 13px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: 10px;
   }
 
   /* ── Tasks ── */
@@ -125,30 +169,30 @@
   .setting-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--pale); }
   .setting-row:last-child { border-bottom: none; }
   .setting-row label { font-size: 12px; font-weight: 800; color: var(--brown); width: 28px; flex-shrink: 0; }
-  .setting-row input { flex: 1; border: 1.5px solid var(--pale); border-radius: 9px; padding: 8px 10px; font-size: 12px; outline: none; color: var(--text); background: var(--surface); }
-  .setting-row input:focus { border-color: var(--teal); }
+  .setting-row input[type=text] { flex: 1; border: 1.5px solid var(--pale); border-radius: 9px; padding: 8px 10px; font-size: 12px; outline: none; color: var(--text); background: var(--surface); }
+  .setting-row input[type=text]:focus { border-color: var(--teal); }
   .type-btns { display: flex; gap: 4px; flex-shrink: 0; }
-  .type-btn { padding: 5px 7px; font-size: 10px; font-weight: 700; border: 1.5px solid var(--pale); border-radius: 7px; cursor: pointer; background: #f5f5f5; color: var(--muted); transition: all .15s; }
+  .type-btn { padding: 5px 7px; font-size: 10px; font-weight: 700; border: 1.5px solid var(--pale); border-radius: 7px; cursor: pointer; background: #f5f5f5; color: var(--muted); transition: all .12s; }
   .type-btn.active-class { background: var(--teal); color: white; border-color: var(--teal); }
   .type-btn.active-plan  { background: #0284c7; color: white; border-color: #0284c7; }
   .type-btn.active-duty  { background: #7c3aed; color: white; border-color: #7c3aed; }
 
   /* ── Buttons ── */
   .btn-primary { background: var(--teal); color: white; border: none; border-radius: 10px; padding: 12px 18px; font-size: 13px; font-weight: 700; cursor: pointer; width: 100%; }
-  .btn-secondary { background: var(--pale); color: var(--brown); border: none; border-radius: 10px; padding: 12px 18px; font-size: 13px; font-weight: 700; cursor: pointer; }
   .btn-sm { padding: 8px 14px; font-size: 12px; border-radius: 9px; border: none; cursor: pointer; font-weight: 700; }
   .btn-sm.teal { background: var(--teal); color: white; }
   .btn-sm.red  { background: #f87171; color: white; }
   .btn-sm.grey { background: var(--pale); color: var(--brown); }
+  .btn-sm.brown { background: var(--brown); color: white; }
 
   /* ── Modal ── */
   #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: flex-end; }
   #modal-overlay.open { display: flex; }
   #modal-sheet {
-    background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-height: 85vh;
-    overflow-y: auto; padding: 20px 20px 32px;
+    background: var(--surface); border-radius: 20px 20px 0 0; width: 100%; max-height: 88vh;
+    overflow-y: auto; padding: 20px 18px 32px;
     padding-bottom: max(32px, calc(var(--safe-bottom) + 20px));
-    animation: slideUp .25s ease;
+    animation: slideUp .22s ease;
   }
   @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
   .modal-handle { width: 36px; height: 4px; background: var(--pale); border-radius: 2px; margin: 0 auto 16px; }
@@ -158,30 +202,36 @@
   .modal-input { width: 100%; border: 1.5px solid var(--pale); border-radius: 10px; padding: 11px 12px; font-size: 14px; outline: none; color: var(--text); margin-bottom: 12px; background: var(--surface); }
   .modal-input:focus { border-color: var(--teal); }
   .modal-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .score-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--pale); }
+  .score-row:last-child { border-bottom: none; }
+  .score-row .aname { flex: 1; font-size: 13px; color: var(--text); }
+  .score-row .apts  { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .score-row input  { width: 64px; border: 1.5px solid var(--pale); border-radius: 8px; padding: 7px 8px; font-size: 13px; font-weight: 700; text-align: center; outline: none; color: var(--text); }
+  .score-row input:focus { border-color: var(--teal); }
 
   /* ── Toast ── */
-  #toast { position: fixed; bottom: calc(70px + var(--safe-bottom)); left: 50%; transform: translateX(-50%) translateY(20px); background: #333; color: white; font-size: 13px; font-weight: 600; padding: 10px 20px; border-radius: 24px; opacity: 0; transition: all .3s; pointer-events: none; white-space: nowrap; z-index: 200; }
+  #toast { position: fixed; bottom: calc(72px + var(--safe-bottom)); left: 50%; transform: translateX(-50%) translateY(20px); background: #333; color: white; font-size: 13px; font-weight: 600; padding: 10px 20px; border-radius: 24px; opacity: 0; transition: all .3s; pointer-events: none; white-space: nowrap; z-index: 200; }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   /* ── Util ── */
   .section-head { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--brown); margin-bottom: 12px; }
   .empty-state { text-align: center; padding: 32px 16px; color: #bbb; font-size: 13px; line-height: 1.6; }
-  .pill { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; }
-  .week-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .week-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .week-nav button { background: var(--pale); border: none; border-radius: 8px; padding: 7px 12px; font-size: 16px; cursor: pointer; color: var(--brown); }
   .week-nav span { flex: 1; text-align: center; font-size: 12px; font-weight: 800; color: var(--brown); }
   .sync-row { display: flex; align-items: center; gap: 10px; }
   .sync-row input { flex: 1; border: 1.5px solid var(--pale); border-radius: 10px; padding: 10px 12px; font-size: 12px; outline: none; color: var(--text); }
   .sync-row input:focus { border-color: var(--teal); }
-
-  /* ── Countdown ── */
-  .countdown-banner { background: linear-gradient(135deg, var(--brown), #8b4513); color: white; border-radius: 14px; padding: 16px; margin-bottom: 16px; text-align: center; }
+  .date-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .date-nav button { background: var(--pale); border: none; border-radius: 8px; padding: 7px 12px; font-size: 16px; cursor: pointer; color: var(--brown); }
+  .date-nav input[type=date] { flex: 1; border: 1.5px solid var(--pale); border-radius: 10px; padding: 9px 12px; font-size: 13px; font-weight: 700; color: var(--brown); outline: none; background: var(--surface); }
+  .date-nav input[type=date]:focus { border-color: var(--teal); }
+  .countdown-banner { background: linear-gradient(135deg, var(--brown), #8b4513); color: white; border-radius: 14px; padding: 16px; margin-bottom: 14px; text-align: center; }
   .countdown-banner .num { font-size: 38px; font-weight: 900; line-height: 1; }
   .countdown-banner .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; opacity: .8; margin-top: 4px; }
-
-  /* ── Dots indicator ── */
-  .dot-row { display: flex; gap: 4px; margin-top: 5px; }
-  .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .class-avg-bar { background: var(--surface); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+  .class-avg-bar .avg-label { font-size: 11px; font-weight: 700; color: var(--muted); flex: 1; }
+  .class-avg-bar .avg-grade { font-size: 22px; font-weight: 900; }
 </style>
 </head>
 <body>
@@ -189,20 +239,23 @@
 <div id="app">
   <!-- Top bar -->
   <div id="top-bar">
-    <h1>MCA Teacher Planner</h1>
-    <div class="sub" id="top-date">Loading…</div>
+    <div>
+      <h1>MCA Teacher Planner</h1>
+      <div class="sub" id="top-date">Loading…</div>
+    </div>
+    <div id="top-badge" style="font-size:11px;font-weight:700;color:var(--muted)"></div>
   </div>
 
-  <!-- Content -->
+  <!-- Content panels -->
   <div id="content">
 
-    <!-- TODAY panel -->
+    <!-- TODAY -->
     <div id="panel-today" class="panel active">
       <div id="countdown-wrap"></div>
       <div id="today-content"></div>
     </div>
 
-    <!-- PLANS panel -->
+    <!-- PLANS -->
     <div id="panel-plans" class="panel">
       <div class="week-nav">
         <button onclick="shiftPlansWeek(-7)">‹</button>
@@ -213,7 +266,33 @@
       <div id="plans-day-content"></div>
     </div>
 
-    <!-- TASKS panel -->
+    <!-- ATTENDANCE -->
+    <div id="panel-attend" class="panel">
+      <div class="section-chips" id="att-section-chips"></div>
+      <div class="date-nav">
+        <button onclick="shiftAttDate(-1)">‹</button>
+        <input type="date" id="att-date" onchange="renderAttendPanel()">
+        <button onclick="shiftAttDate(1)">›</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="btn-sm teal" style="flex:1" onclick="markAllPresent()">✓ Mark All Present</button>
+        <button class="btn-sm grey" onclick="showAttHistory()">History</button>
+      </div>
+      <div id="att-student-list"></div>
+    </div>
+
+    <!-- GRADEBOOK -->
+    <div id="panel-grades" class="panel">
+      <div class="section-chips" id="gb-section-chips"></div>
+      <div id="gb-class-avg"></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="btn-sm teal" style="flex:1" onclick="openAddAssignmentModal()">+ Assignment</button>
+        <button class="btn-sm grey" onclick="openManageAssignmentsModal()">Manage</button>
+      </div>
+      <div id="gb-student-list"></div>
+    </div>
+
+    <!-- TASKS -->
     <div id="panel-tasks" class="panel">
       <div class="task-tabs">
         <div class="task-tab active" onclick="switchTaskTab('teacher',this)">Teacher</div>
@@ -227,53 +306,60 @@
       </div>
     </div>
 
-    <!-- SETTINGS panel -->
+    <!-- SETTINGS -->
     <div id="panel-settings" class="panel">
       <div class="card">
         <div class="card-title">Period Schedule</div>
         <div id="period-settings-list"></div>
       </div>
       <div class="card">
-        <div class="card-title">📡 School Calendar</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">Link the MCA ICS feed to auto-load rotations into your schedule.</p>
+        <div class="card-title">📡 School Calendar Sync</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">Links the MCA ICS feed to auto-load rotations into your daily schedule.</p>
         <div class="sync-row">
           <input type="url" id="ics-url-input" placeholder="https://www.mcacubs.com/calendar/…">
           <button class="btn-sm teal" onclick="syncSchoolIcs()">Sync</button>
         </div>
-        <div id="sync-status" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center;"></div>
+        <div id="sync-status" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center"></div>
       </div>
       <div class="card">
         <div class="card-title">About</div>
-        <p style="font-size:12px;color:var(--muted);line-height:1.6">Data syncs automatically with the desktop planner via shared local storage.<br><br>Period labels and types set here will also update the desktop schedule.</p>
+        <p style="font-size:12px;color:var(--muted);line-height:1.6">All data syncs with the desktop planner automatically via shared local storage. Period labels, grades, attendance, and lesson plans set here update the desktop too.</p>
       </div>
     </div>
 
   </div><!-- /content -->
 
-  <!-- Bottom nav -->
+  <!-- Bottom nav (6 tabs) -->
   <div id="bottom-nav">
-    <button class="nav-btn active" id="nav-today" onclick="switchTab('today',this)">
+    <button class="nav-btn active" onclick="switchTab('today',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       Today
     </button>
-    <button class="nav-btn" id="nav-plans" onclick="switchTab('plans',this)">
+    <button class="nav-btn" onclick="switchTab('plans',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
       Plans
     </button>
-    <button class="nav-btn" id="nav-tasks" onclick="switchTab('tasks',this)">
+    <button class="nav-btn" onclick="switchTab('attend',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Attend
+    </button>
+    <button class="nav-btn" onclick="switchTab('grades',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Grades
+    </button>
+    <button class="nav-btn" onclick="switchTab('tasks',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
       Tasks
     </button>
-    <button class="nav-btn" id="nav-settings" onclick="switchTab('settings',this)">
+    <button class="nav-btn" onclick="switchTab('settings',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
       Settings
     </button>
   </div>
-
-</div><!-- /app -->
+</div>
 
 <!-- Modal -->
-<div id="modal-overlay" onclick="handleModalOverlayClick(event)">
+<div id="modal-overlay" onclick="handleOverlayClick(event)">
   <div id="modal-sheet">
     <div class="modal-handle"></div>
     <div id="modal-body"></div>
@@ -285,49 +371,48 @@
 
 <script>
 // ════════════════════════════════════════════════════════════════
-//  STATE  — shares localStorage with desktop (geo_teacher_planner_db)
+//  STATE — shares localStorage with desktop (geo_teacher_planner_db)
 // ════════════════════════════════════════════════════════════════
-const STORAGE_KEY   = 'geo_teacher_planner_db';
+const STORAGE_KEY    = 'geo_teacher_planner_db';
 const SCHOOL_ICS_KEY = 'mca-school-ics-url';
 const ICS_CACHE_KEY  = 'mca-ics-cache-school';
 const ICS_TS_KEY     = 'mca-ics-cache-ts';
-const DEFAULT_ICS_URL = 'https://www.mcacubs.com/calendar/calendar_323_gmt.ics';
-const SCHOOL_START    = new Date('2026-08-13T00:00:00');
+const DEFAULT_ICS    = 'https://www.mcacubs.com/calendar/calendar_323_gmt.ics';
+const SCHOOL_START   = new Date('2026-08-13T00:00:00');
 
-let state     = null;
-let schoolEvt = [];   // parsed MCA rotation events
-let _currentTab       = 'today';
-let _currentTaskCat   = 'teacher';
-let _plansWeekStart   = null;
-let _plansSelectedDay = null;  // dateStr
+let state = {};
+let schoolEvt = [];
 
+// ── Load/save ────────────────────────────────────────────────────
 function loadState() {
-  try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch(e) { state = null; }
-  if (!state) state = defaultState();
-  // Migrate
+  try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}; } catch(e) { state = {}; }
+  // Ensure all expected fields
   if (!state.periodLabels) state.periodLabels = {};
-  if (!state.periodTypes)  state.periodTypes  = { '1':'class','2':'class','3':'class','4':'class','5':'class','6':'class','7':'class' };
+  if (!state.periodTypes)  state.periodTypes  = {};
   if (!state.tasks)        state.tasks        = { teacher:[], admin:[], home:[] };
   if (!state.schedule)     state.schedule     = {};
-}
-
-function defaultState() {
-  return {
-    periodLabels: { '1':'','2':'','3':'','4':'','5':'','6':'','7':'' },
-    periodTypes:  { '1':'class','2':'class','3':'class','4':'class','5':'class','6':'class','7':'class' },
-    tasks: { teacher:[], admin:[], home:[] },
-    schedule: {},
-  };
+  if (!state.sections)     state.sections     = [];
+  if (!state.students)     state.students     = [];
+  if (!state.assignments)  state.assignments  = [];
+  if (!state.grades)       state.grades       = {};
+  if (!state.attendance)   state.attendance   = {};
 }
 
 function saveState() {
-  // Merge into full desktop state so we don't overwrite desktop-only fields
   try {
+    // Always merge — never overwrite desktop-only fields
     const full = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {};
-    full.periodLabels = state.periodLabels;
-    full.periodTypes  = state.periodTypes;
-    full.tasks        = state.tasks;
-    full.schedule     = state.schedule;
+    Object.assign(full, {
+      periodLabels: state.periodLabels,
+      periodTypes:  state.periodTypes,
+      tasks:        state.tasks,
+      schedule:     state.schedule,
+      sections:     state.sections,
+      students:     state.students,
+      assignments:  state.assignments,
+      grades:       state.grades,
+      attendance:   state.attendance,
+    });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(full));
   } catch(e) {}
 }
@@ -336,20 +421,23 @@ function saveState() {
 function getPeriodLabel(n) { return ((state.periodLabels || {})[String(n)] || '').trim(); }
 function getPeriodType(n)  { return ((state.periodTypes  || {})[String(n)] || 'class'); }
 
-function dateStr(d) {
+function fmtDate(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
 function mondayOf(d) {
-  const c = new Date(d);
+  const c = new Date(d); c.setHours(0,0,0,0);
   const dow = c.getDay();
   c.setDate(c.getDate() - (dow === 0 ? 6 : dow - 1));
-  c.setHours(0,0,0,0);
   return c;
 }
 
+function weekDaysFrom(mon) {
+  return Array.from({length:5}, (_,i) => { const d=new Date(mon); d.setDate(mon.getDate()+i); return d; });
+}
+
 function getRotation(ds) {
-  const [yr, mo, dy] = ds.split('-').map(Number);
+  const [yr,mo,dy] = ds.split('-').map(Number);
   const ev = schoolEvt.find(e => {
     const d = new Date(e.dueDate);
     return d.getUTCFullYear()===yr && d.getUTCMonth()===mo-1 && d.getUTCDate()===dy
@@ -360,430 +448,652 @@ function getRotation(ds) {
   return m ? m[1].split(',').map(s=>s.trim()).filter(Boolean) : null;
 }
 
-function weekDaysFrom(monday) {
-  const days = [];
-  for (let i=0;i<5;i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate()+i);
-    days.push(d);
-  }
-  return days;
+function escHtml(s) {
+  return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── ICS ──────────────────────────────────────────────────────────
-function loadSchoolEventsFromCache() {
-  try {
-    const cached = JSON.parse(localStorage.getItem(ICS_CACHE_KEY) || 'null');
-    if (cached) schoolEvt = cached;
-  } catch(e) {}
+function getLetterGrade(pct) {
+  if (pct===null||pct===undefined||isNaN(pct)) return '—';
+  pct = Math.round(pct);
+  if (pct>=98) return 'A+'; if (pct>=93) return 'A'; if (pct>=90) return 'A-';
+  if (pct>=88) return 'B+'; if (pct>=82) return 'B'; if (pct>=80) return 'B-';
+  if (pct>=79) return 'C+'; if (pct>=76) return 'C'; if (pct>=75) return 'C-';
+  if (pct>=74) return 'D+'; if (pct>=72) return 'D'; if (pct>=70) return 'D-';
+  return 'F';
+}
+
+function gradeBadgeStyle(letter) {
+  const map = { 'A+':'#166534','A':'#15803d','A-':'#16a34a', 'B+':'#1d4ed8','B':'#1e40af','B-':'#2563eb',
+    'C+':'#92400e','C':'#b45309','C-':'#d97706', 'D+':'#991b1b','D':'#b91c1c','D-':'#dc2626', 'F':'#4b0000','—':'#9A958C' };
+  const col = map[letter] || '#9A958C';
+  return `background:${col}20;color:${col};`;
+}
+
+function getAttMetrics(sectionId, sId) {
+  let present=0, total=0;
+  Object.keys(state.attendance).forEach(key => {
+    if (key.startsWith(sectionId + '_')) {
+      const st = state.attendance[key][sId];
+      if (st) { total++; if (st==='P'||st==='T'||st==='E') present++; }
+    }
+  });
+  return { present, total };
+}
+
+function getSectionGrade(sectionId, sId) {
+  const g = state.grades[`${sectionId}_${sId}`] || {};
+  let earned=0, possible=0;
+  (state.assignments||[]).forEach(a => {
+    const sc = parseFloat(g[a.id]);
+    if (!isNaN(sc)) { earned+=sc; possible+=a.points; }
+  });
+  if (possible===0) return null;
+  const pct = Math.round((earned/possible)*100*10)/10;
+  return { pct, earned, possible, letter: getLetterGrade(pct) };
+}
+
+// ════════════════════════════════════════════════════════════════
+//  ICS SYNC
+// ════════════════════════════════════════════════════════════════
+function loadCachedICS() {
+  try { const c=JSON.parse(localStorage.getItem(ICS_CACHE_KEY)||'null'); if(c) schoolEvt=c; } catch(e) {}
 }
 
 async function syncSchoolIcs() {
-  const urlInput = document.getElementById('ics-url-input');
-  const status   = document.getElementById('sync-status');
-  const url = (urlInput ? urlInput.value.trim() : '') || DEFAULT_ICS_URL;
+  const urlEl  = document.getElementById('ics-url-input');
+  const statusEl = document.getElementById('sync-status');
+  const url = (urlEl?.value.trim()) || DEFAULT_ICS;
   if (!url) return;
   localStorage.setItem(SCHOOL_ICS_KEY, url);
-  status.textContent = '⏳ Syncing…';
+  if (statusEl) statusEl.textContent = '⏳ Syncing…';
   try {
     const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
     const res = await fetch(proxy, { signal: AbortSignal.timeout(12000) });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const text = await res.text();
-    schoolEvt = parseICS(text);
+    if (!res.ok) throw new Error('HTTP '+res.status);
+    schoolEvt = parseICS(await res.text());
     localStorage.setItem(ICS_CACHE_KEY, JSON.stringify(schoolEvt));
     localStorage.setItem(ICS_TS_KEY, String(Date.now()));
-    const count = schoolEvt.filter(e => /^classes:/i.test((e.title||'').trim())).length;
-    status.textContent = `✅ Synced ${schoolEvt.length} events (${count} rotation days)`;
-    renderTodayPanel();
-    if (_plansSelectedDay) renderPlansDay(_plansSelectedDay);
-    renderWeekStrip();
-    toast(`Synced ${count} rotation days`);
+    const rot = schoolEvt.filter(e=>/^classes:/i.test((e.title||'').trim())).length;
+    if (statusEl) statusEl.textContent = `✅ Synced — ${rot} rotation days found`;
+    toast(`Synced ${rot} rotation days`);
+    if (_tab==='today') renderToday();
+    if (_tab==='plans') renderPlansPanel();
   } catch(e) {
-    status.textContent = '❌ Sync failed — check URL or try again';
+    if (statusEl) statusEl.textContent = '❌ Sync failed — check URL';
   }
 }
 
 function parseICS(text) {
-  const events = [], lines = text.split(/\r?\n/);
-  let cur = null;
-  for (let i=0; i<lines.length; i++) {
-    let ln = lines[i];
-    while (i+1 < lines.length && (lines[i+1].startsWith(' ') || lines[i+1].startsWith('\t'))) {
-      ln += lines[++i].substring(1);
-    }
-    if (ln.startsWith('BEGIN:VEVENT')) { cur = {}; }
-    else if (ln.startsWith('END:VEVENT')) { if (cur && cur.start) events.push(cur); cur = null; }
+  const evts=[], lines=text.split(/\r?\n/);
+  let cur=null;
+  for (let i=0;i<lines.length;i++) {
+    let ln=lines[i];
+    while (i+1<lines.length&&(lines[i+1][0]===' '||lines[i+1][0]==='\t')) ln+=lines[++i].slice(1);
+    if (ln.startsWith('BEGIN:VEVENT')) cur={};
+    else if (ln.startsWith('END:VEVENT')) { if(cur?.start) evts.push(cur); cur=null; }
     else if (cur) {
       if (ln.startsWith('DTSTART')) {
-        const v = (ln.match(/:(.*)$/) || [])[1] || '';
-        cur.start = `${v.slice(0,4)}-${v.slice(4,6)}-${v.slice(6,8)}`;
-        cur.dueDate = new Date(`${cur.start}T12:00:00Z`);
-      }
-      else if (ln.startsWith('SUMMARY')) {
-        cur.title = (ln.match(/:(.*)$/) || [])[1]?.trim() || '';
+        const v=(ln.match(/:(.*)$/)||[])[1]||'';
+        cur.start=`${v.slice(0,4)}-${v.slice(4,6)}-${v.slice(6,8)}`;
+        cur.dueDate=new Date(`${cur.start}T12:00:00Z`);
+      } else if (ln.startsWith('SUMMARY')) {
+        cur.title=((ln.match(/:(.*)$/)||[])[1]||'').trim();
       }
     }
   }
-  return events;
+  return evts;
 }
 
 // ════════════════════════════════════════════════════════════════
-//  RENDER — TODAY
+//  TODAY
 // ════════════════════════════════════════════════════════════════
-function renderTodayPanel() {
+function renderToday() {
   const today = new Date();
-  const ds = dateStr(today);
-
-  // Top bar date
+  const ds = fmtDate(today);
   document.getElementById('top-date').textContent =
-    today.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+    today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
 
   // Countdown
   const cw = document.getElementById('countdown-wrap');
   if (today < SCHOOL_START) {
-    const diff = Math.ceil((SCHOOL_START - today) / 86400000);
+    const diff = Math.ceil((SCHOOL_START-today)/86400000);
     cw.innerHTML = `<div class="countdown-banner"><div class="num">${diff}</div><div class="lbl">Days until school starts · Aug 13, 2026</div></div>`;
   } else {
-    const diff = Math.floor((today - SCHOOL_START) / 86400000) + 1;
-    cw.innerHTML = `<div class="countdown-banner" style="background:linear-gradient(135deg,#2d5a4f,#3d7a6a)"><div class="num">${diff}</div><div class="lbl">School Day · 2026-27</div></div>`;
+    const diff = Math.floor((today-SCHOOL_START)/86400000)+1;
+    cw.innerHTML = `<div class="countdown-banner" style="background:linear-gradient(135deg,#2d5a4f,#3d7a6a)"><div class="num">${diff}</div><div class="lbl">School Day · 2026–27</div></div>`;
   }
 
-  // Schedule
-  const tc = document.getElementById('today-content');
   const rotation = getRotation(ds);
-  const displayPeriods = rotation || ['1','2','3','4','5','6','7'];
+  const display  = rotation || ['1','2','3','4','5','6','7'];
+  const tc = document.getElementById('today-content');
 
-  let html = '';
+  let html = `<div class="section-head">Today's Classes</div>`;
+  html += rotation
+    ? `<div class="rotation-badge">🔄 ${rotation.map(p=>`P${p}`).join(' → ')}</div>`
+    : `<div class="no-rotation-badge">No rotation posted · Summer break</div>`;
 
-  if (rotation) {
-    html += `<div class="section-head">Today's Classes</div>
-    <div class="rotation-badge">🔄 ${rotation.map(p=>`P${p}`).join(' → ')}</div>`;
-  } else {
-    html += `<div class="section-head">Today's Schedule</div>
-    <div class="no-rotation-badge">No rotation posted for today</div>`;
-  }
-
-  html += displayPeriods.map((pn, idx) => {
-    const lbl   = getPeriodLabel(pn);
-    const pType = getPeriodType(pn);
-    const saved = state.schedule[`${ds}_${pn}`] || {};
-    const slotTag = rotation ? `Block ${idx+1} · P${pn}` : `P${pn}`;
-    let cls = 'period-cell';
-    if (pType==='plan')           cls += ' plan-type';
-    else if (pType==='duty')      cls += ' duty-type';
-    else if (saved.notes||saved.type) cls += ' has-notes';
-    return `<div class="${cls}" onclick="openPlanModal('${ds}','${pn}')">
-      <div class="slot-tag">${slotTag}${pType==='plan'?' · Planning':pType==='duty'?' · Duty':''}</div>
-      <div class="class-name">${lbl || (pType==='plan'?'Planning Period':pType==='duty'?'Duty / Advisory':`Period ${pn}`)}</div>
-      ${saved.notes  ? `<div class="notes-text">📝 ${saved.notes}</div>` : ''}
-      ${saved.type   ? `<div class="notes-text" style="color:#bbb">📦 ${saved.type}</div>` : ''}
-      ${(!saved.notes&&!saved.type&&pType==='class') ? `<div class="add-hint">+ Add lesson plan</div>` : ''}
-      <div class="chevron">›</div>
-    </div>`;
-  }).join('');
-
+  html += display.map((pn,idx)=>periodCellHtml(ds,pn,idx,rotation)).join('');
   tc.innerHTML = html;
 }
 
-// ════════════════════════════════════════════════════════════════
-//  RENDER — PLANS
-// ════════════════════════════════════════════════════════════════
-function renderPlansPanel() {
-  if (!_plansWeekStart) {
-    _plansWeekStart = mondayOf(new Date());
-  }
-  const days = weekDaysFrom(_plansWeekStart);
-  const todayDs = dateStr(new Date());
-
-  // Week label
-  const endFri = new Date(_plansWeekStart);
-  endFri.setDate(_plansWeekStart.getDate() + 4);
-  const fmt = (d) => d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-  document.getElementById('plans-week-label').textContent = `${fmt(_plansWeekStart)} – ${fmt(endFri)}`;
-
-  // Default selection: today if in this week, else Monday
-  if (!_plansSelectedDay || !days.some(d => dateStr(d) === _plansSelectedDay)) {
-    const todayInWeek = days.find(d => dateStr(d) === todayDs);
-    _plansSelectedDay = dateStr(todayInWeek || _plansWeekStart);
-  }
-
-  renderWeekStrip();
-  renderPlansDay(_plansSelectedDay);
+function periodCellHtml(ds, pn, idx, rotation) {
+  const lbl   = getPeriodLabel(pn);
+  const pType = getPeriodType(pn);
+  const saved = state.schedule[`${ds}_${pn}`] || {};
+  const slotTag = rotation ? `Block ${idx+1} · P${pn}` : `P${pn}`;
+  let cls = 'period-cell';
+  if (pType==='plan') cls+=' plan-type';
+  else if (pType==='duty') cls+=' duty-type';
+  else if (saved.notes||saved.type) cls+=' has-notes';
+  return `<div class="${cls}" onclick="openPlanModal('${ds}','${pn}')">
+    <div class="slot-tag">${slotTag}${pType==='plan'?' · Planning':pType==='duty'?' · Duty':''}</div>
+    <div class="class-name">${lbl||(pType==='plan'?'Planning Period':pType==='duty'?'Duty / Advisory':`Period ${pn}`)}</div>
+    ${saved.notes?`<div class="notes-text">📝 ${escHtml(saved.notes)}</div>`:''}
+    ${saved.type ?`<div class="notes-text" style="color:#bbb">📦 ${escHtml(saved.type)}</div>`:''}
+    ${(!saved.notes&&!saved.type&&pType==='class')?`<div class="add-hint">+ Add lesson plan</div>`:''}
+    <div class="chevron">›</div>
+  </div>`;
 }
 
-function renderWeekStrip() {
-  const days = weekDaysFrom(_plansWeekStart);
-  const todayDs = dateStr(new Date());
-  const strip = document.getElementById('week-strip');
-  strip.innerHTML = days.map(d => {
-    const ds = dateStr(d);
-    const rot = getRotation(ds);
-    const isToday = ds === todayDs;
-    const isSel   = ds === _plansSelectedDay;
-    const dayNames = ['Mo','Tu','We','Th','Fr'];
-    const dow = d.getDay();
-    const dn = dayNames[dow===0?6:dow-1];
-    let cls = 'day-chip';
-    if (isSel)  cls += ' active';
-    if (rot)    cls += ' has-events';
-    return `<div class="${cls}" onclick="selectPlansDay('${ds}')">
-      <div class="dn">${dn}</div>
-      <div class="dd">${d.getDate()}</div>
-    </div>`;
+// ════════════════════════════════════════════════════════════════
+//  PLANS
+// ════════════════════════════════════════════════════════════════
+let _plansWeek = null, _plansDay = null;
+
+function renderPlansPanel() {
+  if (!_plansWeek) _plansWeek = mondayOf(new Date());
+  const days = weekDaysFrom(_plansWeek);
+  const todayDs = fmtDate(new Date());
+  const fmt = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  const fri = new Date(_plansWeek); fri.setDate(_plansWeek.getDate()+4);
+  document.getElementById('plans-week-label').textContent = `${fmt(_plansWeek)} – ${fmt(fri)}`;
+  if (!_plansDay||!days.some(d=>fmtDate(d)===_plansDay)) {
+    _plansDay = fmtDate(days.find(d=>fmtDate(d)===todayDs)||_plansWeek);
+  }
+  renderWeekStrip(days);
+  renderPlansDay(_plansDay);
+}
+
+function renderWeekStrip(days) {
+  if (!days) days = weekDaysFrom(_plansWeek||mondayOf(new Date()));
+  const todayDs = fmtDate(new Date());
+  const dayNames = ['Mo','Tu','We','Th','Fr'];
+  document.getElementById('week-strip').innerHTML = days.map(d=>{
+    const ds=fmtDate(d); const rot=getRotation(ds);
+    const dow=d.getDay(), dn=dayNames[dow===0?6:dow-1];
+    let cls='day-chip';
+    if (ds===_plansDay) cls+=' active';
+    if (rot) cls+=' has-events';
+    return `<div class="${cls}" onclick="selectPlansDay('${ds}')"><div class="dn">${dn}</div><div class="dd">${d.getDate()}</div></div>`;
   }).join('');
 }
 
-function selectPlansDay(ds) {
-  _plansSelectedDay = ds;
-  renderWeekStrip();
-  renderPlansDay(ds);
-}
+function selectPlansDay(ds) { _plansDay=ds; renderWeekStrip(); renderPlansDay(ds); }
 
 function renderPlansDay(ds) {
-  const container = document.getElementById('plans-day-content');
-  if (!container) return;
+  const el=document.getElementById('plans-day-content'); if(!el)return;
+  const d=new Date(ds+'T00:00:00');
+  const pretty=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const rotation=getRotation(ds);
+  const display=rotation||['1','2','3','4','5','6','7'];
+  let html=`<div class="section-head">${pretty}</div>`;
+  html+=rotation
+    ?`<div class="rotation-badge">🔄 ${rotation.map(p=>{const l=getPeriodLabel(p);return l?`P${p}·${l}`:`P${p}`;}).join(' → ')}</div>`
+    :`<div class="no-rotation-badge">No rotation posted · Showing all periods</div>`;
+  html+=display.map((pn,idx)=>periodCellHtml(ds,pn,idx,rotation)).join('');
+  el.innerHTML=html;
+}
 
-  const d = new Date(ds + 'T00:00:00');
-  const prettyDate = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
-  const rotation = getRotation(ds);
-  const displayPeriods = rotation || ['1','2','3','4','5','6','7'];
+function shiftPlansWeek(d) {
+  if(!_plansWeek) _plansWeek=mondayOf(new Date());
+  _plansWeek=new Date(_plansWeek); _plansWeek.setDate(_plansWeek.getDate()+d);
+  _plansDay=null; renderPlansPanel();
+}
 
-  let html = `<div class="section-head">${prettyDate}</div>`;
+// ════════════════════════════════════════════════════════════════
+//  ATTENDANCE
+// ════════════════════════════════════════════════════════════════
+let _attSection = null;
 
-  if (rotation) {
-    html += `<div class="rotation-badge">🔄 ${rotation.map(p => {
-      const lbl = getPeriodLabel(p);
-      return lbl ? `P${p}·${lbl}` : `P${p}`;
-    }).join(' → ')}</div>`;
-  } else {
-    html += `<div class="no-rotation-badge">No rotation posted · Showing all periods</div>`;
+function initAttSection() {
+  if (!_attSection && state.sections.length>0) _attSection = state.sections[0].id;
+}
+
+function renderAttendPanel() {
+  initAttSection();
+  // Section chips
+  document.getElementById('att-section-chips').innerHTML = state.sections.map(s=>
+    `<div class="sec-chip ${s.id===_attSection?'active':''}" onclick="setAttSection('${s.id}')">${escHtml(s.name)}</div>`
+  ).join('') || '<div style="font-size:12px;color:var(--muted)">No class sections set up on desktop yet.</div>';
+
+  // Date default
+  const attDate = document.getElementById('att-date');
+  if (attDate && !attDate.value) attDate.value = fmtDate(new Date());
+
+  renderAttStudents();
+}
+
+function setAttSection(id) { _attSection=id; renderAttendPanel(); }
+
+function shiftAttDate(days) {
+  const el=document.getElementById('att-date');
+  if (!el) return;
+  const d=new Date((el.value||fmtDate(new Date()))+'T00:00:00');
+  d.setDate(d.getDate()+days);
+  el.value=fmtDate(d);
+  renderAttStudents();
+}
+
+function renderAttStudents() {
+  const el=document.getElementById('att-student-list'); if(!el)return;
+  if (!_attSection) { el.innerHTML='<div class="empty-state">Select a class section above.</div>'; return; }
+  const ds = document.getElementById('att-date')?.value || fmtDate(new Date());
+  const key = `${_attSection}_${ds}`;
+  const sheet = state.attendance[key] || {};
+  const students = state.students.filter(s=>s.period===_attSection);
+  if (students.length===0) {
+    el.innerHTML='<div class="empty-state">No students in this section.<br>Add students on the desktop planner.</div>'; return;
   }
-
-  html += displayPeriods.map((pn, idx) => {
-    const lbl   = getPeriodLabel(pn);
-    const pType = getPeriodType(pn);
-    const saved = state.schedule[`${ds}_${pn}`] || {};
-    const slotTag = rotation ? `Block ${idx+1} · P${pn}` : `P${pn}`;
-    let cls = 'period-cell';
-    if (pType==='plan')               cls += ' plan-type';
-    else if (pType==='duty')          cls += ' duty-type';
-    else if (saved.notes||saved.type) cls += ' has-notes';
-    return `<div class="${cls}" onclick="openPlanModal('${ds}','${pn}')">
-      <div class="slot-tag">${slotTag}${pType==='plan'?' · Planning':pType==='duty'?' · Duty':''}</div>
-      <div class="class-name">${lbl || (pType==='plan'?'Planning Period':pType==='duty'?'Duty / Advisory':`Period ${pn}`)}</div>
-      ${saved.notes ? `<div class="notes-text">📝 ${saved.notes}</div>` : ''}
-      ${saved.type  ? `<div class="notes-text" style="color:#bbb">📦 ${saved.type}</div>` : ''}
-      ${(!saved.notes&&!saved.type&&pType==='class') ? `<div class="add-hint">+ Add lesson plan</div>` : ''}
-      <div class="chevron">›</div>
+  el.innerHTML = students.map(s=>{
+    const cur = sheet[s.id] || 'P';
+    const m = getAttMetrics(_attSection, s.id);
+    const rate = m.total>0 ? Math.round((m.present/m.total)*100) : 100;
+    return `<div class="att-student-row">
+      <div style="flex:1">
+        <div class="att-student-name">${escHtml(s.name)}</div>
+        <div class="att-student-rate">${rate}% present (${m.present}/${m.total} days)</div>
+      </div>
+      <div class="att-btns">
+        ${['P','A','T','E'].map(st=>`<div class="att-btn ${st} ${cur===st?'active':''}" onclick="setAttendance('${s.id}','${st}')">${st}</div>`).join('')}
+      </div>
     </div>`;
   }).join('');
-
-  container.innerHTML = html;
 }
 
-function shiftPlansWeek(days) {
-  if (!_plansWeekStart) _plansWeekStart = mondayOf(new Date());
-  _plansWeekStart = new Date(_plansWeekStart);
-  _plansWeekStart.setDate(_plansWeekStart.getDate() + days);
-  _plansSelectedDay = null;
-  renderPlansPanel();
+function setAttendance(sId, status) {
+  const ds = document.getElementById('att-date')?.value || fmtDate(new Date());
+  const key = `${_attSection}_${ds}`;
+  if (!state.attendance[key]) state.attendance[key]={};
+  state.attendance[key][sId]=status;
+  saveState();
+  renderAttStudents();
+}
+
+function markAllPresent() {
+  const ds = document.getElementById('att-date')?.value || fmtDate(new Date());
+  const key = `${_attSection}_${ds}`;
+  if (!state.attendance[key]) state.attendance[key]={};
+  const students = state.students.filter(s=>s.period===_attSection);
+  students.forEach(s => state.attendance[key][s.id]='P');
+  saveState();
+  renderAttStudents();
+  toast('All marked present');
+}
+
+function showAttHistory() {
+  if (!_attSection) return;
+  const students = state.students.filter(s=>s.period===_attSection);
+  const keys = Object.keys(state.attendance).filter(k=>k.startsWith(_attSection+'_')).sort().reverse().slice(0,20);
+  if (keys.length===0) { toast('No attendance history yet'); return; }
+  const secName = state.sections.find(s=>s.id===_attSection)?.name || '';
+  let html = `<div class="modal-title">Attendance History</div>
+    <div class="modal-sub">${escHtml(secName)} · Last ${keys.length} dates</div>
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:var(--cream)">
+      <th style="padding:8px;text-align:left;font-weight:800;color:var(--muted)">Date</th>
+      ${students.map(s=>`<th style="padding:8px;text-align:center;font-weight:700;color:var(--text);min-width:52px">${escHtml(s.name.split(' ')[0])}</th>`).join('')}
+    </tr></thead><tbody>`;
+  keys.forEach(k=>{
+    const d=k.split('_')[1]; const sh=state.attendance[k]||{};
+    const cols={'P':'#16a34a','A':'#dc2626','T':'#d97706','E':'#2563eb'};
+    html+=`<tr style="border-bottom:1px solid var(--pale)">
+      <td style="padding:8px;font-weight:700;color:var(--muted);white-space:nowrap">${d}</td>
+      ${students.map(s=>{const st=sh[s.id]||'—';const c=cols[st]||'#ccc';
+        return `<td style="padding:8px;text-align:center"><span style="background:${c}20;color:${c};font-weight:800;font-size:11px;padding:2px 6px;border-radius:6px">${st}</span></td>`;
+      }).join('')}
+    </tr>`;
+  });
+  html+=`</tbody></table></div>
+  <div style="margin-top:16px"><button class="btn-sm grey" style="width:100%" onclick="closeModal()">Close</button></div>`;
+  openModal(html);
 }
 
 // ════════════════════════════════════════════════════════════════
-//  RENDER — TASKS
+//  GRADEBOOK
 // ════════════════════════════════════════════════════════════════
-function renderTaskPanel() {
-  const tasks = (state.tasks || {})[_currentTaskCat] || [];
-  const list  = document.getElementById('task-list');
-  if (!list) return;
-  if (tasks.length === 0) {
-    list.innerHTML = `<div class="empty-state">No tasks · tap + to add one</div>`;
-    return;
+let _gbSection = null;
+
+function initGbSection() {
+  if (!_gbSection && state.sections.length>0) _gbSection = state.sections[0].id;
+}
+
+function renderGradesPanel() {
+  initGbSection();
+  // Section chips
+  document.getElementById('gb-section-chips').innerHTML = state.sections.map(s=>
+    `<div class="sec-chip ${s.id===_gbSection?'active':''}" onclick="setGbSection('${s.id}')">${escHtml(s.name)}</div>`
+  ).join('') || '<div style="font-size:12px;color:var(--muted)">No class sections found. Set up sections on the desktop.</div>';
+
+  renderGbStudents();
+}
+
+function setGbSection(id) { _gbSection=id; renderGradesPanel(); }
+
+function renderGbStudents() {
+  const avgEl = document.getElementById('gb-class-avg');
+  const listEl= document.getElementById('gb-student-list');
+  if (!_gbSection) { avgEl.innerHTML=''; listEl.innerHTML=''; return; }
+
+  const students = state.students.filter(s=>s.period===_gbSection);
+  const secName  = state.sections.find(s=>s.id===_gbSection)?.name||'';
+  const assignments = state.assignments||[];
+
+  // Class average
+  if (students.length>0 && assignments.length>0) {
+    const grades = students.map(s=>getSectionGrade(_gbSection,s.id)).filter(g=>g!==null);
+    if (grades.length>0) {
+      const avg = grades.reduce((s,g)=>s+g.pct,0)/grades.length;
+      const avgLetter = getLetterGrade(avg);
+      avgEl.innerHTML=`<div class="class-avg-bar">
+        <div class="avg-label">${escHtml(secName)}<br><span style="font-size:10px">${grades.length} students graded · ${assignments.length} assignments</span></div>
+        <div class="avg-grade" style="${gradeBadgeStyle(avgLetter)};padding:8px 12px;border-radius:10px">${avgLetter}<br><span style="font-size:11px">${Math.round(avg)}%</span></div>
+      </div>`;
+    } else { avgEl.innerHTML=''; }
+  } else { avgEl.innerHTML=''; }
+
+  if (students.length===0) {
+    listEl.innerHTML='<div class="empty-state">No students in this section.<br>Add students on the desktop planner.</div>'; return;
   }
-  list.innerHTML = tasks.map((t,i) => `
-    <div class="task-item">
-      <div class="task-check ${t.completed?'done':''}" onclick="toggleTask(${i})"></div>
-      <div class="task-text ${t.completed?'done':''}">${escHtml(t.text)}</div>
-      <div class="task-del" onclick="deleteTask(${i})">✕</div>
-    </div>`).join('');
+  if (assignments.length===0) {
+    listEl.innerHTML='<div class="empty-state">No assignments yet.<br>Tap + Assignment to add one.</div>'; return;
+  }
+
+  listEl.innerHTML = students.map(s=>{
+    const g = getSectionGrade(_gbSection, s.id);
+    const letter = g ? g.letter : '—';
+    const pct    = g ? g.pct    : null;
+    return `<div class="student-grade-card" onclick="openStudentGradesModal('${s.id}')">
+      <div style="flex:1">
+        <div class="sname">${escHtml(s.name)}</div>
+        ${g?`<div class="spct">${g.earned}/${g.possible} pts · ${g.pct}%</div>`:`<div class="spct">No scores entered</div>`}
+      </div>
+      <div class="grade-badge" style="${gradeBadgeStyle(letter)}">${letter}</div>
+    </div>`;
+  }).join('');
 }
 
-function switchTaskTab(cat, el) {
-  _currentTaskCat = cat;
-  document.querySelectorAll('.task-tab').forEach(t => t.classList.remove('active'));
+function openStudentGradesModal(sId) {
+  const s = state.students.find(st=>st.id===sId);
+  if (!s) return;
+  const g = state.grades[`${_gbSection}_${sId}`] || {};
+  const assignments = state.assignments||[];
+  const overall = getSectionGrade(_gbSection, sId);
+
+  let html = `<div class="modal-title">${escHtml(s.name)}</div>
+    <div class="modal-sub" style="display:flex;align-items:center;justify-content:space-between">
+      <span>${state.sections.find(sec=>sec.id===_gbSection)?.name||''}</span>
+      ${overall?`<span style="font-size:16px;font-weight:900;${gradeBadgeStyle(overall.letter)};padding:4px 10px;border-radius:8px">${overall.letter} · ${overall.pct}%</span>`:''}
+    </div>`;
+
+  if (assignments.length===0) {
+    html+=`<div class="empty-state">No assignments added yet.</div>`;
+  } else {
+    html+=assignments.map(a=>{
+      const score = g[a.id]!==undefined ? g[a.id] : '';
+      return `<div class="score-row">
+        <div style="flex:1">
+          <div class="aname">${escHtml(a.name)}</div>
+          <div class="apts">${a.points} pts · ${escHtml(a.category||'')}</div>
+        </div>
+        <input type="number" value="${escHtml(String(score))}" min="0" max="${a.points}" placeholder="—"
+          onchange="updateGrade('${sId}','${a.id}',this.value)"
+          oninput="this.style.borderColor=this.value?'var(--teal)':'var(--pale)'">
+      </div>`;
+    }).join('');
+  }
+
+  html+=`<div style="margin-top:16px"><button class="btn-sm grey" style="width:100%" onclick="closeModal()">Done</button></div>`;
+  openModal(html);
+}
+
+function updateGrade(sId, aId, val) {
+  const key = `${_gbSection}_${sId}`;
+  if (!state.grades[key]) state.grades[key]={};
+  if (val==='') delete state.grades[key][aId];
+  else state.grades[key][aId] = parseFloat(val);
+  saveState();
+  // Update overall display in the sheet without closing modal
+  const overall = getSectionGrade(_gbSection, sId);
+  const subEl = document.querySelector('#modal-sheet .modal-sub span:last-child');
+  if (subEl && overall) subEl.outerHTML=`<span style="font-size:16px;font-weight:900;${gradeBadgeStyle(overall.letter)};padding:4px 10px;border-radius:8px">${overall.letter} · ${overall.pct}%</span>`;
+  renderGbStudents(); // refresh list behind modal
+}
+
+function openAddAssignmentModal() {
+  openModal(`
+    <div class="modal-title">Add Assignment</div>
+    <div class="modal-sub">Adds a grading column to all sections</div>
+    <div class="modal-label">Assignment Name</div>
+    <input class="modal-input" id="as-name" placeholder="e.g. Unit Quiz, Essay 1…" autocomplete="off">
+    <div class="modal-label">Category</div>
+    <select class="modal-input" id="as-cat" style="padding:11px 12px">
+      <option value="formative">Formative</option>
+      <option value="summative">Summative</option>
+      <option value="participation">Participation</option>
+      <option value="project">Project</option>
+    </select>
+    <div class="modal-label">Max Points</div>
+    <input class="modal-input" id="as-pts" type="number" value="100" min="1" max="1000">
+    <div class="modal-actions">
+      <button class="btn-sm teal" style="flex:1;padding:13px" onclick="saveNewAssignment()">Add</button>
+      <button class="btn-sm grey" onclick="closeModal()">Cancel</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('as-name')?.focus(),300);
+}
+
+function saveNewAssignment() {
+  const name = document.getElementById('as-name')?.value.trim();
+  const cat  = document.getElementById('as-cat')?.value || 'formative';
+  const pts  = parseInt(document.getElementById('as-pts')?.value)||100;
+  if (!name) { toast('Enter a name'); return; }
+  if (!state.assignments) state.assignments=[];
+  state.assignments.push({ id:'a'+Date.now(), name, category:cat, points:pts });
+  saveState();
+  closeModal();
+  renderGbStudents();
+  toast('Assignment added');
+}
+
+function openManageAssignmentsModal() {
+  const assignments = state.assignments||[];
+  if (assignments.length===0) { toast('No assignments yet'); return; }
+  let html=`<div class="modal-title">Manage Assignments</div>
+    <div class="modal-sub">Tap × to delete a column (removes all scores)</div>`;
+  html+=assignments.map(a=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--pale)">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">${escHtml(a.name)}</div>
+        <div style="font-size:11px;color:var(--muted)">${a.points} pts · ${escHtml(a.category||'')}</div>
+      </div>
+      <button class="btn-sm red" onclick="deleteAssignment('${a.id}')">✕</button>
+    </div>`).join('');
+  html+=`<div style="margin-top:16px"><button class="btn-sm grey" style="width:100%" onclick="closeModal()">Done</button></div>`;
+  openModal(html);
+}
+
+function deleteAssignment(aId) {
+  state.assignments = (state.assignments||[]).filter(a=>a.id!==aId);
+  Object.keys(state.grades).forEach(k => { if(state.grades[k]) delete state.grades[k][aId]; });
+  saveState();
+  closeModal();
+  renderGbStudents();
+  toast('Assignment removed');
+}
+
+// ════════════════════════════════════════════════════════════════
+//  LESSON PLAN MODAL
+// ════════════════════════════════════════════════════════════════
+let _mDs=null, _mPn=null;
+
+function openPlanModal(ds, pn) {
+  _mDs=ds; _mPn=pn;
+  const saved  = state.schedule[`${ds}_${pn}`]||{};
+  const lbl    = getPeriodLabel(pn);
+  const pType  = getPeriodType(pn);
+  const pretty = new Date(ds+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  const ptLbl  = pType==='plan'?'Planning Period':pType==='duty'?'Duty / Advisory':'Class';
+  openModal(`
+    <div class="modal-title">📝 Lesson Plan</div>
+    <div class="modal-sub">${pretty} · ${lbl?`P${pn} · ${lbl}`:`Period ${pn}`} · ${ptLbl}</div>
+    <div class="modal-label">Lesson Focus / Activity</div>
+    <input class="modal-input" id="m-notes" type="text" value="${escHtml(saved.notes||'')}" placeholder="e.g. Quadratic equations intro…" autocomplete="off">
+    <div class="modal-label">Materials / Resources</div>
+    <input class="modal-input" id="m-type" type="text" value="${escHtml(saved.type||'')}" placeholder="e.g. Textbook pp. 42-48…" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn-sm teal" style="flex:1;padding:13px" onclick="savePlanModal()">Save</button>
+      ${saved.notes||saved.type?`<button class="btn-sm red" onclick="clearPlanModal()">Clear</button>`:''}
+      <button class="btn-sm grey" onclick="closeModal()">Cancel</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('m-notes')?.focus(),300);
+}
+
+function savePlanModal() {
+  const notes=(document.getElementById('m-notes')?.value||'').trim();
+  const type =(document.getElementById('m-type')?.value ||'').trim();
+  const key=`${_mDs}_${_mPn}`;
+  if (notes||type) state.schedule[key]={notes,type,label:getPeriodLabel(_mPn)};
+  else delete state.schedule[key];
+  saveState(); closeModal();
+  toast('Saved'); refresh();
+}
+
+function clearPlanModal() {
+  delete state.schedule[`${_mDs}_${_mPn}`];
+  saveState(); closeModal();
+  toast('Cleared'); refresh();
+}
+
+function refresh() {
+  if (_tab==='today') renderToday();
+  if (_tab==='plans') { renderWeekStrip(); renderPlansDay(_plansDay); }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  TASKS
+// ════════════════════════════════════════════════════════════════
+let _taskCat='teacher';
+
+function renderTaskPanel() {
+  const tasks=(state.tasks||{})[_taskCat]||[];
+  const el=document.getElementById('task-list'); if(!el)return;
+  if (tasks.length===0) { el.innerHTML=`<div class="empty-state">No tasks · tap + to add one</div>`; return; }
+  el.innerHTML=tasks.map((t,i)=>`<div class="task-item">
+    <div class="task-check ${t.completed?'done':''}" onclick="toggleTask(${i})"></div>
+    <div class="task-text ${t.completed?'done':''}">${escHtml(t.text)}</div>
+    <div class="task-del" onclick="deleteTask(${i})">✕</div>
+  </div>`).join('');
+}
+
+function switchTaskTab(cat,el) {
+  _taskCat=cat;
+  document.querySelectorAll('.task-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   renderTaskPanel();
 }
 
 function addTask() {
-  const input = document.getElementById('new-task-input');
-  const text = input.value.trim();
-  if (!text) return;
-  if (!state.tasks) state.tasks = { teacher:[], admin:[], home:[] };
-  if (!state.tasks[_currentTaskCat]) state.tasks[_currentTaskCat] = [];
-  state.tasks[_currentTaskCat].push({ id: Date.now().toString(), text, completed: false });
-  saveState();
-  input.value = '';
-  renderTaskPanel();
+  const input=document.getElementById('new-task-input');
+  const text=input.value.trim(); if(!text)return;
+  if (!state.tasks) state.tasks={teacher:[],admin:[],home:[]};
+  if (!state.tasks[_taskCat]) state.tasks[_taskCat]=[];
+  state.tasks[_taskCat].push({id:Date.now().toString(),text,completed:false});
+  saveState(); input.value=''; renderTaskPanel();
 }
 
-function toggleTask(idx) {
-  const tasks = state.tasks[_currentTaskCat];
-  if (tasks[idx]) { tasks[idx].completed = !tasks[idx].completed; saveState(); renderTaskPanel(); }
+function toggleTask(i) {
+  const t=state.tasks[_taskCat][i]; if(!t)return;
+  t.completed=!t.completed; saveState(); renderTaskPanel();
 }
 
-function deleteTask(idx) {
-  state.tasks[_currentTaskCat].splice(idx, 1);
-  saveState();
-  renderTaskPanel();
+function deleteTask(i) {
+  state.tasks[_taskCat].splice(i,1); saveState(); renderTaskPanel();
 }
 
 // ════════════════════════════════════════════════════════════════
-//  RENDER — SETTINGS
+//  SETTINGS
 // ════════════════════════════════════════════════════════════════
 function renderSettingsPanel() {
-  // Period list
-  const list = document.getElementById('period-settings-list');
-  list.innerHTML = Array.from({length:7}, (_,i) => {
-    const n = String(i+1);
-    const lbl = getPeriodLabel(n);
-    const pt  = getPeriodType(n);
-    return `<div class="setting-row">
-      <label>P${n}</label>
-      <input type="text" value="${escHtml(lbl)}" placeholder="Class name" oninput="savePeriodLabel('${n}',this.value)">
-      <div class="type-btns">
-        <button class="type-btn ${pt==='class'?'active-class':''}" onclick="savePeriodType('${n}','class')">C</button>
-        <button class="type-btn ${pt==='plan' ?'active-plan':''}"  onclick="savePeriodType('${n}','plan')">P</button>
-        <button class="type-btn ${pt==='duty' ?'active-duty':''}"  onclick="savePeriodType('${n}','duty')">D</button>
-      </div>
-    </div>`;
-  }).join('');
+  document.getElementById('period-settings-list').innerHTML =
+    Array.from({length:7},(_,i)=>{
+      const n=String(i+1), lbl=getPeriodLabel(n), pt=getPeriodType(n);
+      return `<div class="setting-row">
+        <label>P${n}</label>
+        <input type="text" value="${escHtml(lbl)}" placeholder="Class name" oninput="savePeriodLabel('${n}',this.value)">
+        <div class="type-btns">
+          <button class="type-btn ${pt==='class'?'active-class':''}" onclick="savePeriodType('${n}','class')">C</button>
+          <button class="type-btn ${pt==='plan'?'active-plan':''}"  onclick="savePeriodType('${n}','plan')">P</button>
+          <button class="type-btn ${pt==='duty'?'active-duty':''}"  onclick="savePeriodType('${n}','duty')">D</button>
+        </div>
+      </div>`;
+    }).join('') +
+    `<p style="font-size:10px;color:var(--muted);margin-top:10px;line-height:1.5"><b>C</b> = Class &nbsp;·&nbsp; <b>P</b> = Plan/Prep (no plan req.) &nbsp;·&nbsp; <b>D</b> = Duty/Advisory</p>`;
 
-  // Legend
-  document.getElementById('period-settings-list').insertAdjacentHTML('beforeend',
-    `<p style="font-size:10px;color:var(--muted);margin-top:10px;line-height:1.5"><b>C</b> = Class &nbsp;·&nbsp; <b>P</b> = Plan/Prep (no plan req.) &nbsp;·&nbsp; <b>D</b> = Duty/Advisory</p>`);
-
-  // ICS URL
-  const icsInput = document.getElementById('ics-url-input');
-  if (icsInput) {
-    icsInput.value = localStorage.getItem(SCHOOL_ICS_KEY) || DEFAULT_ICS_URL;
-  }
+  const urlEl=document.getElementById('ics-url-input');
+  if (urlEl) urlEl.value=localStorage.getItem(SCHOOL_ICS_KEY)||DEFAULT_ICS;
 }
 
-function savePeriodLabel(n, val) {
-  if (!state.periodLabels) state.periodLabels = {};
-  state.periodLabels[n] = val;
-  saveState();
+function savePeriodLabel(n,v) {
+  if(!state.periodLabels) state.periodLabels={};
+  state.periodLabels[n]=v; saveState();
 }
 
-function savePeriodType(n, t) {
-  if (!state.periodTypes) state.periodTypes = {};
-  state.periodTypes[n] = t;
-  saveState();
+function savePeriodType(n,t) {
+  if(!state.periodTypes) state.periodTypes={};
+  state.periodTypes[n]=t; saveState();
   renderSettingsPanel();
-  // Refresh visible content
-  if (_currentTab === 'today') renderTodayPanel();
-  if (_currentTab === 'plans' && _plansSelectedDay) renderPlansDay(_plansSelectedDay);
+  if (_tab==='today') renderToday();
+  if (_tab==='plans'&&_plansDay) renderPlansDay(_plansDay);
 }
 
 // ════════════════════════════════════════════════════════════════
-//  PLAN MODAL
+//  MODAL
 // ════════════════════════════════════════════════════════════════
-let _modalDs = null, _modalPn = null;
-
-function openPlanModal(ds, pn) {
-  _modalDs = ds; _modalPn = pn;
-  const saved  = state.schedule[`${ds}_${pn}`] || {};
-  const lbl    = getPeriodLabel(pn);
-  const pType  = getPeriodType(pn);
-  const d      = new Date(ds+'T00:00:00');
-  const pretty = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
-  const ptLabel = pType==='plan'?'Planning Period':pType==='duty'?'Duty / Advisory':'Class';
-  const periodLabel = lbl ? `P${pn} · ${lbl}` : `Period ${pn}`;
-
-  document.getElementById('modal-body').innerHTML = `
-    <div class="modal-title">📝 Lesson Plan</div>
-    <div class="modal-sub">${pretty} &nbsp;·&nbsp; ${periodLabel} &nbsp;·&nbsp; ${ptLabel}</div>
-    <div class="modal-label">Lesson Focus / Activity</div>
-    <input class="modal-input" id="m-notes" type="text" value="${escHtml(saved.notes||'')}" placeholder="e.g. Quadratic equations, group work…" autocomplete="off">
-    <div class="modal-label">Materials / Resources</div>
-    <input class="modal-input" id="m-type" type="text" value="${escHtml(saved.type||'')}" placeholder="e.g. Textbook pp. 42-48, worksheet…" autocomplete="off">
-    <div class="modal-actions">
-      <button class="btn-sm teal" style="flex:1;padding:13px" onclick="savePlanModal()">Save</button>
-      ${saved.notes||saved.type ? `<button class="btn-sm red" onclick="clearPlanModal()">Clear</button>` : ''}
-      <button class="btn-sm grey" onclick="closeModal()">Cancel</button>
-    </div>`;
-
+function openModal(html) {
+  document.getElementById('modal-body').innerHTML=html;
   document.getElementById('modal-overlay').classList.add('open');
-  setTimeout(() => { const el = document.getElementById('m-notes'); if(el) el.focus(); }, 300);
 }
-
-function savePlanModal() {
-  const notes = (document.getElementById('m-notes')?.value || '').trim();
-  const type  = (document.getElementById('m-type')?.value  || '').trim();
-  const key   = `${_modalDs}_${_modalPn}`;
-  if (notes || type) {
-    state.schedule[key] = { notes, type, label: getPeriodLabel(_modalPn) };
-  } else {
-    delete state.schedule[key];
-  }
-  saveState();
-  closeModal();
-  toast('Lesson plan saved');
-  if (_currentTab === 'today') renderTodayPanel();
-  if (_currentTab === 'plans') { renderWeekStrip(); renderPlansDay(_plansSelectedDay); }
-}
-
-function clearPlanModal() {
-  const key = `${_modalDs}_${_modalPn}`;
-  delete state.schedule[key];
-  saveState();
-  closeModal();
-  toast('Plan cleared');
-  if (_currentTab === 'today') renderTodayPanel();
-  if (_currentTab === 'plans') renderPlansDay(_plansSelectedDay);
-}
-
-function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('open');
-}
-
-function handleModalOverlayClick(e) {
-  if (e.target === document.getElementById('modal-overlay')) closeModal();
-}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+function handleOverlayClick(e) { if(e.target===document.getElementById('modal-overlay')) closeModal(); }
 
 // ════════════════════════════════════════════════════════════════
 //  NAV
 // ════════════════════════════════════════════════════════════════
+let _tab='today';
+
 function switchTab(tab, btn) {
-  _currentTab = tab;
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('panel-' + tab).classList.add('active');
+  _tab=tab;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
   btn.classList.add('active');
-  if (tab === 'today')    renderTodayPanel();
-  if (tab === 'plans')    renderPlansPanel();
-  if (tab === 'tasks')    renderTaskPanel();
-  if (tab === 'settings') renderSettingsPanel();
-  // Scroll content to top on tab change
-  document.getElementById('content').scrollTop = 0;
+  document.getElementById('content').scrollTop=0;
+  if (tab==='today')    renderToday();
+  if (tab==='plans')    renderPlansPanel();
+  if (tab==='attend')   renderAttendPanel();
+  if (tab==='grades')   renderGradesPanel();
+  if (tab==='tasks')    renderTaskPanel();
+  if (tab==='settings') renderSettingsPanel();
 }
 
 // ════════════════════════════════════════════════════════════════
-//  TOAST & UTILS
+//  TOAST
 // ════════════════════════════════════════════════════════════════
-let _toastTimer = null;
+let _toastT=null;
 function toast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
-}
-
-function escHtml(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(_toastT); _toastT=setTimeout(()=>el.classList.remove('show'),2400);
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -791,27 +1101,25 @@ function escHtml(s) {
 // ════════════════════════════════════════════════════════════════
 (function boot() {
   loadState();
-  loadSchoolEventsFromCache();
-  renderTodayPanel();
+  loadCachedICS();
+  renderToday();
 
-  // Auto-sync ICS in background if cache is older than 2 hours or missing
-  const ts = parseInt(localStorage.getItem(ICS_TS_KEY) || '0');
-  const ageMin = ts ? Math.round((Date.now() - ts) / 60000) : Infinity;
-  const storedUrl = localStorage.getItem(SCHOOL_ICS_KEY) || DEFAULT_ICS_URL;
-  if (ageMin > 120 && storedUrl) {
-    setTimeout(async () => {
+  // Background ICS refresh if stale
+  const ts=parseInt(localStorage.getItem(ICS_TS_KEY)||'0');
+  if ((Date.now()-ts)>7200000) {
+    const url=localStorage.getItem(SCHOOL_ICS_KEY)||DEFAULT_ICS;
+    if (url) setTimeout(async()=>{
       try {
-        const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(storedUrl);
-        const res = await fetch(proxy, { signal: AbortSignal.timeout(12000) });
-        if (!res.ok) return;
-        const text = await res.text();
-        schoolEvt = parseICS(text);
-        localStorage.setItem(ICS_CACHE_KEY, JSON.stringify(schoolEvt));
-        localStorage.setItem(ICS_TS_KEY, String(Date.now()));
-        if (_currentTab === 'today') renderTodayPanel();
-        if (_currentTab === 'plans') renderPlansPanel();
-      } catch(e) {}
-    }, 1500);
+        const proxy='https://api.allorigins.win/raw?url='+encodeURIComponent(url);
+        const res=await fetch(proxy,{signal:AbortSignal.timeout(12000)});
+        if(!res.ok)return;
+        schoolEvt=parseICS(await res.text());
+        localStorage.setItem(ICS_CACHE_KEY,JSON.stringify(schoolEvt));
+        localStorage.setItem(ICS_TS_KEY,String(Date.now()));
+        if(_tab==='today') renderToday();
+        if(_tab==='plans') renderPlansPanel();
+      }catch(e){}
+    },1500);
   }
 })();
 </script>
