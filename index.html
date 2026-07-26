@@ -348,6 +348,121 @@
                 transform: translateX(0);
             }
         }
+
+        /* ══════════════════════════════════════════════════════
+           GRADEBOOK DESIGN SYSTEM (gbx-*)
+           ══════════════════════════════════════════════════════ */
+        .gbx-header {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .gbx-class-chip {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 7px 15px; border-radius: 12px; font-size: 12.5px; font-weight: 700;
+            border: 1.5px solid var(--c-pale); background: var(--c-surface);
+            color: var(--c-text-secondary); cursor: pointer;
+            transition: all .18s cubic-bezier(.4,0,.2,1);
+            box-shadow: 0 1px 2px rgba(0,0,0,.04);
+        }
+        .gbx-class-chip:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,.08); }
+        .gbx-class-chip .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .gbx-class-chip.active { color: white; border-color: transparent; }
+        .gbx-class-chip.add {
+            border-style: dashed; color: var(--c-light); background: transparent; box-shadow: none;
+        }
+        .gbx-class-chip.add:hover { color: var(--c-brown); border-color: var(--c-brown); transform: none; }
+
+        .gbx-toolbar {
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+            margin-bottom: 14px; padding: 10px 14px;
+            background: var(--c-surface);
+            border: 1px solid var(--c-pale); border-radius: 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.05);
+        }
+        .gbx-seg {
+            display: flex; gap: 2px; padding: 3px; border-radius: 11px;
+            background: var(--c-cream); border: 1px solid var(--c-pale); flex-shrink: 0;
+        }
+        .gbx-seg button {
+            padding: 6px 15px; border-radius: 8px; font-size: 12px; font-weight: 800;
+            border: none; cursor: pointer; background: transparent; color: var(--c-medium);
+            transition: all .15s;
+        }
+        .gbx-seg button.active {
+            background: var(--c-brown); color: white; box-shadow: 0 2px 5px rgba(0,0,0,.18);
+        }
+        .gbx-stats { display: flex; align-items: center; gap: 14px; padding: 0 6px; }
+        .gbx-stat { display: flex; flex-direction: column; line-height: 1.2; }
+        .gbx-stat .v { font-size: 15px; font-weight: 900; color: var(--c-brown); }
+        .gbx-stat .k { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--c-light); }
+        .gbx-divider { width: 1px; height: 26px; background: var(--c-pale); flex-shrink: 0; }
+
+        .gbx-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 14px; border-radius: 11px; font-size: 12px; font-weight: 700;
+            border: 1.5px solid var(--c-pale); background: var(--c-surface);
+            color: var(--c-text-secondary); cursor: pointer;
+            transition: all .15s; white-space: nowrap;
+        }
+        .gbx-btn:hover { border-color: var(--c-brown); color: var(--c-brown); }
+        .gbx-btn.primary {
+            background: var(--c-brown); color: white; border-color: var(--c-brown);
+            box-shadow: 0 2px 6px rgba(90,45,12,.25);
+        }
+        .gbx-btn.primary:hover { filter: brightness(1.12); color: white; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(90,45,12,.3); }
+        .gbx-btn.danger-active { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+        .gbx-btn.exam-mid { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+        .gbx-btn.exam-mid:hover { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+        .gbx-btn.exam-fin { background: #fff1f2; color: #9f1239; border-color: #fecdd3; }
+        .gbx-btn.exam-fin:hover { background: #9f1239; color: white; border-color: #9f1239; }
+
+        .gbx-menu-wrap { position: relative; flex-shrink: 0; }
+        .gbx-menu {
+            display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 50;
+            min-width: 200px; background: var(--c-surface);
+            border: 1px solid var(--c-pale); border-radius: 14px;
+            box-shadow: 0 8px 28px rgba(0,0,0,.14); padding: 6px; overflow: hidden;
+        }
+        .gbx-menu.open { display: block; animation: gbxMenuIn .14s ease; }
+        @keyframes gbxMenuIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        .gbx-menu button {
+            display: flex; align-items: center; gap: 10px; width: 100%;
+            padding: 9px 12px; border-radius: 9px; font-size: 12.5px; font-weight: 600;
+            border: none; background: none; color: var(--c-text-primary);
+            cursor: pointer; text-align: left; transition: background .12s;
+        }
+        .gbx-menu button:hover { background: var(--c-cream); }
+        .gbx-menu .sep { height: 1px; background: var(--c-pale); margin: 5px 8px; }
+        .gbx-menu .ico { width: 20px; text-align: center; flex-shrink: 0; font-size: 13px; }
+
+        .gbx-table-wrap {
+            border: 1px solid var(--c-pale); border-radius: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.06); overflow-x: auto;
+            background: var(--c-surface);
+        }
+        .gbx-table-wrap table tbody tr { transition: filter .1s; }
+        .gbx-empty {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 64px 24px; gap: 14px; text-align: center;
+            border: 2px dashed var(--c-pale); border-radius: 18px; background: var(--c-surface);
+        }
+        .gbx-empty .big { font-size: 40px; line-height: 1; opacity: .85; }
+        .gbx-empty h4 { font-size: 16px; font-weight: 800; color: var(--c-text-primary); }
+        .gbx-empty p { font-size: 12.5px; color: var(--c-text-muted); max-width: 380px; line-height: 1.6; }
+        .gbx-empty .steps { display: flex; gap: 18px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
+        .gbx-empty .step { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 120px; }
+        .gbx-empty .step .n {
+            width: 26px; height: 26px; border-radius: 50%; background: var(--c-pale);
+            color: var(--c-brown); font-size: 12px; font-weight: 900;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .gbx-empty .step span { font-size: 11px; font-weight: 600; color: var(--c-text-secondary); line-height: 1.4; }
+
+        .gb-grade-input { transition: border-color .12s, box-shadow .12s; }
+        .gb-grade-input:focus {
+            outline: none; border-color: var(--c-brown) !important;
+            box-shadow: 0 0 0 3px rgba(90,45,12,.12);
+        }
     </style>
 </head>
 <body class="min-h-screen flex theme-earthy" id="planner-body">
@@ -7472,39 +7587,43 @@ function renderGradebook() {
   const cls = data.classes[gbClassIdx] || null;
   let html = '<div class="fade-in">';
 
-  // ── Row 1: Class tabs + Charts toggle
-  html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-    <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;flex:1">`;
+  // ── Row 1: Class chips + Charts toggle
+  html += `<div class="gbx-header">
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1">`;
   for (let i = 0; i < data.classes.length; i++) {
     const active = i === gbClassIdx;
     const c = data.classes[i];
     const clr = c.color || 'var(--c-brown)';
-    html += `<button onclick="gbSelectClass(${i})"
-      style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;border:2px solid;cursor:pointer;transition:all .15s;
-      ${active ? `background:${clr};color:white;border-color:${clr};box-shadow:0 2px 6px ${clr}40` : `background:var(--c-surface);color:var(--c-text-secondary);border-color:var(--c-pale)`}">
-      ${active ? '' : `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${clr};margin-right:5px;vertical-align:middle;opacity:.8"></span>`}${escHtml(c.name || `Class ${i+1}`)}
+    html += `<button onclick="gbSelectClass(${i})" class="gbx-class-chip${active ? ' active' : ''}"
+      style="${active ? `background:${clr};box-shadow:0 3px 10px ${clr}45` : ''}">
+      ${active ? '' : `<span class="dot" style="background:${clr}"></span>`}${escHtml(c.name || `Class ${i+1}`)}
     </button>`;
   }
   if (data.classes.length < 10) {
-    html += `<button onclick="openGbAddClass()" style="padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;border:2px dashed var(--c-pale);color:var(--c-light);cursor:pointer;background:transparent">+ Class</button>`;
+    html += `<button onclick="openGbAddClass()" class="gbx-class-chip add">+ Class</button>`;
   }
   html += `</div>`;
   if (cls) {
     const _chartsOn = gbSubView === 'charts';
     const _clrC = cls.color || 'var(--c-brown)';
-    html += `<button onclick="toggleCharts()" style="padding:8px 20px;border-radius:20px;font-size:13px;font-weight:800;border:2px solid;cursor:pointer;transition:all .15s;flex-shrink:0;letter-spacing:.01em;
-      ${_chartsOn
-        ? `background:${_clrC};color:white;border-color:${_clrC};box-shadow:0 3px 10px ${_clrC}50`
-        : `background:white;color:var(--c-brown);border-color:var(--c-brown);box-shadow:0 1px 4px rgba(0,0,0,.08)`}">
-      📊 Charts
+    html += `<button onclick="toggleCharts()" class="gbx-btn${_chartsOn ? '' : ''}"
+      style="${_chartsOn ? `background:${_clrC};color:white;border-color:${_clrC};box-shadow:0 3px 10px ${_clrC}45` : 'font-weight:800'}">
+      📊 ${_chartsOn ? 'Back to Grades' : 'Charts'}
     </button>`;
   }
   html += `</div>`;
 
   if (!cls) {
-    html += `<div class="flex flex-col items-center justify-center py-24 gap-4">
-      <p class="text-sm" style="color:var(--c-text-muted)">No classes yet. Add up to 10.</p>
-      <button onclick="openGbAddClass()" class="px-5 py-2 rounded-xl text-sm font-bold" style="background:var(--c-brown);color:white">+ Add First Class</button>
+    html += `<div class="gbx-empty">
+      <div class="big">🎓</div>
+      <h4>Welcome to your Gradebook</h4>
+      <p>Set up a class to start tracking grades. You can add up to 10 classes, each with its own students, assignments, categories, and quarter grades.</p>
+      <div class="steps">
+        <div class="step"><div class="n">1</div><span>Create a class</span></div>
+        <div class="step"><div class="n">2</div><span>Add your students</span></div>
+        <div class="step"><div class="n">3</div><span>Add assignments &amp; grade</span></div>
+      </div>
+      <button onclick="openGbAddClass()" class="gbx-btn primary" style="margin-top:8px;padding:11px 24px;font-size:13px">+ Create Your First Class</button>
     </div>`;
     html += '</div>';
     document.getElementById('main-content').innerHTML = html;
@@ -7512,51 +7631,59 @@ function renderGradebook() {
     return;
   }
 
-  // ── Row 2: Actions toolbar (grouped) — hidden for charts + exam summary sub-views
+  // ── Row 2: Actions toolbar — hidden for charts + exam summary sub-views
   if (gbSubView === 'grades') {
     const _syncActive = getSyncUrl() || getGistToken();
-    html += `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px;padding:8px 12px;background:var(--c-surface);border:1.5px solid var(--c-pale);border-radius:14px">
+    const _q = cls.quarters?.[gbQuarter] || {assignments:[],grades:{}};
+    const _stuCount = (cls.students || []).length;
+    const _asgnCount = (_q.assignments || []).length;
+    const _avgPcts0 = (cls.students||[]).map(s=>calcStudentGrade(cls,gbQuarter,s.id).pct).filter(p=>p!==null&&p!==undefined);
+    const _avg0 = _avgPcts0.length ? Math.round(_avgPcts0.reduce((a,b)=>a+b,0)/_avgPcts0.length*10)/10 : null;
+    const _avgL0 = _avg0 !== null ? getLetterGrade(_avg0) : null;
 
-      <!-- Quarter pills -->
-      <div style="display:flex;gap:2px;padding:3px;border-radius:10px;background:var(--c-pale);flex-shrink:0">`;
+    html += `<div class="gbx-toolbar">
+      <div class="gbx-seg">`;
     for (const q of ['Q1','Q2','Q3','Q4']) {
-      const a = q === gbQuarter;
-      html += `<button onclick="gbSelectQuarter('${q}')" style="padding:4px 12px;border-radius:8px;font-size:11px;font-weight:800;border:none;cursor:pointer;
-        ${a ? 'background:var(--c-brown);color:white;box-shadow:0 1px 3px rgba(0,0,0,.18)' : 'background:transparent;color:var(--c-medium)'}">${q}</button>`;
+      html += `<button onclick="gbSelectQuarter('${q}')" class="${q === gbQuarter ? 'active' : ''}">${q}</button>`;
     }
     html += `</div>
 
-      <div style="width:1px;height:22px;background:var(--c-pale);flex-shrink:0"></div>
+      <div class="gbx-divider"></div>
 
-      <!-- Settings group -->
-      <button onclick="openGbSettings()" style="padding:5px 11px;border-radius:10px;font-size:11px;font-weight:700;border:1.5px solid var(--c-pale);background:var(--c-surface);color:var(--c-text-secondary);cursor:pointer" title="Class settings">⚙ Settings</button>
-      <button onclick="openTopStudentModal()" style="padding:5px 10px;border-radius:10px;font-size:11px;font-weight:700;border:1.5px solid var(--c-pale);background:var(--c-surface);color:var(--c-text-secondary);cursor:pointer" title="Top student">🏆</button>
-      <button onclick="openSyncSettings()" style="padding:5px 10px;border-radius:10px;font-size:11px;font-weight:700;border:1.5px solid var(--c-pale);background:var(--c-surface);color:${_syncActive?'#16a34a':'var(--c-text-secondary)'};cursor:pointer" title="${_syncActive?'Sync active':'Set up sync'}">☁${_syncActive?' On':''}</button>
-      <button onclick="openExportModal()" style="padding:5px 11px;border-radius:10px;font-size:11px;font-weight:700;border:1.5px solid var(--c-pale);background:var(--c-surface);color:var(--c-text-secondary);cursor:pointer" title="Download gradebook">⬇ Export</button>`;
-
-    if (cls.examEnabled?.midterm || cls.examEnabled?.final) {
-      html += `<div style="width:1px;height:22px;background:var(--c-pale);flex-shrink:0"></div>`;
-      if (cls.examEnabled?.midterm) {
-        html += `<button onclick="openExamModal('${cls.id}','midterm')" style="padding:5px 12px;border-radius:10px;font-size:11px;font-weight:700;border:2px solid #93c5fd;background:#eff6ff;color:#1d4ed8;cursor:pointer" onmouseover="this.style.background='#1d4ed8';this.style.color='white'" onmouseout="this.style.background='#eff6ff';this.style.color='#1d4ed8'">📝 Midterm</button>`;
-      }
-      if (cls.examEnabled?.final) {
-        html += `<button onclick="openExamModal('${cls.id}','final')" style="padding:5px 12px;border-radius:10px;font-size:11px;font-weight:700;border:2px solid #fca5a5;background:#fff1f2;color:#9f1239;cursor:pointer" onmouseover="this.style.background='#9f1239';this.style.color='white'" onmouseout="this.style.background='#fff1f2';this.style.color='#9f1239'">📝 Final</button>`;
-      }
-    }
+      <div class="gbx-stats">
+        <div class="gbx-stat"><span class="v">${_stuCount}</span><span class="k">Students</span></div>
+        <div class="gbx-stat"><span class="v">${_asgnCount}</span><span class="k">Assignments</span></div>
+        <div class="gbx-stat"><span class="v" style="color:${_avgL0 ? gradeColor(_avgL0) : 'var(--c-text-muted)'}">${_avg0 !== null ? _avgL0 + ' · ' + _avg0 + '%' : '—'}</span><span class="k">Class Avg</span></div>
+      </div>`;
 
     html += `<div style="flex:1"></div>`;
 
-    if (gbEditMode) {
-      html += `<button onclick="openAddStudent()" style="padding:5px 11px;border-radius:10px;font-size:11px;font-weight:700;border:1.5px solid var(--c-pale);background:var(--c-surface);color:var(--c-text-secondary);cursor:pointer">+ Student</button>`;
+    if (cls.examEnabled?.midterm) {
+      html += `<button onclick="openExamModal('${cls.id}','midterm')" class="gbx-btn exam-mid">📝 Midterm</button>`;
     }
-    html += `<button onclick="if(!gbEditMode){gbEditMode=true;}openAddAssignment();" style="display:flex;align-items:center;gap:5px;padding:5px 13px;border-radius:10px;font-size:11px;font-weight:700;background:var(--c-brown);color:white;border:none;cursor:pointer">
+    if (cls.examEnabled?.final) {
+      html += `<button onclick="openExamModal('${cls.id}','final')" class="gbx-btn exam-fin">📝 Final</button>`;
+    }
+
+    if (gbEditMode) {
+      html += `<button onclick="openAddStudent()" class="gbx-btn">+ Student</button>`;
+    }
+    html += `<button onclick="if(!gbEditMode){gbEditMode=true;}openAddAssignment();" class="gbx-btn primary">
       <svg style="width:11px;height:11px;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
       Assignment
     </button>`;
-    html += `<button onclick="toggleGbEditMode()" style="padding:5px 13px;border-radius:10px;font-size:11px;font-weight:700;border:2px solid;cursor:pointer;
-      ${gbEditMode ? 'background:#fef2f2;color:#dc2626;border-color:#fca5a5' : 'background:var(--c-surface);color:var(--c-medium);border-color:var(--c-pale)'}">
-      ${gbEditMode ? '✓ Done' : '✏ Edit'}
-    </button>`;
+    html += `<button onclick="toggleGbEditMode()" class="gbx-btn${gbEditMode ? ' danger-active' : ''}">${gbEditMode ? '✓ Done' : '✏ Edit'}</button>`;
+
+    html += `<div class="gbx-menu-wrap">
+      <button onclick="toggleGbxMenu(event)" class="gbx-btn" title="More options" style="padding:8px 12px;font-size:15px;line-height:1">⋯</button>
+      <div id="gbx-menu" class="gbx-menu">
+        <button onclick="closeGbxMenu();openGbSettings()"><span class="ico">⚙️</span> Class Settings</button>
+        <button onclick="closeGbxMenu();openTopStudentModal()"><span class="ico">🏆</span> Top Students</button>
+        <div class="sep"></div>
+        <button onclick="closeGbxMenu();openSyncSettings()"><span class="ico">☁️</span> Cloud Sync ${_syncActive ? '<span style="margin-left:auto;font-size:10px;font-weight:800;color:#16a34a">● ON</span>' : ''}</button>
+        <button onclick="closeGbxMenu();openExportModal()"><span class="ico">⬇️</span> Export Gradebook</button>
+      </div>
+    </div>`;
 
     html += `</div>`;
   }
@@ -7596,6 +7723,23 @@ function renderGradebook() {
   _mc.style.background = '';
 }
 
+// ── Overflow menu (⋯) ──────────────────────────────────
+function toggleGbxMenu(ev) {
+  ev.stopPropagation();
+  const m = document.getElementById('gbx-menu');
+  if (m) m.classList.toggle('open');
+}
+function closeGbxMenu() {
+  const m = document.getElementById('gbx-menu');
+  if (m) m.classList.remove('open');
+}
+document.addEventListener('click', (e) => {
+  const m = document.getElementById('gbx-menu');
+  if (m && m.classList.contains('open') && !e.target.closest('.gbx-menu-wrap')) {
+    m.classList.remove('open');
+  }
+});
+
 function gbRenderTable(cls, data) {
   const q = cls.quarters?.[gbQuarter] || {assignments:[],grades:{}};
   const assignments = q.assignments || [];
@@ -7604,8 +7748,30 @@ function gbRenderTable(cls, data) {
   const isWeighted = cls.type === 'weighted';
 
   if (students.length === 0 && assignments.length === 0) {
-    return `<div class="rounded-xl border-2 border-dashed flex flex-col items-center py-16 gap-3" style="border-color:var(--c-pale)">
-      <p class="text-sm" style="color:var(--c-text-muted)">${gbEditMode ? 'Use the buttons above to add students and assignments' : 'Click ✏ Edit to add students and assignments'}</p>
+    return `<div class="gbx-empty">
+      <div class="big">📋</div>
+      <h4>${escHtml(cls.name || 'This class')} is ready to go</h4>
+      <p>Add your students and first assignment to start grading ${gbQuarter}. Everything saves automatically as you type.</p>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button onclick="if(!gbEditMode){gbEditMode=true;}openAddStudent();" class="gbx-btn" style="padding:10px 20px">+ Add Students</button>
+        <button onclick="if(!gbEditMode){gbEditMode=true;}openAddAssignment();" class="gbx-btn primary" style="padding:10px 20px">+ Add Assignment</button>
+      </div>
+    </div>`;
+  }
+  if (students.length === 0) {
+    return `<div class="gbx-empty">
+      <div class="big">👩‍🎓</div>
+      <h4>No students yet</h4>
+      <p>Your assignments are set up — now add students to ${escHtml(cls.name || 'this class')} to start entering grades.</p>
+      <button onclick="if(!gbEditMode){gbEditMode=true;}openAddStudent();" class="gbx-btn primary" style="margin-top:4px;padding:10px 22px">+ Add Students</button>
+    </div>`;
+  }
+  if (assignments.length === 0 && !cls.examEnabled?.midterm && !cls.examEnabled?.final) {
+    return `<div class="gbx-empty">
+      <div class="big">📝</div>
+      <h4>No assignments in ${gbQuarter} yet</h4>
+      <p>Your roster of ${students.length} student${students.length===1?'':'s'} is ready. Add the first assignment for this quarter to start grading.</p>
+      <button onclick="if(!gbEditMode){gbEditMode=true;}openAddAssignment();" class="gbx-btn primary" style="margin-top:4px;padding:10px 22px">+ Add Assignment</button>
     </div>`;
   }
 
@@ -7630,7 +7796,7 @@ function gbRenderTable(cls, data) {
   const thBase = `padding:5px 9px;font-size:10.5px;font-weight:700;white-space:nowrap;border-bottom:1.5px solid var(--c-medium)`;
   const tdBase = `padding:3px 7px;font-size:11.5px;border-bottom:1px solid var(--c-pale)`;
 
-  let t = `<div style="overflow-x:auto;border:1px solid var(--c-pale);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+  let t = `<div class="gbx-table-wrap" style="overflow-x:auto">
     <table style="border-collapse:collapse;min-width:100%;font-size:11.5px;width:100%">
     <thead style="position:sticky;top:0;z-index:3">`;
 
@@ -7735,15 +7901,23 @@ function gbRenderTable(cls, data) {
     const grades = q.grades?.[stu.id] || {};
     const result = calcStudentGrade(cls, gbQuarter, stu.id);
 
+    const _initials = stu.name.trim().split(/\s+/).map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+    const _clsClr = cls.color || 'var(--c-brown)';
     t += `<tr style="background:${rowBg}" onmouseover="this.style.filter='brightness(0.96)'" onmouseout="this.style.filter=''">
       <td style="${tdBase};${stickyStyle};background:${rowBg};font-weight:600;border-right:2px solid var(--c-pale)">
-        <div style="display:flex;align-items:center;gap:6px">
-          ${escHtml(stu.name)}
-          ${gbEditMode?`<button onclick="gbDeleteStudent('${stu.id}')" style="color:#dc2626;font-size:10px;border:none;background:none;cursor:pointer;opacity:0.7">✕</button>`:''}
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:24px;height:24px;border-radius:50%;background:${_clsClr}18;color:${_clsClr};font-size:9px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;letter-spacing:.02em">${_initials}</span>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(stu.name)}</span>
+          ${gbEditMode?`<button onclick="gbDeleteStudent('${stu.id}')" style="color:#dc2626;font-size:10px;border:none;background:none;cursor:pointer;opacity:0.7;flex-shrink:0">✕</button>`:''}
         </div>
       </td>
       <td style="${tdBase};${stickyStyle2};background:${rowBg};text-align:center;border-right:2px solid var(--c-medium)">
-        ${result.pct !== null ? `<div style="font-weight:900;font-size:13px;color:${gradeColor(result.letter)}">${result.letter}</div><div style="font-size:10px;color:var(--c-text-muted)">${result.pct}%</div>` : '<span style="color:var(--c-text-muted)">—</span>'}
+        ${result.pct !== null
+          ? `<span style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;min-width:44px;padding:3px 8px;border-radius:9px;background:${gradeColor(result.letter)}14">
+              <span style="font-weight:900;font-size:13px;line-height:1;color:${gradeColor(result.letter)}">${result.letter}</span>
+              <span style="font-size:9px;font-weight:600;color:var(--c-text-muted)">${result.pct}%</span>
+            </span>`
+          : '<span style="color:var(--c-text-muted)">—</span>'}
       </td>`;
 
     let _ai = 0; // assignment column index (for keyboard nav)
