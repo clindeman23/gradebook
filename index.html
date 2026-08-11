@@ -1304,6 +1304,19 @@
         </div>
     </div>
 
+    <!-- Gradebook Modal Box (used by openGbModal/closeGbModal) -->
+    <div id="gb-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;padding:20px">
+        <div style="background:var(--c-surface);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.25);max-width:92vw;max-height:90vh;overflow-y:auto;position:relative">
+            <button onclick="closeGbModal()" style="position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;border:none;background:var(--c-cream);color:var(--c-light);font-size:14px;cursor:pointer;z-index:1;display:flex;align-items:center;justify-content:center">✕</button>
+            <div id="gb-modal-content"></div>
+        </div>
+    </div>
+    <style>
+        #gb-modal { display: none; }
+        #gb-modal.open { display: flex; animation: gbModalFadeIn .15s ease; }
+        @keyframes gbModalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+
     <!-- Javascript Logical State System -->
     <script>
         // Subject metadata — display names, icons, and groups for the standards picker
@@ -6562,6 +6575,7 @@ let gbSubView = 'grades'; // 'grades' or 'charts'
 let gbQuarter = localStorage.getItem('mca-last-quarter') || 'Q1';
 let gbEditMode = false;
 let mathGradebookMode = localStorage.getItem('mca-math-gb-on') === 'true';
+let _pdfExportFilename = null; // set before doPdfExport() to override the default download name
 
 function _gbKey() { return 'mca-gradebook'; }
 function getGbData() {
@@ -7682,6 +7696,8 @@ function renderGradebook() {
         <div class="sep"></div>
         <button onclick="closeGbxMenu();openSyncSettings()"><span class="ico">☁️</span> Cloud Sync ${_syncActive ? '<span style="margin-left:auto;font-size:10px;font-weight:800;color:#16a34a">● ON</span>' : ''}</button>
         <button onclick="closeGbxMenu();openExportModal()"><span class="ico">⬇️</span> Export Gradebook</button>
+        <div class="sep"></div>
+        <button onclick="closeGbxMenu();openNewYearModal()" style="color:#dc2626"><span class="ico">🎓</span> New School Year…</button>
       </div>
     </div>`;
 
@@ -9420,6 +9436,127 @@ function runExport(fmt) {
 }
 function _removeExportToast() { const t = document.getElementById('export-toast'); if (t) t.remove(); }
 
+// ── New School Year — archive to PDF, then wipe the gradebook ────────────
+function openNewYearModal() {
+  const data = getGbData();
+  const classes = data.classes || [];
+
+  if (classes.length === 0) {
+    openGbModal(`
+      <div style="padding:28px;min-width:min(92vw,420px);text-align:center">
+        <div style="font-size:34px;margin-bottom:10px">🎓</div>
+        <h3 style="font-size:17px;font-weight:800;color:var(--c-brown);margin:0 0 8px">Nothing to Archive Yet</h3>
+        <p style="font-size:12.5px;color:var(--c-text-muted);line-height:1.6;margin-bottom:18px">You don't have any classes set up, so there's nothing to save or clear. Add a class first to build up a gradebook.</p>
+        <button onclick="closeGbModal()" style="width:100%;padding:10px;border-radius:10px;background:var(--c-pale);color:var(--c-brown);font-size:13px;font-weight:700;border:1.5px solid var(--c-light);cursor:pointer">Close</button>
+      </div>`);
+    return;
+  }
+
+  let totalStudents = 0, totalAssignments = 0;
+  classes.forEach(cls => {
+    totalStudents += (cls.students || []).length;
+    for (const q of ['Q1','Q2','Q3','Q4']) totalAssignments += (cls.quarters?.[q]?.assignments || []).length;
+  });
+  const yearLabel = escHtml((state.profile && state.profile.year) || 'This Year');
+
+  openGbModal(`
+    <div style="padding:26px;min-width:min(92vw,480px);max-width:520px">
+      <div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#dc2626;margin-bottom:5px">🎓 New School Year</div>
+      <h3 style="font-size:19px;font-weight:800;color:var(--c-brown);margin:0 0 14px">Archive ${yearLabel} &amp; Start Fresh</h3>
+
+      <div style="display:flex;gap:10px;margin-bottom:16px">
+        <div style="flex:1;background:var(--c-cream);border-radius:12px;padding:10px 12px;text-align:center">
+          <div style="font-size:18px;font-weight:900;color:var(--c-brown)">${classes.length}</div>
+          <div style="font-size:9px;font-weight:700;color:var(--c-light);text-transform:uppercase;letter-spacing:.05em">Classes</div>
+        </div>
+        <div style="flex:1;background:var(--c-cream);border-radius:12px;padding:10px 12px;text-align:center">
+          <div style="font-size:18px;font-weight:900;color:var(--c-brown)">${totalStudents}</div>
+          <div style="font-size:9px;font-weight:700;color:var(--c-light);text-transform:uppercase;letter-spacing:.05em">Students</div>
+        </div>
+        <div style="flex:1;background:var(--c-cream);border-radius:12px;padding:10px 12px;text-align:center">
+          <div style="font-size:18px;font-weight:900;color:var(--c-brown)">${totalAssignments}</div>
+          <div style="font-size:9px;font-weight:700;color:var(--c-light);text-transform:uppercase;letter-spacing:.05em">Assignments</div>
+        </div>
+      </div>
+
+      <div style="background:#fefbf3;border:1.5px solid #fde68a;border-radius:12px;padding:12px 14px;margin-bottom:16px">
+        <p style="font-size:12px;color:#92400e;line-height:1.6;margin:0">
+          <strong>Here's exactly what will happen:</strong><br>
+          1. A PDF is downloaded with every class, all four quarters, and the Charts page — a full backup of ${yearLabel}.<br>
+          2. All classes, students, assignments, grades, and exam scores are permanently cleared so you can start the new year with a clean gradebook.<br>
+          3. Attendance history is <strong>not</strong> affected.
+        </p>
+      </div>
+
+      <label style="display:flex;align-items:flex-start;gap:9px;padding:10px 4px;cursor:pointer;margin-bottom:16px">
+        <input type="checkbox" id="ny-confirm-check" onchange="const b=document.getElementById('ny-confirm-btn');b.disabled=!this.checked;b.style.opacity=this.checked?'1':'.5';b.style.cursor=this.checked?'pointer':'not-allowed'" style="width:16px;height:16px;margin-top:1px;accent-color:#dc2626;cursor:pointer;flex-shrink:0">
+        <span style="font-size:12.5px;color:var(--c-text-primary);line-height:1.5">I understand this will download a backup PDF and then <strong>permanently erase</strong> my gradebook. This cannot be undone.</span>
+      </label>
+
+      <div style="display:flex;gap:8px">
+        <button onclick="closeGbModal()" style="flex:1;padding:11px;border-radius:10px;background:var(--c-pale);color:var(--c-brown);font-size:13px;font-weight:700;border:1.5px solid var(--c-light);cursor:pointer">Cancel</button>
+        <button id="ny-confirm-btn" onclick="confirmNewYear()" disabled style="flex:1.4;padding:11px;border-radius:10px;background:#dc2626;color:white;font-size:13px;font-weight:800;border:none;cursor:not-allowed;opacity:.5;transition:opacity .15s">📦 Archive &amp; Start Fresh</button>
+      </div>
+    </div>`);
+}
+
+function _ensurePdfLibs(cb) {
+  _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => {
+    _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js', cb);
+  });
+}
+
+function confirmNewYear() {
+  const checkEl = document.getElementById('ny-confirm-check');
+  if (!checkEl || !checkEl.checked) return; // guard against programmatic/early calls
+
+  const data = getGbData();
+  const classes = data.classes || [];
+  if (classes.length === 0) { closeGbModal(); return; }
+
+  const classIds = classes.map(c => c.id);
+  const yearSlug = ((state.profile && state.profile.year) || 'Year').replace(/[^\w-]/g, '');
+  const dateSlug = new Date().toISOString().slice(0,10);
+
+  closeGbModal();
+
+  const toast = document.createElement('div');
+  toast.id = 'export-toast';
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:white;padding:12px 22px;border-radius:12px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3)';
+  toast.textContent = '📦 Building your archive PDF…';
+  document.body.appendChild(toast);
+
+  _pendingExportClasses = classes;
+  _pdfExportFilename = `Gradebook-Archive-${yearSlug}-${dateSlug}.pdf`;
+
+  _ensurePdfLibs(() => {
+    doPdfExport();
+    _removeExportToast();
+    _wipeGradebookForNewYear(classIds);
+  });
+}
+
+function _wipeGradebookForNewYear(classIds) {
+  // Clear exam configs/scores tied to the classes being wiped
+  (classIds || []).forEach(id => {
+    localStorage.removeItem('mca-me-config-' + id);
+    localStorage.removeItem('mca-me-scores-' + id);
+    localStorage.removeItem('mca-fe-config-' + id);
+    localStorage.removeItem('mca-fe-scores-' + id);
+  });
+
+  saveGbData({ classes: [] });
+
+  gbClassIdx = 0;
+  gbQuarter = 'Q1';
+  gbEditMode = false;
+  gbSubView = 'grades';
+  localStorage.setItem('mca-last-quarter', 'Q1');
+
+  renderGradebook();
+  showToast('🎉 Archived! Your gradebook is ready for a new year.');
+}
+
 // ── Shared data builders ─────────────────────────────────
 function _exportQtrRows(cls, quarter) {
   const q = cls.quarters?.[quarter] || { assignments:[], grades:{} };
@@ -9714,7 +9851,8 @@ function doPdfExport() {
   }
 
   const date = new Date().toISOString().slice(0,10);
-  doc.save('Gradebook-'+date+'.pdf');
+  doc.save(_pdfExportFilename || ('Gradebook-'+date+'.pdf'));
+  _pdfExportFilename = null;
 }
 
 // ── Attendance PDF ───────────────────────────────────────
