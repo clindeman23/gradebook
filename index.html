@@ -1224,8 +1224,13 @@
                         <button onclick="exportData()" class="px-5 py-2.5 bg-[#82BDC3] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">💾 Export Snapshot JSON</button>
                         <button onclick="document.getElementById('importFile').click()" class="px-5 py-2.5 bg-white border text-xs font-bold rounded-lg hover:bg-gray-50 transition">📂 Import Snapshot JSON</button>
                         <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+                        <button onclick="promptClearGradebookOnly()" class="px-5 py-2.5 bg-orange-400 text-white text-xs font-bold rounded-lg hover:bg-orange-500 transition">🗑️ Clear Gradebook Only</button>
                         <button onclick="promptResetDatabase()" class="px-5 py-2.5 bg-red-400 text-white text-xs font-bold rounded-lg hover:bg-red-500 transition">⚠️ Clear & Reset Database</button>
                     </div>
+                    <p class="text-[11px] text-gray-400 mt-3 leading-relaxed">
+                        <strong>Clear Gradebook Only</strong> erases just your classes, students, grades, and exam scores — lessons and rosters stay put.
+                        <strong>Clear & Reset Database</strong> wipes lessons/rosters/schedule but leaves the Gradebook untouched.
+                    </p>
                 </div>
 
                 <!-- MCA Canvas & GitHub Gist Sync Card -->
@@ -4732,19 +4737,23 @@
         }
 
         function promptResetDatabase() {
-            customConfirm('WARNING! This permanently erases EVERYTHING — lessons, rosters, schedules, gradebook classes and grades, attendance history, and exam scores. Proceed?', () => {
-                // The gradebook, attendance, exams, and calendar caches live under their own
-                // "mca-*" keys (separate from geo_teacher_planner_db), so they must be swept
-                // up explicitly or a "reset" leaves classes/grades behind.
-                const keysToRemove = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key === 'geo_teacher_planner_db' || key === 'app_unlocked_local' || key.startsWith('mca-')) {
-                        keysToRemove.push(key);
-                    }
-                }
-                keysToRemove.forEach(k => localStorage.removeItem(k));
+            customConfirm('WARNING! Wiping your database resets all custom templates, student profiles, and lessons. Your Gradebook is separate and NOT affected — use "Clear Gradebook Only" below for that. Proceed?', () => {
+                localStorage.removeItem('geo_teacher_planner_db');
                 window.location.reload();
+            });
+        }
+
+        function promptClearGradebookOnly() {
+            const data = getGbData();
+            const classes = data.classes || [];
+            if (classes.length === 0) {
+                showToast('Your gradebook is already empty.');
+                return;
+            }
+            const classCount = classes.length;
+            customConfirm(`WARNING! This permanently erases all ${classCount} class${classCount === 1 ? '' : 'es'} in your Gradebook — every student, assignment, grade, and exam score. Your lessons, rosters, schedule, and attendance history are NOT affected. Tip: use "New School Year" from the Gradebook's ⋯ menu instead if you want a PDF backup first. Proceed?`, () => {
+                const classIds = classes.map(c => c.id);
+                _wipeGradebookForNewYear(classIds, '🗑️ Gradebook cleared — ready for new classes.');
             });
         }
 
@@ -9551,7 +9560,7 @@ function confirmNewYear() {
   });
 }
 
-function _wipeGradebookForNewYear(classIds) {
+function _wipeGradebookForNewYear(classIds, toastMsg) {
   // Clear exam configs/scores tied to the classes being wiped
   (classIds || []).forEach(id => {
     localStorage.removeItem('mca-me-config-' + id);
@@ -9568,8 +9577,8 @@ function _wipeGradebookForNewYear(classIds) {
   gbSubView = 'grades';
   localStorage.setItem('mca-last-quarter', 'Q1');
 
-  renderGradebook();
-  showToast('🎉 Archived! Your gradebook is ready for a new year.');
+  if (gradebookMode) renderGradebook();
+  showToast(toastMsg || '🎉 Archived! Your gradebook is ready for a new year.');
 }
 
 // ── Shared data builders ─────────────────────────────────
