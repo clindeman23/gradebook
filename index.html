@@ -2620,6 +2620,11 @@
                 targetBtn.classList.add('active');
             }
 
+            const welcomeBanner = document.getElementById('welcome-banner');
+            if (welcomeBanner) {
+                welcomeBanner.classList.toggle('hidden', tabId !== 'dashboard');
+            }
+
             if (tabId === 'dashboard') refreshDashboard();
             if (tabId === 'schedule') renderBlockSchedule();
             if (tabId === 'unit') renderUnits();
