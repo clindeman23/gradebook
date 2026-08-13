@@ -530,34 +530,17 @@
 
         <!-- Master Welcome Banner -->
         <header id="welcome-banner" class="mb-10 p-8 rounded-3xl shadow-sm relative overflow-hidden transition-all duration-300" style="background-color: var(--banner-bg);">
-            <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <h2 id="banner-greeting" class="text-3xl font-bold mb-2 text-[#4A4540]">Hi, Educator! 👋</h2>
-                    <div class="flex flex-wrap items-center gap-3 text-sm font-semibold opacity-90 text-[#4A4540]">
-                        <span id="current-date" class="bg-white/35 px-4 py-1.5 rounded-full">Date</span>
-                        <span id="days-counter" class="bg-white/35 px-4 py-1.5 rounded-full">School Day Tracker</span>
-                        <button onclick="openProfileModal()" class="bg-white/50 text-xs font-bold text-[#4A4540] px-3.5 py-1.5 rounded-full shadow-sm hover:opacity-95">Edit Profile ⚙️</button>
-                    </div>
-                    <p id="banner-quote" class="mt-6 italic max-w-2xl text-sm leading-relaxed text-[#4A4540]/90">
-                        "Every day is a fresh opportunity to spark curiosity, build confidence, and inspire a lifelong love of learning." 
-                        <span id="banner-quote-author" class="font-semibold block mt-1.5">— Daily Affirmation</span>
-                    </p>
+            <div class="relative z-10">
+                <h2 id="banner-greeting" class="text-3xl font-bold mb-2 text-[#4A4540]">Hi, Educator! 👋</h2>
+                <div class="flex flex-wrap items-center gap-3 text-sm font-semibold opacity-90 text-[#4A4540]">
+                    <span id="current-date" class="bg-white/35 px-4 py-1.5 rounded-full">Date</span>
+                    <span id="days-counter" class="bg-white/35 px-4 py-1.5 rounded-full">School Day Tracker</span>
+                    <button onclick="openProfileModal()" class="bg-white/50 text-xs font-bold text-[#4A4540] px-3.5 py-1.5 rounded-full shadow-sm hover:opacity-95">Edit Profile ⚙️</button>
                 </div>
-                
-                <!-- Cloud Sync Status Bar -->
-                <div class="bg-white/95 p-4 rounded-2xl border border-white/20 shadow-sm max-w-xs text-[#4A4540] self-start md:self-auto flex flex-col gap-2 shrink-0">
-                    <div class="flex items-center justify-between gap-3 text-xs font-bold">
-                        <span>☁️ CLOUD SYNC STATE</span>
-                        <span id="sync-badge" class="px-2 py-0.5 rounded bg-gray-200 text-gray-600 text-[10px]">LOCAL</span>
-                    </div>
-                    <div class="text-[11px] text-gray-500 leading-normal">
-                        Sync and save your workspace database securely between your machines.
-                    </div>
-                    <div class="flex gap-1.5">
-                        <button onclick="triggerSyncPush()" class="flex-1 py-1 px-2.5 bg-[#82BDC3] text-white text-[10px] font-bold rounded-lg hover:opacity-90">Push</button>
-                        <button onclick="triggerSyncPull()" class="flex-1 py-1 px-2.5 bg-gray-100 text-[#4A4540] text-[10px] font-bold rounded-lg border hover:bg-gray-200">Pull</button>
-                    </div>
-                </div>
+                <p id="banner-quote" class="mt-6 italic max-w-2xl text-sm leading-relaxed text-[#4A4540]/90">
+                    "Every day is a fresh opportunity to spark curiosity, build confidence, and inspire a lifelong love of learning."
+                    <span id="banner-quote-author" class="font-semibold block mt-1.5">— Daily Affirmation</span>
+                </p>
             </div>
             <!-- Aesthetic Background Accents -->
             <div class="absolute -top-10 -right-10 w-44 h-44 bg-white/10 rounded-full"></div>
