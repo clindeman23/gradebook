@@ -11,7 +11,7 @@
     <!-- CryptoJS CDN for secure client-side encryption and password hashing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Nunito:wght@300;400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Nunito:wght@300;400;500;600;700;800;900&family=Baloo+2:wght@500;600;700;800&display=swap');
         
         :root {
             /* Default: Earthy Theme */
@@ -315,15 +315,41 @@
             transition: transform 0.3s ease, opacity 0.3s ease;
         }
 
-        .student-avatar {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            display: flex;
+        .student-card-v2 {
+            border-top-width: 5px;
+            border-top-style: solid;
+            transition: transform .15s, box-shadow .15s;
+        }
+        .student-card-v2:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,.08);
+        }
+        .student-name-fun {
+            font-family: 'Baloo 2', cursive;
+            font-weight: 700;
+            font-size: 1.15rem;
+            letter-spacing: 0.01em;
+            line-height: 1.25;
+        }
+        .student-meta-badge {
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            margin: 0 auto 8px;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 10.5px;
+            font-weight: 700;
+            font-family: 'Nunito', sans-serif;
+            white-space: nowrap;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .student-meta-badge.empty {
+            background: #f3f4f6;
+            color: #b3b0aa;
+            font-style: italic;
+            font-weight: 600;
         }
 
         .spinner {
@@ -4333,6 +4359,39 @@
             });
         }
 
+        // Deterministic color for a counselor/homeroom string so the same value
+        // always renders with the same badge color across reloads and sessions.
+        function _mcaStringHash(str) {
+            let h = 0;
+            for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+            return h;
+        }
+        const COUNSELOR_PALETTE = [
+            { bg:'#FDE2E4', text:'#9D174D' },
+            { bg:'#DBEAFE', text:'#1E40AF' },
+            { bg:'#FEF3C7', text:'#92400E' },
+            { bg:'#DCFCE7', text:'#166534' },
+            { bg:'#EDE9FE', text:'#5B21B6' },
+            { bg:'#FFE4E6', text:'#9F1239' },
+            { bg:'#CCFBF1', text:'#0F766E' },
+            { bg:'#FFEDD5', text:'#9A3412' },
+        ];
+        const HOMEROOM_PALETTE = [
+            { bg:'#E0E7FF', text:'#3730A3' },
+            { bg:'#FCE7F3', text:'#9D174D' },
+            { bg:'#D1FAE5', text:'#065F46' },
+            { bg:'#FEF9C3', text:'#854D0E' },
+            { bg:'#F3E8FF', text:'#6B21A8' },
+            { bg:'#FFE4E6', text:'#BE123C' },
+            { bg:'#CFFAFE', text:'#155E75' },
+            { bg:'#FED7AA', text:'#9A3412' },
+        ];
+        function _mcaPaletteFor(value, palette) {
+            if (!value) return null;
+            const idx = _mcaStringHash(value.trim().toLowerCase()) % palette.length;
+            return palette[idx];
+        }
+
         function renderStudents(sectionId) {
             activeStudentSectionId = sectionId;
             const container = document.getElementById('studentGrid');
@@ -4346,15 +4405,27 @@
             }
 
             matched.forEach(s => {
+                const counselorColor = _mcaPaletteFor(s.counselor, COUNSELOR_PALETTE);
+                const homeroomColor  = _mcaPaletteFor(s.homeroom, HOMEROOM_PALETTE);
+                const accentColor = counselorColor ? counselorColor.text : '#D8D3C8';
+
                 const card = document.createElement('div');
-                card.className = 'student-card bg-white p-5 rounded-2xl shadow-sm text-center border relative';
+                card.className = 'student-card student-card-v2 bg-white p-5 rounded-2xl shadow-sm text-center border relative';
+                card.style.borderTopColor = accentColor;
                 card.innerHTML = `
                     <button onclick="deleteStudent('${s.id}')" class="absolute top-3 right-3 text-gray-300 hover:text-red-500 text-xs">✕</button>
-                    <div class="student-avatar" style="background-color: ${s.avatarBg || '#A1CDCE'}">${s.emoji}</div>
-                    <h4 class="font-bold text-sm text-[#4A4540]">${s.name}</h4>
-                    <p class="text-xs text-gray-500 mt-2">${s.notes || 'No IEP / accommodation notes loaded.'}</p>
+                    <h4 class="student-name-fun text-[#4A4540] mt-1">${escHtml(s.name)}</h4>
+                    <div class="flex flex-wrap gap-1.5 justify-center mt-2.5">
+                        ${counselorColor
+                            ? `<span class="student-meta-badge" style="background:${counselorColor.bg};color:${counselorColor.text}">Counselor: ${escHtml(s.counselor)}</span>`
+                            : `<span class="student-meta-badge empty">No counselor set</span>`}
+                        ${homeroomColor
+                            ? `<span class="student-meta-badge" style="background:${homeroomColor.bg};color:${homeroomColor.text}">Homeroom ${escHtml(s.homeroom)}</span>`
+                            : `<span class="student-meta-badge empty">No homeroom set</span>`}
+                    </div>
+                    <p class="text-xs text-gray-500 mt-3">${s.notes ? escHtml(s.notes) : 'No IEP / accommodation notes loaded.'}</p>
                     <div class="mt-4 flex gap-1 justify-center">
-                        <button onclick="openStudentModal('${s.id}')" class="px-3 py-1 bg-gray-50 border hover:bg-gray-100 text-[10px] font-bold rounded-lg">Edit Profiles</button>
+                        <button onclick="openStudentModal('${s.id}')" class="px-3 py-1 bg-gray-50 border hover:bg-gray-100 text-[10px] font-bold rounded-lg">Edit Profile</button>
                     </div>
                 `;
                 container.appendChild(card);
@@ -4363,12 +4434,15 @@
 
         function openStudentModal(id = null) {
             const current = state.students.find(s => s.id === id) || {};
-            const emojis = ['🐸','🦋','🌸','🌟','🐝','🦄','🐙','🌈','🍀','🦊','🦁','🌻'];
-            const avatarBgs = ['#FFB3C6','#FFCBA4','#FFE99A','#B5EAD7','#AED6F1','#C3B1E1'];
 
             const classOptions = state.sections.map(sec => `
                 <option value="${sec.id}" ${current.period === sec.id ? 'selected' : ''}>${sec.name}</option>
             `).join('');
+
+            // Autocomplete suggestions from counselor/homeroom values already used elsewhere,
+            // so entries stay consistent (e.g. always "Ms. Rivera", never a mix of variants)
+            const counselorList = [...new Set(state.students.map(s => s.counselor).filter(Boolean))];
+            const homeroomList  = [...new Set(state.students.map(s => s.homeroom).filter(Boolean))];
 
             showModal(`
                 <h3 class="text-xl font-bold mb-4">${current.id ? '✏️ Edit Student' : '👩‍🎓 Add Learner Profile'}</h3>
@@ -4376,7 +4450,7 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Student Name</label>
-                        <input id="sName" type="text" value="${current.name || ''}" placeholder="e.g. Smith, John" class="w-full border p-2.5 rounded-lg text-xs outline-none">
+                        <input id="sName" type="text" value="${escHtml(current.name || '')}" placeholder="e.g. Smith, John" class="w-full border p-2.5 rounded-lg text-xs outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Class Section Mapping</label>
@@ -4384,23 +4458,21 @@
                             ${classOptions}
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Interventions / Accommodations Notes</label>
-                        <textarea id="sNotes" placeholder="Describe learner focus, seating modifications, or extended pacing needs..." class="w-full border p-2.5 rounded-lg text-xs outline-none h-20">${current.notes || ''}</textarea>
-                    </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Select Avatar Emoji</label>
-                            <select id="sEmoji" class="w-full border p-2.5 rounded-lg text-xs outline-none">
-                                ${emojis.map(e => `<option value="${e}" ${current.emoji === e ? 'selected' : ''}>${e}</option>`).join('')}
-                            </select>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Counselor</label>
+                            <input id="sCounselor" list="counselor-datalist" type="text" value="${escHtml(current.counselor || '')}" placeholder="e.g. Ms. Rivera" class="w-full border p-2.5 rounded-lg text-xs outline-none">
+                            <datalist id="counselor-datalist">${counselorList.map(c => `<option value="${escHtml(c)}">`).join('')}</datalist>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Roster Background Accent</label>
-                            <select id="sBg" class="w-full border p-2.5 rounded-lg text-xs outline-none">
-                                ${avatarBgs.map(c => `<option value="${c}" ${current.avatarBg === c ? 'selected' : ''} style="background:${c}">${c}</option>`).join('')}
-                            </select>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Homeroom</label>
+                            <input id="sHomeroom" list="homeroom-datalist" type="text" value="${escHtml(current.homeroom || '')}" placeholder="e.g. 12B" class="w-full border p-2.5 rounded-lg text-xs outline-none">
+                            <datalist id="homeroom-datalist">${homeroomList.map(h => `<option value="${escHtml(h)}">`).join('')}</datalist>
                         </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Interventions / Accommodations Notes</label>
+                        <textarea id="sNotes" placeholder="Describe learner focus, seating modifications, or extended pacing needs..." class="w-full border p-2.5 rounded-lg text-xs outline-none h-20">${escHtml(current.notes || '')}</textarea>
                     </div>
                     <button onclick="saveStudent('${current.id || ''}')" class="w-full py-2.5 bg-[#9F5F67] text-white text-xs font-bold rounded-lg shadow-sm hover:opacity-90">Save Student Profile</button>
                 </div>
@@ -4415,9 +4487,9 @@
                 id: id || 'student_' + Date.now(),
                 name,
                 period: document.getElementById('sPeriod').value,
+                counselor: document.getElementById('sCounselor').value.trim(),
+                homeroom: document.getElementById('sHomeroom').value.trim(),
                 notes: document.getElementById('sNotes').value,
-                emoji: document.getElementById('sEmoji').value,
-                avatarBg: document.getElementById('sBg').value
             };
 
             const idx = state.students.findIndex(s => s.id === id);
@@ -11082,10 +11154,6 @@ function renderAssignments()     {}   // was: writes to #main-content (home view
 function renderTodoList()        {}   // was: renders todo sidebar
 
 // ─── Auto-sync MCA gradebook students into the Friend's Students tab ────────
-// Emojis and colors assigned deterministically from student name hash
-const _MCA_EMOJIS = ['🐾','⭐','🌟','📚','🎯','🎨','🌻','🦋','🌈','🎭','🎸','🔭','🧩','🎪','🏆'];
-const _MCA_COLORS = ['#FFB3C6','#BFEFFF','#C3FFC3','#FFE4B5','#E6CCFF','#FFD1A9','#CAFFD8','#D5E8FF','#FFF3B0','#D4F0F0'];
-
 function mca_syncStudents() {
     const gbData  = getGbData();
     const classes = gbData.classes || [];
@@ -11095,25 +11163,24 @@ function mca_syncStudents() {
     const newSections = classes.map(cls => ({ id: cls.id, name: cls.name }));
     state.sections = newSections;
 
-    // Build a lookup of existing student profiles (preserve notes, emoji, bg)
+    // Build a lookup of existing student profiles (preserve notes, counselor, homeroom)
     const existingById = {};
     (state.students || []).forEach(s => { existingById[s.id] = s; });
 
     const synced = [];
     classes.forEach(cls => {
         (cls.students || []).forEach(stu => {
-            const hash = stu.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
             if (existingById[stu.id]) {
                 // Preserve existing profile metadata, just update name + period
                 synced.push({ ...existingById[stu.id], name: stu.name, period: cls.id });
             } else {
                 synced.push({
-                    id:       stu.id,
-                    name:     stu.name,
-                    period:   cls.id,
-                    emoji:    _MCA_EMOJIS[hash % _MCA_EMOJIS.length],
-                    notes:    '',
-                    avatarBg: _MCA_COLORS[hash % _MCA_COLORS.length]
+                    id:        stu.id,
+                    name:      stu.name,
+                    period:    cls.id,
+                    counselor: '',
+                    homeroom:  '',
+                    notes:     '',
                 });
             }
         });
