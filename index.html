@@ -131,6 +131,45 @@
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
         }
 
+        .dashboard-pinned-card {
+            position: relative;
+            border: 2px solid #5A2D0C !important;
+            box-shadow: 0 10px 28px rgba(90,45,12,.14) !important;
+            padding-top: 2.25rem !important;
+        }
+        .dashboard-pin-badge {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #5A2D0C;
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            padding: 6px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border-radius: 1.25rem 1.25rem 0 0;
+            z-index: 5;
+        }
+        .dashboard-pin-badge button {
+            background: rgba(255,255,255,.2);
+            border: none;
+            color: white;
+            font-size: 9px;
+            font-weight: 800;
+            padding: 2px 10px;
+            border-radius: 999px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+        }
+        .dashboard-pin-badge button:hover { background: rgba(255,255,255,.35); }
+
         .chart-container {
             position: relative;
             width: 100%;
@@ -559,34 +598,11 @@
                 </button>
             </div>
 
-            <!-- 4 quick-stat mini cards (fixed) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <div class="card p-6 accent-teal">
-                    <span class="text-xs font-bold text-[#9A958C] tracking-wider uppercase">ACTIVE CURRICULUM</span>
-                    <p class="text-xl font-bold mt-2 text-[#82BDC3]" id="snap-active-unit">—</p>
-                    <p class="text-xs text-gray-400 mt-1">Unit Progress • Active</p>
-                </div>
-                <div class="card p-6 accent-mauve">
-                    <span class="text-xs font-bold text-[#9A958C] tracking-wider uppercase">ROSTER SECTIONS</span>
-                    <p class="text-xl font-bold mt-2 text-[#9F5F67]" id="snap-student-count">0 Students Total</p>
-                    <p class="text-xs text-gray-400 mt-1">Students enrolled in database</p>
-                </div>
-                <div class="card p-6 accent-aqua">
-                    <span class="text-xs font-bold text-[#9A958C] tracking-wider uppercase">TASK PROGRESS</span>
-                    <p class="text-xl font-bold mt-2 text-[#A1CDCE]" id="dashboard-task-percent">0%</p>
-                    <div class="w-full bg-gray-100 h-2 rounded-full mt-3 overflow-hidden">
-                        <div id="dashboard-task-bar" class="bg-[#A1CDCE] h-full transition-all duration-500" style="width: 0%"></div>
-                    </div>
-                </div>
-                <div class="card p-6 accent-mustard">
-                    <span class="text-xs font-bold text-[#9A958C] tracking-wider uppercase">CLASS SECTIONS</span>
-                    <p class="text-xl font-bold mt-2 text-[#E7A445]" id="snap-period-count">0 Periods</p>
-                    <p class="text-xs text-gray-400 mt-1">Classroom periods defined</p>
-                </div>
-            </div>
+            <!-- Pinned card slot — populated via JS when a card is pinned to the top -->
+            <div id="dashboard-pinned-slot" class="mb-8"></div>
 
             <!-- Reorderable cards — single flat grid, order controlled by JS -->
-            <div id="dashboard-card-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+            <div id="dashboard-card-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10 grid-flow-dense">
 
                 <!-- CARD: Today's Active Schedule -->
                 <div id="dash-card-schedule" data-card-id="schedule" class="card p-6 accent-coral lg:col-span-2">
@@ -605,7 +621,7 @@
                         <h4 class="text-lg font-bold">Task Management</h4>
                         <button onclick="resetAllTasks()" class="text-xs text-red-400 hover:text-red-600 font-bold underline">Reset</button>
                     </div>
-                    <div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar max-h-[500px]">
+                    <div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar max-h-[760px]">
                         <div>
                             <div class="flex justify-between items-center mb-3">
                                 <h5 class="text-xs font-bold text-[#E67F76] uppercase tracking-wider">🍎 Teaching Queue</h5>
@@ -697,10 +713,10 @@
                 </div>
 
                 <!-- CARD: Quick Pad -->
-                <div id="dash-card-quickpad" data-card-id="quickpad" class="card p-6 accent-mustard flex flex-col justify-between">
+                <div id="dash-card-quickpad" data-card-id="quickpad" class="card p-6 accent-mustard flex flex-col justify-between lg:col-span-2">
                     <div>
                         <h4 class="text-xs font-bold mb-4 uppercase text-gray-400 tracking-wider">📝 Quick Pad</h4>
-                        <textarea id="quickNoteText" class="w-full border p-3 rounded-xl font-medium text-xs text-[#4A4540] resize-none h-24 focus:ring-1 focus:ring-coral-400 outline-none" placeholder="Jot down a quick thought..."></textarea>
+                        <textarea id="quickNoteText" class="w-full border p-3 rounded-xl font-medium text-xs text-[#4A4540] resize-none h-56 focus:ring-1 focus:ring-coral-400 outline-none" placeholder="Jot down a quick thought..."></textarea>
                     </div>
                     <button onclick="saveQuickNote()" class="w-full py-2 bg-[#E7A445] text-white text-xs font-bold rounded-lg hover:opacity-90 transition mt-2">Save to Reflections</button>
                 </div>
@@ -2511,6 +2527,7 @@
             calendarEvents: [],
             appPassword: '',
             dashboardOrder: null,
+            dashboardPinned: null,
             navOrder: null,
             navHidden: []
         };
@@ -2843,6 +2860,7 @@
             if (!state.customStandards) state.customStandards = [];
             if (state.navHidden === undefined) state.navHidden = [];
             if (state.navOrder === undefined) state.navOrder = null;
+            if (state.dashboardPinned === undefined) state.dashboardPinned = null;
 
             // Safe translation of old static keys to new dynamic references
             state.students.forEach(s => {
@@ -2948,10 +2966,6 @@
                 <span id="banner-quote-author" class="font-semibold block mt-1.5">— ${state.profile.quoteAuthor}</span>
             `;
             document.getElementById('sidebar-aesthetic-quote').innerText = `"Every day is a fresh opportunity to spark curiosity and inspire discovery." 🌟`;
-            
-            document.getElementById('snap-active-unit').innerText = state.units[0]?.title || 'None Set';
-            document.getElementById('snap-student-count').innerText = `${state.students.length} Total Students`;
-            document.getElementById('snap-period-count').innerText = `${state.sections.length} Active Sections`;
 
             // Subject insights
             document.getElementById('dash-ins-subject').innerText = state.profile.subjectName;
@@ -2966,7 +2980,6 @@
             updateSchoolDayCounter();
             renderDashTodo();
             renderDashTodaySchedule();
-            renderOverallTaskProgress();
             syncCharts();
             updateCloudSyncWidgets();
         }
@@ -3031,17 +3044,6 @@
             });
         }
 
-        function renderOverallTaskProgress() {
-            const total = state.tasks.teacher.length + state.tasks.admin.length + state.tasks.home.length;
-            const completed = 
-                state.tasks.teacher.filter(t => t.completed).length +
-                state.tasks.admin.filter(t => t.completed).length +
-                state.tasks.home.filter(t => t.completed).length;
-
-            const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
-            document.getElementById('dashboard-task-percent').innerText = `${rate}%`;
-            document.getElementById('dashboard-task-bar').style.width = `${rate}%`;
-        }
 
         /* --- TO-DO CONTROLLERS --- */
         function renderDashTodo() {
@@ -3070,7 +3072,6 @@
                 document.getElementById(`${cat}-perc`).innerText = `${perc}%`;
                 document.getElementById(`bar-${cat}`).style.width = `${perc}%`;
             });
-            renderOverallTaskProgress();
         }
 
         function toggleTodoState(cat, id) {
@@ -11390,22 +11391,49 @@ function mca_init() {
 
 // ─── Dashboard card reorder ──────────────────────────────────────────────────
 const DASH_CARDS = [
-    { id: 'schedule',    label: '📅 Today\'s Active Schedule',     colSpan: 2 },
-    { id: 'tasks',       label: '✅ Task Management',              colSpan: 1 },
+    { id: 'schedule',    label: '📅 Today\'s Active Schedule',     colSpan: 2, pinnable: true },
+    { id: 'tasks',       label: '✅ Task Management',              colSpan: 1, pinnable: true },
     { id: 'analytics',   label: '📊 Class Performance Analytics',  colSpan: 2 },
     { id: 'pacing',      label: '📈 Dynamic Pacing Metrics',       colSpan: 1 },
     { id: 'remediation', label: '🔄 Remediation Blueprint',        colSpan: 1 },
-    { id: 'quickpad',    label: '📝 Quick Pad',                    colSpan: 1 },
+    { id: 'quickpad',    label: '📝 Quick Pad',                    colSpan: 2, pinnable: true },
 ];
 
 function applyDashboardOrder() {
     const grid = document.getElementById('dashboard-card-grid');
+    const pinnedSlot = document.getElementById('dashboard-pinned-slot');
     if (!grid) return;
     const order = (state.dashboardOrder && state.dashboardOrder.length === DASH_CARDS.length)
         ? state.dashboardOrder
         : DASH_CARDS.map(c => c.id);
     const cardMap = Object.fromEntries(DASH_CARDS.map(c => [c.id, c]));
+    const pinnedId = (state.dashboardPinned && cardMap[state.dashboardPinned]?.pinnable) ? state.dashboardPinned : null;
+
+    // Clear any pin styling/badge left over from a previous pinned card. This targets each
+    // card directly by id (not via the slot), so it's safe no matter which parent it's
+    // currently sitting in — never use pinnedSlot.innerHTML='' here, since a real card
+    // element (not a clone) may currently live inside the slot and that would delete it.
+    DASH_CARDS.forEach(c => {
+        const el = document.getElementById('dash-card-' + c.id);
+        if (!el) return;
+        el.classList.remove('dashboard-pinned-card');
+        el.querySelector(':scope > .dashboard-pin-badge')?.remove();
+    });
+
+    if (pinnedId && pinnedSlot) {
+        const el = document.getElementById('dash-card-' + pinnedId);
+        if (el) {
+            el.classList.add('dashboard-pinned-card', 'lg:col-span-2');
+            const badge = document.createElement('div');
+            badge.className = 'dashboard-pin-badge';
+            badge.innerHTML = `📌 Pinned to top <button onclick="dashTogglePin('${pinnedId}')">Unpin</button>`;
+            el.insertBefore(badge, el.firstChild);
+            pinnedSlot.appendChild(el); // moves it here from wherever it currently is
+        }
+    }
+
     order.forEach(cardId => {
+        if (cardId === pinnedId) return; // already placed in the pinned slot above
         const el = document.getElementById('dash-card-' + cardId);
         if (!el) return;
         const info = cardMap[cardId];
@@ -11413,7 +11441,8 @@ function applyDashboardOrder() {
             if (info.colSpan === 2) el.classList.add('lg:col-span-2');
             else el.classList.remove('lg:col-span-2');
         }
-        grid.appendChild(el); // moves to end preserving correct order
+        grid.appendChild(el); // moves to end preserving correct order (also relocates it
+                              // out of the pinned slot if it was pinned until just now)
     });
 }
 
@@ -11422,13 +11451,17 @@ function openDashboardCustomizer() {
         ? [...state.dashboardOrder]
         : DASH_CARDS.map(c => c.id);
     const cardMap = Object.fromEntries(DASH_CARDS.map(c => [c.id, c]));
+    const pinnedId = state.dashboardPinned;
 
     const rows = order.map((id, i) => {
         const info = cardMap[id] || { label: id };
         const isFirst = i === 0, isLast = i === order.length - 1;
-        return `<div class="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
+        const isPinned = pinnedId === id;
+        return `<div class="flex items-center gap-3 p-3 bg-white border ${isPinned ? 'border-[#5A2D0C]' : 'border-gray-100'} rounded-xl shadow-sm">
             <span class="text-gray-300 text-lg leading-none select-none">⠿</span>
-            <span class="flex-1 text-sm font-semibold text-[#4A4540]">${info.label}</span>
+            <span class="flex-1 text-sm font-semibold text-[#4A4540]">${info.label}${isPinned ? ' <span class=\'text-[10px] font-extrabold text-[#5A2D0C] uppercase\'>· Pinned</span>' : ''}</span>
+            ${info.pinnable ? `<button onclick="dashTogglePin('${id}')"
+                class="px-2.5 h-8 flex items-center justify-center rounded-lg border text-xs font-bold transition hover:bg-gray-50 ${isPinned ? 'bg-[#5A2D0C] text-white border-[#5A2D0C]' : ''}" title="${isPinned ? 'Unpin from top' : 'Pin to top'}">📌</button>` : ''}
             <button onclick="dashMoveCard('${id}',-1)"
                 class="w-8 h-8 flex items-center justify-center rounded-lg border text-xs font-bold transition hover:bg-gray-50 ${isFirst ? 'opacity-25 pointer-events-none' : ''}">↑</button>
             <button onclick="dashMoveCard('${id}',1)"
@@ -11438,7 +11471,7 @@ function openDashboardCustomizer() {
 
     showModal(`<div class="p-2">
         <h3 class="text-xl font-bold mb-1">⠿ Customize Dashboard</h3>
-        <p class="text-xs text-gray-400 mb-5">Use the arrows to reorder your dashboard cards. Changes are saved instantly.</p>
+        <p class="text-xs text-gray-400 mb-5">Use the arrows to reorder cards, or tap 📌 to pin one at the very top of the dashboard. Changes are saved instantly.</p>
         <div class="space-y-2">${rows}</div>
         <div class="mt-5 flex items-center justify-between">
             <button onclick="dashResetOrder()" class="text-xs text-red-400 hover:text-red-600 font-bold">Reset to default</button>
@@ -11462,8 +11495,16 @@ function dashMoveCard(cardId, dir) {
     openDashboardCustomizer(); // refresh modal with new positions
 }
 
+function dashTogglePin(cardId) {
+    state.dashboardPinned = (state.dashboardPinned === cardId) ? null : cardId;
+    saveToStorage();
+    applyDashboardOrder();
+    openDashboardCustomizer(); // refresh modal to reflect new pin state
+}
+
 function dashResetOrder() {
     state.dashboardOrder = null;
+    state.dashboardPinned = null;
     saveToStorage();
     applyDashboardOrder();
     openDashboardCustomizer();
