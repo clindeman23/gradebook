@@ -4416,6 +4416,22 @@
             });
         }
 
+        // Count how many recorded test days this student was marked Absent on,
+        // read straight from the Attendance page's data — never stored separately,
+        // so it always stays in sync with whatever's marked there.
+        function _getTestDayAbsenceStats(periodId, studentId) {
+            if (!periodId || !studentId) return { absences: 0, testDays: 0 };
+            const attData = getAttData(periodId);
+            let absences = 0, testDays = 0;
+            Object.values(attData).forEach(day => {
+                if (!day.testDay) return;
+                testDays++;
+                const rec = (day.records || {})[studentId];
+                if (rec && rec.status === 'A') absences++;
+            });
+            return { absences, testDays };
+        }
+
         function openStudentModal(id = null) {
             const current = state.students.find(s => s.id === id) || {};
 
@@ -4427,6 +4443,43 @@
             // so entries stay consistent (e.g. always "Ms. Rivera", never a mix of variants)
             const counselorList = [...new Set(state.students.map(s => s.counselor).filter(Boolean))];
             const homeroomList  = [...new Set(state.students.map(s => s.homeroom).filter(Boolean))];
+
+            const bathroomCount  = current.bathroomCount  || 0;
+            const noChargerCount = current.noChargerCount || 0;
+            const testStats = _getTestDayAbsenceStats(current.period, current.id);
+
+            const trackingSection = current.id ? `
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Behavior & Readiness Tracking</label>
+                    <div class="flex items-center justify-between gap-3">
+                        <span class="text-xs font-semibold text-[#4A4540]">🚻 Bathroom Trips</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="bumpStudentCounter('${current.id}','bathroomCount',-1)" class="w-7 h-7 rounded-lg border bg-white text-sm font-bold hover:bg-gray-100">−</button>
+                            <span id="sBathroomCountDisplay" class="w-8 text-center text-sm font-bold text-[#4A4540]">${bathroomCount}</span>
+                            <button onclick="bumpStudentCounter('${current.id}','bathroomCount',1)" class="w-7 h-7 rounded-lg border bg-white text-sm font-bold hover:bg-gray-100">+</button>
+                            <button onclick="resetStudentCounter('${current.id}','bathroomCount')" class="text-[10px] text-gray-400 hover:text-red-500 underline ml-1">Reset</button>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <span class="text-xs font-semibold text-[#4A4540]">🔌 No Charged Laptop</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="bumpStudentCounter('${current.id}','noChargerCount',-1)" class="w-7 h-7 rounded-lg border bg-white text-sm font-bold hover:bg-gray-100">−</button>
+                            <span id="sNoChargerCountDisplay" class="w-8 text-center text-sm font-bold text-[#4A4540]">${noChargerCount}</span>
+                            <button onclick="bumpStudentCounter('${current.id}','noChargerCount',1)" class="w-7 h-7 rounded-lg border bg-white text-sm font-bold hover:bg-gray-100">+</button>
+                            <button onclick="resetStudentCounter('${current.id}','noChargerCount')" class="text-[10px] text-gray-400 hover:text-red-500 underline ml-1">Reset</button>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between gap-3 pt-1 border-t border-gray-200">
+                        <span class="text-xs font-semibold text-[#4A4540]">📝 Absent on Test Days</span>
+                        <span class="text-xs font-bold text-[#9F5F67]">${testStats.absences} of ${testStats.testDays} test day${testStats.testDays === 1 ? '' : 's'} recorded</span>
+                    </div>
+                    <p class="text-[10px] text-gray-400 leading-relaxed">Test-day absences are pulled automatically from the Attendance page — mark Test Day + Absent there and it'll show up here.</p>
+                </div>
+            ` : `
+                <div class="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-center text-xs text-gray-400">
+                    Save this student first to start tracking bathroom trips, charger status, and test-day attendance.
+                </div>
+            `;
 
             showModal(`
                 <h3 class="text-xl font-bold mb-4">${current.id ? '✏️ Edit Student' : '👩‍🎓 Add Learner Profile'}</h3>
@@ -4458,16 +4511,43 @@
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Interventions / Accommodations Notes</label>
                         <textarea id="sNotes" placeholder="Describe learner focus, seating modifications, or extended pacing needs..." class="w-full border p-2.5 rounded-lg text-xs outline-none h-20">${escHtml(current.notes || '')}</textarea>
                     </div>
+                    ${trackingSection}
                     <button onclick="saveStudent('${current.id || ''}')" class="w-full py-2.5 bg-[#9F5F67] text-white text-xs font-bold rounded-lg shadow-sm hover:opacity-90">Save Student Profile</button>
                 </div>
             `);
+        }
+
+        // Bathroom/charger counters save immediately (independent of the main Save button)
+        // so a quick tap mid-class is never lost even if the modal is just closed afterward.
+        function bumpStudentCounter(id, field, delta) {
+            const s = state.students.find(s => s.id === id);
+            if (!s) return;
+            s[field] = Math.max(0, (s[field] || 0) + delta);
+            saveToStorage();
+            const displayId = field === 'bathroomCount' ? 'sBathroomCountDisplay' : 'sNoChargerCountDisplay';
+            const el = document.getElementById(displayId);
+            if (el) el.textContent = s[field];
+            renderStudents(activeStudentSectionId);
+        }
+
+        function resetStudentCounter(id, field) {
+            const s = state.students.find(s => s.id === id);
+            if (!s) return;
+            s[field] = 0;
+            saveToStorage();
+            const displayId = field === 'bathroomCount' ? 'sBathroomCountDisplay' : 'sNoChargerCountDisplay';
+            const el = document.getElementById(displayId);
+            if (el) el.textContent = 0;
+            renderStudents(activeStudentSectionId);
         }
 
         function saveStudent(id) {
             const name = document.getElementById('sName').value.trim();
             if (!name) return;
 
+            const existing = state.students.find(s => s.id === id) || {};
             const data = {
+                ...existing,
                 id: id || 'student_' + Date.now(),
                 name,
                 period: document.getElementById('sPeriod').value,
