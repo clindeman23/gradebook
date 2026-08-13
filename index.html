@@ -2529,7 +2529,9 @@
             dashboardOrder: null,
             dashboardPinned: null,
             navOrder: null,
-            navHidden: []
+            navHidden: [],
+            counselorColorMap: {},
+            homeroomColorMap: {}
         };
 
         // Navigation state for schedule dates
@@ -2861,6 +2863,8 @@
             if (state.navHidden === undefined) state.navHidden = [];
             if (state.navOrder === undefined) state.navOrder = null;
             if (state.dashboardPinned === undefined) state.dashboardPinned = null;
+            if (!state.counselorColorMap) state.counselorColorMap = {};
+            if (!state.homeroomColorMap) state.homeroomColorMap = {};
 
             // Safe translation of old static keys to new dynamic references
             state.students.forEach(s => {
@@ -4343,38 +4347,70 @@
             });
         }
 
-        // Deterministic color for a counselor/homeroom string so the same value
-        // always renders with the same badge color across reloads and sessions.
-        function _mcaStringHash(str) {
-            let h = 0;
-            for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
-            return h;
-        }
+        // Every counselor/homeroom gets its own color, guaranteed unique up to 20 of each —
+        // the most this school has. Colors are assigned in first-seen order and remembered
+        // in state.counselorColorMap/homeroomColorMap forever, so a given counselor or
+        // homeroom always keeps the same color once assigned (never recomputed from a hash,
+        // which would risk two different values colliding on the same color).
         const COUNSELOR_PALETTE = [
-            { bg:'#FDE2E4', text:'#9D174D' },
-            { bg:'#DBEAFE', text:'#1E40AF' },
-            { bg:'#FEF3C7', text:'#92400E' },
-            { bg:'#DCFCE7', text:'#166534' },
-            { bg:'#EDE9FE', text:'#5B21B6' },
-            { bg:'#FFE4E6', text:'#9F1239' },
-            { bg:'#CCFBF1', text:'#0F766E' },
-            { bg:'#FFEDD5', text:'#9A3412' },
+            { bg:'#FEE2E2', text:'#991B1B' }, // red
+            { bg:'#FFEDD5', text:'#9A3412' }, // orange
+            { bg:'#FEF3C7', text:'#92400E' }, // amber
+            { bg:'#FEF9C3', text:'#854D0E' }, // yellow
+            { bg:'#ECFCCB', text:'#3F6212' }, // lime
+            { bg:'#DCFCE7', text:'#166534' }, // green
+            { bg:'#D1FAE5', text:'#065F46' }, // emerald
+            { bg:'#CCFBF1', text:'#0F766E' }, // teal
+            { bg:'#CFFAFE', text:'#155E75' }, // cyan
+            { bg:'#E0F2FE', text:'#075985' }, // sky
+            { bg:'#DBEAFE', text:'#1E40AF' }, // blue
+            { bg:'#E0E7FF', text:'#3730A3' }, // indigo
+            { bg:'#EDE9FE', text:'#5B21B6' }, // violet
+            { bg:'#F3E8FF', text:'#6B21A8' }, // purple
+            { bg:'#FAE8FF', text:'#86198F' }, // fuchsia
+            { bg:'#FCE7F3', text:'#9D174D' }, // pink
+            { bg:'#FFE4E6', text:'#9F1239' }, // rose
+            { bg:'#F5F5F4', text:'#44403C' }, // stone
+            { bg:'#F1F5F9', text:'#334155' }, // slate
+            { bg:'#FDF2E9', text:'#7C4A1E' }, // terracotta
         ];
         const HOMEROOM_PALETTE = [
-            { bg:'#E0E7FF', text:'#3730A3' },
-            { bg:'#FCE7F3', text:'#9D174D' },
-            { bg:'#D1FAE5', text:'#065F46' },
-            { bg:'#FEF9C3', text:'#854D0E' },
-            { bg:'#F3E8FF', text:'#6B21A8' },
-            { bg:'#FFE4E6', text:'#BE123C' },
-            { bg:'#CFFAFE', text:'#155E75' },
-            { bg:'#FED7AA', text:'#9A3412' },
+            { bg:'#DBEAFE', text:'#1E3A8A' }, // blue
+            { bg:'#FCE7F3', text:'#831843' }, // pink
+            { bg:'#D1FAE5', text:'#064E3B' }, // emerald
+            { bg:'#FEF9C3', text:'#713F12' }, // yellow
+            { bg:'#F3E8FF', text:'#581C87' }, // purple
+            { bg:'#FFE4E6', text:'#881337' }, // rose
+            { bg:'#CFFAFE', text:'#164E63' }, // cyan
+            { bg:'#FFEDD5', text:'#7C2D12' }, // orange
+            { bg:'#E0E7FF', text:'#312E81' }, // indigo
+            { bg:'#CCFBF1', text:'#134E4A' }, // teal
+            { bg:'#FEE2E2', text:'#7F1D1D' }, // red
+            { bg:'#ECFCCB', text:'#365314' }, // lime
+            { bg:'#E0F2FE', text:'#0C4A6E' }, // sky
+            { bg:'#FEF3C7', text:'#78350F' }, // amber
+            { bg:'#EDE9FE', text:'#4C1D95' }, // violet
+            { bg:'#FAE8FF', text:'#701A75' }, // fuchsia
+            { bg:'#DCFCE7', text:'#14532D' }, // green
+            { bg:'#F5F5F4', text:'#292524' }, // stone
+            { bg:'#F1F5F9', text:'#1E293B' }, // slate
+            { bg:'#FDF2E9', text:'#5C3418' }, // terracotta
         ];
-        function _mcaPaletteFor(value, palette) {
+
+        function _getPaletteColor(value, palette, mapKey) {
             if (!value) return null;
-            const idx = _mcaStringHash(value.trim().toLowerCase()) % palette.length;
-            return palette[idx];
+            const key = value.trim().toLowerCase();
+            if (!key) return null;
+            if (!state[mapKey]) state[mapKey] = {};
+            const map = state[mapKey];
+            if (map[key] === undefined) {
+                map[key] = Object.keys(map).length % palette.length;
+                saveToStorage();
+            }
+            return palette[map[key]];
         }
+        function _mcaCounselorColor(value) { return _getPaletteColor(value, COUNSELOR_PALETTE, 'counselorColorMap'); }
+        function _mcaHomeroomColor(value)  { return _getPaletteColor(value, HOMEROOM_PALETTE,  'homeroomColorMap'); }
 
         function renderStudents(sectionId) {
             activeStudentSectionId = sectionId;
@@ -4389,8 +4425,8 @@
             }
 
             matched.forEach(s => {
-                const counselorColor = _mcaPaletteFor(s.counselor, COUNSELOR_PALETTE);
-                const homeroomColor  = _mcaPaletteFor(s.homeroom, HOMEROOM_PALETTE);
+                const counselorColor = _mcaCounselorColor(s.counselor);
+                const homeroomColor  = _mcaHomeroomColor(s.homeroom);
                 const accentColor = counselorColor ? counselorColor.text : '#D8D3C8';
 
                 const card = document.createElement('div');
