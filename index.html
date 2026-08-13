@@ -10327,6 +10327,7 @@ function renderCharts() {
 // ════════════════════════════════════════════════════════
 let attendanceMode = false;
 let attClassIdx = 0;
+let _attSearchTerm = '';
 
 function _todayStr() { return new Date().toISOString().slice(0,10); }
 function _fmtDateShort(iso) {
@@ -10339,6 +10340,25 @@ function _fmtDateLong(iso) {
   const [y,m,d] = iso.split('-');
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return `${months[+m-1]} ${+d}, ${y}${iso===_todayStr()?' (Today)':''}`;
+}
+function _attDateMatchesSearch(iso, term) {
+  if (!term) return true;
+  const t = term.trim().toLowerCase();
+  if (!t) return true;
+  const [y,m,d] = iso.split('-');
+  const MONTHS_LONG  = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+  const MONTHS_SHORT = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const monthLong  = MONTHS_LONG[+m-1] || '';
+  const monthShort = MONTHS_SHORT[+m-1] || '';
+  const weekday = new Date(iso+'T12:00:00').toLocaleDateString('en-US',{weekday:'long'}).toLowerCase();
+  // Include the exact "Aug 5, 2026" / "Aug 5" formats shown on-screen so typing what you see always matches
+  const haystack = [
+    iso, monthLong, monthShort, weekday,
+    `${+m}/${+d}`, `${+m}/${+d}/${y}`, y,
+    `${monthShort} ${+d}`, `${monthShort} ${+d}, ${y}`,
+    `${monthLong} ${+d}`, `${monthLong} ${+d}, ${y}`,
+  ].join(' ');
+  return haystack.includes(t);
 }
 
 function getAttData(classId) {
@@ -10379,9 +10399,17 @@ function renderAttendance() {
   const students = cls.students || [];
   const attData = getAttData(cls.id);
 
-  // Only show dates that were explicitly started — never auto-add today
-  const dates = Object.keys(attData).sort().slice(-20);
-  const activeDate = dates.find(d => !attData[d].submitted); // first unsubmitted
+  // Preserve search-box focus/cursor across the full re-render below
+  const searchWasFocused = document.activeElement?.id === 'att-date-search';
+  const searchCursorPos = searchWasFocused ? document.activeElement.selectionStart : null;
+
+  const allDates = Object.keys(attData).sort();
+  const hasSearch = _attSearchTerm.trim().length > 0;
+  const matchingDates = hasSearch ? allDates.filter(d => _attDateMatchesSearch(d, _attSearchTerm)) : allDates;
+  const DEFAULT_VISIBLE = 15;
+  const dates = hasSearch ? matchingDates : matchingDates.slice(-DEFAULT_VISIBLE);
+  const hiddenCount = hasSearch ? 0 : Math.max(0, allDates.length - dates.length);
+  const activeDate = dates.find(d => !attData[d].submitted); // first unsubmitted (within visible set)
 
   let html = '<div class="fade-in">';
 
@@ -10402,6 +10430,19 @@ function renderAttendance() {
   html += `<button onclick="attOpenExport('${cls.id}')" style="padding:6px 14px;border-radius:10px;font-size:12px;font-weight:700;border:1.5px solid var(--c-pale);background:white;color:var(--c-text-secondary);cursor:pointer;margin-right:6px">⬇ Export</button>`;
   html += `<button onclick="attTakeAttendance('${cls.id}')" style="padding:6px 16px;border-radius:10px;font-size:12px;font-weight:700;background:var(--c-brown);color:white;border:none;cursor:pointer">📋 Take Attendance</button>`;
   html += `</div>`;
+
+  // ── Row 2: Search + Manage Days ──
+  html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+    <div style="position:relative;flex:1;max-width:340px">
+      <input id="att-date-search" type="text" value="${escHtml(_attSearchTerm)}" placeholder="🔍 Search dates — e.g. Sep, 9/15, Monday"
+        oninput="_attSearchTerm=this.value;renderAttendance()"
+        style="width:100%;padding:7px 30px 7px 12px;border-radius:10px;border:1.5px solid var(--c-pale);background:white;font-size:12px;outline:none;box-sizing:border-box">
+      ${_attSearchTerm ? `<button onclick="_attSearchTerm='';renderAttendance()" title="Clear search" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--c-light);font-size:13px;cursor:pointer;padding:2px 4px">✕</button>` : ''}
+    </div>
+    ${hasSearch ? `<span style="font-size:11px;color:var(--c-text-muted)">${dates.length} match${dates.length===1?'':'es'}</span>` : ''}
+    <div style="flex:1"></div>
+    <button onclick="attOpenManageDays('${cls.id}')" style="padding:6px 14px;border-radius:10px;font-size:12px;font-weight:700;border:1.5px solid var(--c-pale);background:white;color:var(--c-text-secondary);cursor:pointer">🗑 Manage Days</button>
+  </div>`;
 
   // ── Active session banner (if unsubmitted day exists) ──
   if (activeDate) {
@@ -10432,12 +10473,20 @@ function renderAttendance() {
   // ── Grid ──
   if (!students.length) {
     html += `<div style="text-align:center;padding:50px 20px;color:var(--c-text-muted);font-size:13px;background:white;border-radius:14px;border:2px dashed var(--c-pale)">No students in <strong>${escHtml(cls.name)}</strong> — add them in the Gradebook tab.</div>`;
-  } else if (!dates.length) {
+  } else if (!allDates.length) {
     html += `<div style="text-align:center;padding:60px 20px;color:var(--c-text-muted);font-size:14px;background:white;border-radius:14px;border:2px dashed var(--c-pale)">
       No attendance recorded yet.<br><br>
       <button onclick="attTakeAttendance('${cls.id}')" style="padding:9px 22px;border-radius:10px;background:var(--c-brown);color:white;font-size:13px;font-weight:700;border:none;cursor:pointer">📋 Take Attendance</button>
     </div>`;
+  } else if (!dates.length) {
+    html += `<div style="text-align:center;padding:50px 20px;color:var(--c-text-muted);font-size:13px;background:white;border-radius:14px;border:2px dashed var(--c-pale)">
+      No dates match "<strong>${escHtml(_attSearchTerm)}</strong>".
+      <button onclick="_attSearchTerm='';renderAttendance()" style="display:block;margin:12px auto 0;padding:6px 16px;border-radius:9px;background:var(--c-pale);color:var(--c-brown);font-size:12px;font-weight:700;border:none;cursor:pointer">Clear search</button>
+    </div>`;
   } else {
+    if (hiddenCount > 0) {
+      html += `<div style="font-size:11px;color:var(--c-text-muted);margin-bottom:6px">Showing the most recent ${dates.length} of ${allDates.length} days — search above or use <strong>Manage Days</strong> to see the rest.</div>`;
+    }
     html += `<div style="overflow-x:auto;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06)">
     <table id="att-grid" style="border-collapse:collapse;background:white;width:100%;min-width:max-content">
       <thead><tr>
@@ -10450,7 +10499,9 @@ function renderAttendance() {
       const isLast = di === dates.length - 1;
       html += `<th title="${isSubmitted?'✓ Submitted — click date to toggle Test Day':'In progress — click date to toggle Test Day'}"
         onclick="attToggleTestDay('${cls.id}','${d}')"
-        style="padding:5px 3px;text-align:center;background:${isActive?'#92400e':'var(--c-brown)'};color:${isTest?'#fde68a':'white'};font-size:10px;font-weight:700;min-width:46px;cursor:pointer;border-left:1px solid rgba(255,255,255,.15);${isLast?'border-radius:0 14px 0 0':''}">
+        style="padding:5px 3px;text-align:center;background:${isActive?'#92400e':'var(--c-brown)'};color:${isTest?'#fde68a':'white'};font-size:10px;font-weight:700;min-width:46px;cursor:pointer;border-left:1px solid rgba(255,255,255,.15);position:relative;${isLast?'border-radius:0 14px 0 0':''}">
+        <span onclick="event.stopPropagation();attDeleteDay('${cls.id}','${d}')" title="Delete this day"
+          style="position:absolute;top:1px;right:2px;font-size:8px;line-height:1;color:rgba(255,255,255,.55);cursor:pointer;padding:2px">✕</span>
         ${_fmtDateShort(d)}
         ${isTest?'<br><span style="font-size:9px">📝</span>':''}
         ${isSubmitted?'<br><span style="font-size:9px;opacity:.7">✓</span>':'<br><span style="font-size:9px;color:#fcd34d">●</span>'}
@@ -10479,19 +10530,26 @@ function renderAttendance() {
     html += `</tr></tbody></table></div>`;
   }
 
-  // Legend
-  html += `<div style="display:flex;gap:12px;align-items:center;margin-top:8px;font-size:10px;color:var(--c-text-muted);flex-wrap:wrap;padding:0 2px">
-    <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:16px;height:16px;border-radius:3px;background:#fee2e2;border:1.5px solid #fca5a5;font-size:9px;font-weight:800;color:#dc2626;text-align:center;line-height:16px">A</span>Absent</span>
-    <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:16px;height:16px;border-radius:3px;background:#fef9c3;border:1.5px solid #fde68a;font-size:9px;font-weight:800;color:#d97706;text-align:center;line-height:16px">T</span>Tardy</span>
+  // Legend — condensed to one compact line
+  html += `<div style="display:flex;gap:10px;align-items:center;margin-top:6px;font-size:10px;color:var(--c-text-muted);flex-wrap:wrap;padding:0 2px">
+    <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#fee2e2;border:1.5px solid #fca5a5;font-size:8px;font-weight:800;color:#dc2626;text-align:center;line-height:14px">A</span>Absent</span>
+    <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#fef9c3;border:1.5px solid #fde68a;font-size:8px;font-weight:800;color:#d97706;text-align:center;line-height:14px">T</span>Tardy</span>
     <span style="display:inline-flex;align-items:center;gap:3px"><span style="font-size:8px;color:#7c3aed">●</span>Missed test</span>
-    <span style="display:inline-flex;align-items:center;gap:3px"><span style="color:#fcd34d;font-size:10px">●</span>In progress</span>
     <span style="display:inline-flex;align-items:center;gap:3px"><span style="opacity:.6">✓</span>Submitted</span>
-    <span style="margin-left:auto">Click cell to mark · Click date header for Test Day</span>
+    <span style="margin-left:auto;opacity:.75">Click a cell to mark · click a date header to toggle Test Day · ✕ on a header deletes that day</span>
   </div>`;
 
   html += '</div>';
   mc.innerHTML = html;
   mc.style.background = '';
+
+  if (searchWasFocused) {
+    const el = document.getElementById('att-date-search');
+    if (el) {
+      el.focus();
+      if (searchCursorPos != null) el.setSelectionRange(searchCursorPos, searchCursorPos);
+    }
+  }
 }
 
 function attTakeAttendance(classId) {
@@ -10539,6 +10597,108 @@ function attSubmitDay(classId, dateStr) {
   data[dateStr].submitted = true;
   saveAttData(classId, data);
   renderAttendance();
+}
+
+// ── Delete a single day (grid header ✕, or from Manage Days) ──
+function attDeleteDay(classId, dateStr) {
+  if (!confirm(`Delete attendance for ${_fmtDateLong(dateStr)}? This can't be undone.`)) return;
+  const data = getAttData(classId);
+  delete data[dateStr];
+  saveAttData(classId, data);
+  renderAttendance();
+  showToast(`Deleted attendance for ${_fmtDateLong(dateStr)}.`);
+}
+
+// ── Manage Days modal — search, review, and bulk-delete recorded days ──
+function attOpenManageDays(classId) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML = `<div style="background:white;border-radius:18px;padding:24px;width:420px;max-width:100%;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="font-size:15px;font-weight:800;color:var(--c-brown);margin-bottom:2px">🗑 Manage Recorded Days</div>
+    <div id="att-mgmt-subtitle" style="font-size:11px;color:var(--c-text-muted);margin-bottom:12px"></div>
+    <input id="att-mgmt-search" type="text" placeholder="🔍 Search dates…" oninput="attRenderManageDaysList('${classId}')"
+      style="width:100%;padding:8px 12px;border-radius:10px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:12px;outline:none;box-sizing:border-box;margin-bottom:10px">
+    <div id="att-mgmt-list" style="overflow-y:auto;flex:1;min-height:100px;border-top:1px solid var(--c-pale);border-bottom:1px solid var(--c-pale)"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:14px">
+      <button onclick="attMgmtToggleAll('${classId}')" style="padding:7px 12px;border-radius:9px;font-size:11px;font-weight:700;border:1.5px solid var(--c-pale);background:white;color:var(--c-text-secondary);cursor:pointer">Select All</button>
+      <div style="flex:1"></div>
+      <button onclick="this.closest('.att-mgmt-modal').remove()" style="padding:8px 16px;border-radius:10px;border:1.5px solid var(--c-pale);background:white;font-size:13px;font-weight:700;cursor:pointer">Close</button>
+      <button id="att-mgmt-delete-btn" onclick="attDeleteSelectedDays('${classId}')" disabled style="padding:8px 16px;border-radius:10px;background:#dc2626;color:white;font-size:13px;font-weight:700;border:none;cursor:not-allowed;opacity:.45">🗑 Delete Selected</button>
+    </div>
+  </div>`;
+  modal.classList.add('att-mgmt-modal');
+  modal.addEventListener('mousedown', e => { if (e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+  attRenderManageDaysList(classId);
+  setTimeout(()=>document.getElementById('att-mgmt-search')?.focus(),80);
+}
+
+function attRenderManageDaysList(classId) {
+  const data = getAttData(classId);
+  const cls = getGbData().classes.find(c=>c.id===classId);
+  const term = document.getElementById('att-mgmt-search')?.value || '';
+  const allDates = Object.keys(data).sort().reverse();
+  const dates = allDates.filter(d => _attDateMatchesSearch(d, term));
+
+  const subtitle = document.getElementById('att-mgmt-subtitle');
+  if (subtitle) subtitle.textContent = `${escHtml(cls?.name||'')} · ${allDates.length} day${allDates.length===1?'':'s'} recorded`;
+
+  const list = document.getElementById('att-mgmt-list');
+  if (!list) return;
+
+  if (dates.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:30px 10px;color:var(--c-text-muted);font-size:12px">${allDates.length===0 ? 'No attendance recorded yet.' : 'No dates match your search.'}</div>`;
+    attMgmtUpdateDeleteButton();
+    return;
+  }
+
+  list.innerHTML = dates.map(d => {
+    const dd = data[d] || {};
+    const recs = Object.values(dd.records||{});
+    const a = recs.filter(r=>r.status==='A').length;
+    const t = recs.filter(r=>r.status==='T').length;
+    const statusLabel = a===0 && t===0 ? '<span style="color:#16a34a">All present</span>' : `${a>0?`<span style="color:#dc2626">${a}A</span>`:''} ${t>0?`<span style="color:#d97706">${t}T</span>`:''}`;
+    const subLabel = dd.submitted ? 'Submitted' : 'In progress';
+    return `<label style="display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid #f0ece6;cursor:pointer">
+      <input type="checkbox" class="att-mgmt-check" value="${d}" onchange="attMgmtUpdateDeleteButton()" style="width:15px;height:15px;accent-color:#dc2626;cursor:pointer;flex-shrink:0">
+      <div style="flex:1">
+        <div style="font-size:12.5px;font-weight:700;color:var(--c-text-primary)">${_fmtDateLong(d)}</div>
+        <div style="font-size:10.5px;color:var(--c-text-muted)">${subLabel} · ${statusLabel}</div>
+      </div>
+      <button onclick="event.preventDefault();attDeleteDay('${classId}','${d}');attRenderManageDaysList('${classId}')" title="Delete this day"
+        style="padding:4px 9px;border-radius:8px;font-size:11px;font-weight:700;border:1.5px solid #fca5a5;background:#fef2f2;color:#dc2626;cursor:pointer">Delete</button>
+    </label>`;
+  }).join('');
+  attMgmtUpdateDeleteButton();
+}
+
+function attMgmtToggleAll(classId) {
+  const boxes = document.querySelectorAll('.att-mgmt-check');
+  const allChecked = [...boxes].every(b => b.checked);
+  boxes.forEach(b => b.checked = !allChecked);
+  attMgmtUpdateDeleteButton();
+}
+
+function attMgmtUpdateDeleteButton() {
+  const count = document.querySelectorAll('.att-mgmt-check:checked').length;
+  const btn = document.getElementById('att-mgmt-delete-btn');
+  if (!btn) return;
+  btn.textContent = count > 0 ? `🗑 Delete Selected (${count})` : '🗑 Delete Selected';
+  btn.disabled = count === 0;
+  btn.style.opacity = count === 0 ? '.45' : '1';
+  btn.style.cursor = count === 0 ? 'not-allowed' : 'pointer';
+}
+
+function attDeleteSelectedDays(classId) {
+  const checked = [...document.querySelectorAll('.att-mgmt-check:checked')].map(el => el.value);
+  if (checked.length === 0) return;
+  if (!confirm(`Delete attendance for ${checked.length} day${checked.length===1?'':'s'}? This can't be undone.`)) return;
+  const data = getAttData(classId);
+  checked.forEach(d => delete data[d]);
+  saveAttData(classId, data);
+  attRenderManageDaysList(classId);
+  renderAttendance();
+  showToast(`Deleted ${checked.length} day${checked.length===1?'':'s'}.`);
 }
 
 function attOpenExport(classId) {
