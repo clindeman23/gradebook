@@ -476,48 +476,14 @@
         </div>
 
         <nav class="flex-1 space-y-1">
-            <div class="text-[10px] uppercase tracking-wider font-extrabold text-[#9A958C] mb-2 px-4">MAIN CONTROL</div>
+            <div class="text-[10px] uppercase tracking-wider font-extrabold text-[#9A958C] mb-2 px-4">NAVIGATION</div>
             <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-item active w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
                 <span>🏠</span> Dashboard
             </button>
-            <button onclick="switchTab('schedule')" id="btn-schedule" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
-                <span>📅</span> Block Schedule
-            </button>
-            <button onclick="switchTab('unit')" id="btn-unit" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
-                <span>📋</span> Unit Planner
-            </button>
-            <button onclick="switchTab('lessons')" id="btn-lessons" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
-                <span>📚</span> Lesson Plans
-            </button>
-            <button onclick="switchTab('standards')" id="btn-standards" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
-                <span>🎯</span> Standards Tracker
-            </button>
-            <button onclick="switchTab('calendar')" id="btn-calendar" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
-                <span>📅</span> Canvas Calendar
-            </button>
-            <button onclick="switchTab('classplan')" id="btn-classplan" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
-                <span>🗓️</span> Class Plan
-            </button>
-
-            <div class="text-[10px] uppercase tracking-wider font-extrabold text-[#9A958C] mt-6 mb-2 px-4">DATA & ROSTER</div>
-            <button onclick="switchTab('gradebook')" id="btn-gradebook" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
-                <span>📝</span> Gradebooks
-            </button>
-            <button onclick="switchTab('attendance')" id="btn-attendance" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
-                <span>👥</span> Attendance
-            </button>
-            <button onclick="switchTab('students')" id="btn-students" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
-                <span>👩‍🎓</span> Student Profiles
-            </button>
-            <button onclick="switchTab('resources')" id="btn-resources" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
-                <span>📌</span> Resources Hub
-            </button>
+            <div id="nav-dynamic-items" class="space-y-1"><!-- Rendered via JS: renderSidebarNav() --></div>
         </nav>
 
         <div class="mt-auto pt-4 border-t border-gray-200/60 space-y-1">
-            <button onclick="switchTab('reflection')" id="btn-reflection" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
-                <span>💡</span> Daily Reflection
-            </button>
             <button onclick="switchTab('settings')" id="btn-settings" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
                 <span>⚙️</span> Planner Settings
             </button>
@@ -737,8 +703,8 @@
         <section id="tab-schedule" class="tab-content hidden">
             <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h3 class="text-2xl font-bold mb-1">📅 Monday–Friday Dynamic Scheduler</h3>
-                    <p class="text-sm text-[#9A958C]">Manage classroom rotations linked directly to your defined class periods.</p>
+                    <h3 class="text-2xl font-bold mb-1">🗓️ Pacing Guide</h3>
+                    <p class="text-sm text-[#9A958C]">Your weekly rotation, lesson plans, and assignments due — all in one place.</p>
                 </div>
                 
                 <!-- Week Navigator -->
@@ -963,11 +929,6 @@
             <div id="mca-calendar-content"></div>
         </section>
 
-        <!-- Tab: Class Plan (MCA) -->
-        <section id="tab-classplan" class="tab-content hidden">
-            <div id="mca-classplan-content"></div>
-        </section>
-
         <!-- Tab: Gradebook (MCA) -->
         <section id="tab-gradebook" class="tab-content hidden">
             <div id="mca-gradebook-content"></div>
@@ -1082,6 +1043,48 @@
             </div>
 
             <div class="space-y-6">
+                <!-- Teacher Profile -->
+                <div class="card p-6 accent-mauve max-w-2xl">
+                    <h4 class="text-lg font-bold mb-2">👤 Teacher Profile</h4>
+                    <p class="text-xs text-gray-500 mb-5 leading-relaxed">
+                        Your name and subject appear in the dashboard greeting and header.
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Your Name</label>
+                            <input id="settings-prof-name" type="text" placeholder="e.g. Ms. Lindeman" oninput="settingsSaveProfileField('teacherName', this.value)" class="w-full border p-2.5 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#9F5F67]">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Subject</label>
+                            <input id="settings-prof-subject" type="text" placeholder="e.g. Algebra II" oninput="settingsSaveProfileField('subjectName', this.value)" class="w-full border p-2.5 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#9F5F67]">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">School Year</label>
+                            <input id="settings-prof-year" type="text" placeholder="e.g. 2026-2027" oninput="settingsSaveProfileField('year', this.value)" class="w-full border p-2.5 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#9F5F67]">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Daily Quote</label>
+                            <input id="settings-prof-quote" type="text" placeholder="A favorite quote…" oninput="settingsSaveProfileField('quote', this.value)" class="w-full border p-2.5 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#9F5F67]">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Quote Author</label>
+                            <input id="settings-prof-author" type="text" placeholder="e.g. Daily Affirmation" oninput="settingsSaveProfileField('quoteAuthor', this.value)" class="w-full border p-2.5 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#9F5F67]">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar Navigation Customization -->
+                <div class="card p-6 accent-teal max-w-2xl">
+                    <h4 class="text-lg font-bold mb-2">🧭 Customize Navigation</h4>
+                    <p class="text-xs text-gray-500 mb-5 leading-relaxed">
+                        Reorder or hide pages from the sidebar. Dashboard and these Settings always stay put so you can never lock yourself out.
+                    </p>
+                    <div id="nav-customize-list" class="space-y-1.5 mb-4"><!-- Rendered via JS --></div>
+                    <button onclick="resetNavCustomization()" class="px-4 py-2 bg-white border text-xs font-bold rounded-lg hover:bg-gray-50 transition">↺ Reset to Default Order</button>
+                </div>
+
                 <!-- Class Sections Configuration Deck -->
                 <div class="card p-6 accent-coral max-w-2xl">
                     <h4 class="text-lg font-bold mb-2">🏫 Dynamic Class Sections & Roster Groups</h4>
@@ -2498,7 +2501,9 @@
             },
             calendarEvents: [],
             appPassword: '',
-            dashboardOrder: null
+            dashboardOrder: null,
+            navOrder: null,
+            navHidden: []
         };
 
         // Navigation state for schedule dates
@@ -2605,6 +2610,101 @@
             showToast(`Theme changed to ${themeId.charAt(0).toUpperCase() + themeId.slice(1)}! ✨`);
         }
 
+        /* --- SIDEBAR NAVIGATION CUSTOMIZATION --- */
+        // Dashboard + Settings are pinned outside this list and can't be reordered or hidden.
+        const NAV_ITEMS = [
+            { key: 'schedule',   icon: '🗓️', label: 'Pacing Guide' },
+            { key: 'unit',       icon: '📋', label: 'Unit Planner' },
+            { key: 'lessons',    icon: '📚', label: 'Lesson Plans' },
+            { key: 'standards',  icon: '🎯', label: 'Standards Tracker' },
+            { key: 'calendar',   icon: '📅', label: 'Canvas Calendar' },
+            { key: 'gradebook',  icon: '📝', label: 'Gradebooks' },
+            { key: 'attendance', icon: '👥', label: 'Attendance' },
+            { key: 'students',   icon: '👩‍🎓', label: 'Student Profiles' },
+            { key: 'resources',  icon: '📌', label: 'Resources Hub' },
+            { key: 'reflection', icon: '💡', label: 'Daily Reflection' },
+        ];
+        const NAV_DEFAULT_ORDER = NAV_ITEMS.map(i => i.key);
+
+        function getNavOrder() {
+            const saved = state.navOrder;
+            if (!saved || !Array.isArray(saved)) return [...NAV_DEFAULT_ORDER];
+            // Merge in any keys missing from a stale saved order (e.g. after an app update), append at end
+            const missing = NAV_DEFAULT_ORDER.filter(k => !saved.includes(k));
+            return [...saved.filter(k => NAV_DEFAULT_ORDER.includes(k)), ...missing];
+        }
+
+        function renderSidebarNav() {
+            const container = document.getElementById('nav-dynamic-items');
+            if (!container) return;
+            const order = getNavOrder();
+            const hidden = new Set(state.navHidden || []);
+            const byKey = Object.fromEntries(NAV_ITEMS.map(i => [i.key, i]));
+            container.innerHTML = order
+                .filter(key => !hidden.has(key) && byKey[key])
+                .map(key => {
+                    const item = byKey[key];
+                    return `<button onclick="switchTab('${item.key}')" id="btn-${item.key}" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
+                        <span>${item.icon}</span> ${escHtml(item.label)}
+                    </button>`;
+                }).join('');
+        }
+
+        function renderNavCustomizeList() {
+            const container = document.getElementById('nav-customize-list');
+            if (!container) return;
+            const order = getNavOrder();
+            const hidden = new Set(state.navHidden || []);
+            const byKey = Object.fromEntries(NAV_ITEMS.map(i => [i.key, i]));
+            container.innerHTML = order.map((key, idx) => {
+                const item = byKey[key];
+                if (!item) return '';
+                const isHidden = hidden.has(key);
+                return `<div class="flex items-center gap-2 p-2 rounded-lg border ${isHidden ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-100'}">
+                    <div class="flex flex-col">
+                        <button onclick="navMove('${key}',-1)" ${idx===0?'disabled':''} class="text-gray-400 hover:text-[#4A4540] disabled:opacity-20 disabled:cursor-not-allowed leading-none px-1" title="Move up">▲</button>
+                        <button onclick="navMove('${key}',1)" ${idx===order.length-1?'disabled':''} class="text-gray-400 hover:text-[#4A4540] disabled:opacity-20 disabled:cursor-not-allowed leading-none px-1" title="Move down">▼</button>
+                    </div>
+                    <label class="flex items-center gap-2 flex-1 cursor-pointer ${isHidden?'opacity-50':''}">
+                        <input type="checkbox" ${isHidden?'':'checked'} onchange="navToggleVisible('${key}')" class="w-4 h-4 accent-[#82BDC3] cursor-pointer">
+                        <span>${item.icon}</span>
+                        <span class="text-sm font-medium">${escHtml(item.label)}</span>
+                    </label>
+                    ${isHidden ? '<span class="text-[10px] font-bold uppercase text-gray-400">Hidden</span>' : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function navMove(key, dir) {
+            const order = getNavOrder();
+            const i = order.indexOf(key);
+            const j = i + dir;
+            if (i < 0 || j < 0 || j >= order.length) return;
+            [order[i], order[j]] = [order[j], order[i]];
+            state.navOrder = order;
+            saveToStorage();
+            renderNavCustomizeList();
+            renderSidebarNav();
+        }
+
+        function navToggleVisible(key) {
+            const hidden = new Set(state.navHidden || []);
+            if (hidden.has(key)) hidden.delete(key); else hidden.add(key);
+            state.navHidden = [...hidden];
+            saveToStorage();
+            renderNavCustomizeList();
+            renderSidebarNav();
+        }
+
+        function resetNavCustomization() {
+            state.navOrder = null;
+            state.navHidden = [];
+            saveToStorage();
+            renderNavCustomizeList();
+            renderSidebarNav();
+            showToast('Navigation reset to default order.');
+        }
+
         /* --- STREAMING_CHUNK: Defining layout switch tabs functions... --> */
         /* --- NAVIGATION LAYOUT CONTROLLER --- */
         function switchTab(tabId) {
@@ -2638,7 +2738,6 @@
             if (tabId === 'gradebook') mca_renderGradebook();
             if (tabId === 'attendance') mca_renderAttendance();
             if (tabId === 'calendar') mca_renderCalendarTab();
-            if (tabId === 'classplan') mca_renderClassPlan();
             if (tabId === 'students') renderStudents(state.sections[0]?.id || 'sec-1');
             if (tabId === 'reflection') renderReflections();
 
@@ -2733,6 +2832,8 @@
             if (!state.activeStandardsSubject) state.activeStandardsSubject = state.activeStandardsSet || 'CUSTOM';
             if (!state.myClasses) state.myClasses = [];
             if (!state.customStandards) state.customStandards = [];
+            if (state.navHidden === undefined) state.navHidden = [];
+            if (state.navOrder === undefined) state.navOrder = null;
 
             // Safe translation of old static keys to new dynamic references
             state.students.forEach(s => {
@@ -2805,6 +2906,27 @@
             closeModal();
             refreshDashboard();
             showToast("Profile credentials refreshed successfully!");
+        }
+
+        // Inline profile editing from the Settings tab (no modal — saves as you type)
+        function settingsSaveProfileField(field, value) {
+            state.profile[field] = value;
+            saveToStorage();
+            refreshDashboard();
+        }
+
+        function populateProfileSettings() {
+            const map = {
+                'settings-prof-name':    state.profile.teacherName,
+                'settings-prof-subject': state.profile.subjectName,
+                'settings-prof-year':    state.profile.year,
+                'settings-prof-quote':   state.profile.quote,
+                'settings-prof-author':  state.profile.quoteAuthor,
+            };
+            for (const [id, val] of Object.entries(map)) {
+                const el = document.getElementById(id);
+                if (el) el.value = val || '';
+            }
         }
 
         /* --- STREAMING_CHUNK: Constructing the dashboard summary updater... --> */
@@ -3081,6 +3203,27 @@
                     badge.textContent = 'No rotation posted';
                 }
                 col.appendChild(badge);
+
+                // Assignments Due — Canvas assignments due this day (merged in from the old Class Plan page)
+                const dayAssignments = allAssignments
+                    .filter(a => new Date(a.dueDate).toDateString() === new Date(day.dateStr + 'T00:00:00').toDateString())
+                    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+                if (dayAssignments.length > 0) {
+                    const dueBox = document.createElement('div');
+                    dueBox.style.cssText = 'background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:6px 8px;';
+                    const shown = dayAssignments.slice(0, 3);
+                    const moreCount = dayAssignments.length - shown.length;
+                    dueBox.innerHTML = `<div style="font-size:8px;font-weight:800;color:#b91c1c;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">📌 ${dayAssignments.length} Due</div>` +
+                        shown.map(a => {
+                            const p = palette(a.course);
+                            return `<div style="display:flex;align-items:flex-start;gap:4px;margin-bottom:2px">
+                                <div class="${p.dot}" style="width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:3px"></div>
+                                <div style="font-size:9px;color:#4A4540;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(a.title)}</div>
+                            </div>`;
+                        }).join('') +
+                        (moreCount > 0 ? `<div style="font-size:8px;color:#b91c1c;font-weight:700;margin-top:1px">+${moreCount} more</div>` : '');
+                    col.appendChild(dueBox);
+                }
 
                 // Which periods to show: rotation order if available, else all class/plan/duty periods
                 const displayPeriods = day.hasRotation
@@ -4784,6 +4927,7 @@
         /* --- INITIALIZATION HOOK --- */
         window.onload = function () {
             loadFromStorage();
+            _migrateClassPlanNotesToSchedule();
 
             document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', {
                 weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
@@ -4805,8 +4949,11 @@
             checkApplicationLockStatus();
 
             // Render section selectors & dynamic elements
+            renderSidebarNav();
             renderSettingsSections();
             populatePeriodLabelSettings();
+            populateProfileSettings();
+            renderNavCustomizeList();
             renderGradebookTabs();
             renderAttendanceTabs();
             renderStudentTabs();
@@ -5629,8 +5776,7 @@ function render() {
     if (mc) mc.style.background = '';
   }
   renderCalendar(); renderCourseFilter(); renderCalendarSection();
-  if (classPlanMode) renderClassPlan();
-  else if (gradebookMode) renderGradebook();
+  if (gradebookMode) renderGradebook();
   else if (calendarTabMode) renderCalendarTab();
   else renderAssignments();
 }
@@ -5770,17 +5916,9 @@ function changeMonth(dir) { currentMonth.setMonth(currentMonth.getMonth()+dir); 
 
 function selectDate(y,m,d) {
   const date = new Date(y,m,d);
-  if (classPlanMode) {
-    // In class plan mode: always select the tapped date (no toggle-off)
-    selectedDate = date;
-    currentMonth = new Date(y,m,1);
-    renderCalendar();
-    renderClassPlan();
-  } else {
-    selectedDate = (selectedDate && selectedDate.toDateString()===date.toDateString()) ? null : date;
-    if (selectedDate) currentMonth = new Date(y,m,1);
-    render();
-  }
+  selectedDate = (selectedDate && selectedDate.toDateString()===date.toDateString()) ? null : date;
+  if (selectedDate) currentMonth = new Date(y,m,1);
+  render();
 }
 
 // ════════════════════════════════════════════════════════
@@ -6176,11 +6314,6 @@ function renderAssignRow(a,rank,done){
 }
 
 // ════════════════════════════════════════════════════════
-//  CLASS PLAN
-// ════════════════════════════════════════════════════════
-let classPlanMode = false;
-
-// ════════════════════════════════════════════════════════
 //  CALENDAR TAB
 // ════════════════════════════════════════════════════════
 let calendarTabMode = false;
@@ -6379,7 +6512,6 @@ function renderCalendarTab() {
 function _deactivateAllTabs(except) {
   const tabs = {
     'gradebook':   'gradebook-btn',
-    'classPlan':   'class-plan-btn',
     'calendarTab': 'calendar-tab-btn',
     'attendance':  'attendance-btn',
     'home':        'home-btn'
@@ -6387,7 +6519,6 @@ function _deactivateAllTabs(except) {
   for (const [key, btnId] of Object.entries(tabs)) {
     if (key === except) continue;
     if (key === 'gradebook')   gradebookMode   = false;
-    if (key === 'classPlan')   classPlanMode   = false;
     if (key === 'calendarTab') calendarTabMode = false;
     if (key === 'attendance')  attendanceMode  = false;
     const b = document.getElementById(btnId);
@@ -6395,199 +6526,33 @@ function _deactivateAllTabs(except) {
   }
 }
 
-// Auto-grow a textarea to fit its content (call on oninput and after render)
-function autoGrowTextarea(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.max(56, el.scrollHeight) + 'px';
-}
-// Grow all class-plan textareas (called after rendering the table)
-function autoGrowAllTextareas() {
-  document.querySelectorAll('.cp-textarea').forEach(autoGrowTextarea);
-}
-
-function toggleClassPlan() {
-  _deactivateAllTabs('classPlan');
-  classPlanMode = !classPlanMode;
-  const btn = document.getElementById('class-plan-btn');
-  if (classPlanMode) {
-    btn.classList.add('active');
-    if (!selectedDate) { const t=new Date(); selectedDate=t; currentMonth=new Date(t.getFullYear(),t.getMonth(),1); }
-    syncTodoVisibility(); renderCalendar(); renderClassPlan();
-  } else {
-    btn.classList.remove('active');
-    render();
-  }
-}
-
-// Course name lookup — build from courseList for the period labels
-const PERIOD_COURSE_NAMES = {};
-
-function getClassPlanNotes(dateKey) {
-  try { return JSON.parse(localStorage.getItem('mca-class-plan-' + dateKey) || '{}'); } catch(e) { return {}; }
-}
-function saveClassPlanNote(dateKey, period, text) {
-  const notes = getClassPlanNotes(dateKey);
-  if (text) notes[period] = text; else delete notes[period];
-  localStorage.setItem('mca-class-plan-' + dateKey, JSON.stringify(notes));
-  _scheduleSync();
-}
-
-// Hue palette for period cards
-const PERIOD_COLORS = [
-  { bg:'#fff7ed', border:'#fed7aa', dot:'#f97316' },
-  { bg:'#f0f9ff', border:'#bae6fd', dot:'#0ea5e9' },
-  { bg:'#f0fdf4', border:'#bbf7d0', dot:'#22c55e' },
-  { bg:'#fdf4ff', border:'#e9d5ff', dot:'#a855f7' },
-  { bg:'#fff1f2', border:'#fecdd3', dot:'#f43f5e' },
-  { bg:'#f0fdfa', border:'#99f6e4', dot:'#14b8a6' },
-  { bg:'#fffbeb', border:'#fde68a', dot:'#f59e0b' },
-  { bg:'#f5f3ff', border:'#ddd6fe', dot:'#7c3aed' },
-];
-
-function renderClassPlan() {
-  const date = selectedDate || new Date();
-  const dateKey = [date.getFullYear(), String(date.getMonth()+1).padStart(2,'0'), String(date.getDate()).padStart(2,'0')].join('-');
-  const dateLabel = date.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'});
-  const isToday = date.toDateString() === new Date().toDateString();
-
-  // Find rotation for this day
-  const rotationEvent = schoolEvents.find(e => {
-    const ed = new Date(e.dueDate);
-    return ed.getUTCFullYear()===date.getFullYear() && ed.getUTCMonth()===date.getMonth() && ed.getUTCDate()===date.getDate() && /^classes:/i.test(e.title.trim());
-  });
-
-  // Parse periods from "Classes: 1,2,3,4"
-  let periods = [];
-  if (rotationEvent) {
-    const m = rotationEvent.title.match(/classes:\s*(.+)/i);
-    if (m) periods = m[1].split(',').map(s => s.trim()).filter(Boolean);
-  }
-
-  // Canvas assignments due this day, sorted by time
-  const dayAssignments = allAssignments
-    .filter(a => new Date(a.dueDate).toDateString() === date.toDateString())
-    .sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate));
-
-  const notes = getClassPlanNotes(dateKey);
-
-  let html = '<div class="fade-in">';
-
-  // ── Header ──
-  html += `<div class="mb-4 flex items-center gap-3 flex-wrap">
-    <div>
-      <p class="text-[10px] font-bold uppercase tracking-widest mb-0.5" style="color:var(--c-light)">Class Plan</p>
-      <div class="flex items-center gap-2">
-        <h2 class="text-lg font-extrabold" style="color:var(--c-text-primary)">${dateLabel}</h2>
-        ${isToday ? '<span class="text-[10px] font-extrabold px-2 py-0.5 rounded-sm uppercase tracking-wide" style="background:var(--c-pale);color:var(--c-brown)">Today</span>' : ''}
-      </div>
-    </div>`;
-
-  if (rotationEvent) {
-    // Build a labeled list: "P1 · Algebra II  P2 · English II  …"
-    const labeledPeriods = periods.map(p => {
-      const lbl = getPeriodLabel(p);
-      return lbl ? `P${escHtml(p)} · ${escHtml(lbl)}` : `P${escHtml(p)}`;
-    }).join('<span style="opacity:.4;margin:0 4px">|</span>');
-    html += `<div class="flex flex-wrap items-center gap-1.5 mt-1">
-      <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-1 uppercase tracking-wider shrink-0" style="background:var(--c-brown);color:white;border-radius:3px">
-        🔄 ${periods.length} Classes
-      </span>
-      <span class="text-[11px] font-semibold" style="color:var(--c-brown)">${labeledPeriods}</span>
-    </div>`;
-  } else {
-    html += `<span class="text-[10px] font-semibold px-2.5 py-1 uppercase tracking-wider" style="background:var(--c-pale);color:var(--c-light);border-radius:3px">No Rotation</span>`;
-  }
-
-  html += `<p class="text-xs ml-auto" style="color:var(--c-text-muted)">Select a date ←</p>
-  </div>`;
-
-  // ── Table ──
-  html += `<div style="border:1px solid var(--c-pale);border-radius:4px;overflow:hidden;background:var(--c-surface)">
-    <table class="cp-table">
-      <thead>
-        <tr style="background:var(--c-brown);color:white">
-          <th style="width:72px;border-right:1px solid rgba(255,255,255,0.18)">Period</th>
-          <th style="border-right:1px solid rgba(255,255,255,0.18)">Notes / Activities</th>
-          <th style="width:240px">Assignments Due</th>
-        </tr>
-      </thead>
-      <tbody>`;
-
-  if (periods.length > 0) {
-    periods.forEach((period, idx) => {
-      const noteText = notes[period] || '';
-      const rowBg = idx % 2 === 0 ? 'var(--c-surface)' : 'var(--c-cream)';
-      html += `<tr>
-        <td style="background:${rowBg};border-right:1px solid var(--c-pale)">
-          <div class="cp-cell-inner" style="text-align:center">
-            <div style="font-weight:800;font-size:14px;color:var(--c-brown);letter-spacing:0.01em">P${escHtml(period)}</div>
-            ${getPeriodLabel(period) ? `<div style="font-size:10px;font-weight:600;color:var(--c-text-muted);margin-top:2px;line-height:1.3;max-width:72px;word-break:break-word">${escHtml(getPeriodLabel(period))}</div>` : ''}
-          </div>
-        </td>
-        <td style="background:${rowBg};border-right:1px solid var(--c-pale)">
-          <textarea class="cp-textarea"
-            placeholder="Topics, activities, agenda…"
-            oninput="saveClassPlanNote('${dateKey}','${period}',this.value);autoGrowTextarea(this)"
-          >${escHtml(noteText)}</textarea>
-        </td>
-        <td style="background:${rowBg}">
-          <div class="cp-cell-inner" style="min-height:56px">
-            ${dayAssignments.length === 0
-              ? `<span style="color:var(--c-text-muted);font-size:11px;font-style:italic">None</span>`
-              : dayAssignments.map(a => {
-                  const p2 = palette(a.course);
-                  const href = a.url ? `href="${escHtml(a.url)}" target="_blank" rel="noopener"` : '';
-                  const t = fmtTime(a.dueDate);
-                  const isUrgent = new Date(a.dueDate) - new Date() < 3*86400000;
-                  return `<a ${href} class="flex items-start gap-1.5 mb-1.5" style="text-decoration:none">
-                    <div class="w-1.5 h-1.5 rounded-full flex-shrink-0 ${p2.dot}" style="margin-top:3px"></div>
-                    <div style="min-width:0">
-                      <div style="font-size:11px;color:var(--c-text-primary);line-height:1.4">${escHtml(a.title)}</div>
-                      <div style="font-size:10px;font-weight:600;color:${isUrgent?'#ef4444':'var(--c-text-muted)'};letter-spacing:0.01em">Due ${t}</div>
-                    </div>
-                  </a>`;
-                }).join('')
-            }
-          </div>
-        </td>
-      </tr>`;
-    });
-  } else {
-    // No rotation — single row for general notes
-    const noteText = notes['general'] || '';
-    html += `<tr>
-      <td style="background:var(--c-surface);border-right:1px solid var(--c-pale)">
-        <div class="cp-cell-inner" style="font-weight:700;font-size:11px;color:var(--c-light);text-align:center">—</div>
-      </td>
-      <td style="background:var(--c-surface);border-right:1px solid var(--c-pale)" colspan="1">
-        <textarea class="cp-textarea" style="min-height:80px"
-          placeholder="No class rotation found. Enter general notes for the day…"
-          oninput="saveClassPlanNote('${dateKey}','general',this.value);autoGrowTextarea(this)"
-        >${escHtml(noteText)}</textarea>
-      </td>
-      <td style="background:var(--c-surface)">
-        <div class="cp-cell-inner" style="min-height:80px">
-          ${dayAssignments.length === 0
-            ? `<span style="color:var(--c-text-muted);font-size:11px;font-style:italic">None</span>`
-            : dayAssignments.map(a => {
-                const p2 = palette(a.course);
-                const href = a.url ? `href="${escHtml(a.url)}" target="_blank" rel="noopener"` : '';
-                return `<a ${href} class="flex items-start gap-1.5 mb-1" style="text-decoration:none">
-                  <div class="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1 ${p2.dot}"></div>
-                  <span style="font-size:11px;color:var(--c-text-primary);line-height:1.4">${escHtml(a.title)}</span>
-                </a>`;
-              }).join('')
-          }
-        </div>
-      </td>
-    </tr>`;
-  }
-
-  html += `</tbody></table></div>`;
-  html += '</div>';
-  document.getElementById('main-content').innerHTML = html;
-  // Grow textareas to fit any pre-existing saved text
-  requestAnimationFrame(autoGrowAllTextareas);
+// One-time migration: the old "Class Plan" page stored per-period lesson notes
+// under mca-class-plan-<dateKey> keys. That page is now merged into the
+// Pacing Guide (Block Schedule), which keeps its own notes in state.schedule.
+// Pull any old notes across (without overwriting anything already there) so
+// nothing a teacher already typed gets silently lost in the merge.
+function _migrateClassPlanNotesToSchedule() {
+  if (localStorage.getItem('mca-classplan-migrated-v1')) return;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith('mca-class-plan-')) continue;
+      const dateKey = key.replace('mca-class-plan-', '');
+      let notes;
+      try { notes = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) { continue; }
+      for (const [period, text] of Object.entries(notes)) {
+        if (period === 'general' || !text) continue; // no equivalent slot for general (non-rotation) notes
+        const schedKey = `${dateKey}_${period}`;
+        if (!state.schedule[schedKey]) {
+          state.schedule[schedKey] = { notes: text, type: '', label: getPeriodLabel(period) };
+        } else if (!state.schedule[schedKey].notes) {
+          state.schedule[schedKey].notes = text;
+        }
+      }
+    }
+    saveToStorage();
+  } catch(e) { /* best-effort migration — never block boot on it */ }
+  localStorage.setItem('mca-classplan-migrated-v1', '1');
 }
 
 // ════════════════════════════════════════════════════════
@@ -11085,25 +11050,20 @@ function activateMcaContainer(targetId) {
 
 // Called by friend's switchTab() for MCA tabs
 function mca_renderGradebook() {
-    gradebookMode = true; attendanceMode = false; calendarTabMode = false; classPlanMode = false;
+    gradebookMode = true; attendanceMode = false; calendarTabMode = false;
     activateMcaContainer('mca-gradebook-content');
     mca_syncStudents();   // keep Students tab in sync whenever gradebook is opened
     renderGradebook();
 }
 function mca_renderAttendance() {
-    attendanceMode = true; gradebookMode = false; calendarTabMode = false; classPlanMode = false;
+    attendanceMode = true; gradebookMode = false; calendarTabMode = false;
     activateMcaContainer('mca-attendance-content');
     renderAttendance();
 }
 function mca_renderCalendarTab() {
-    calendarTabMode = true; gradebookMode = false; attendanceMode = false; classPlanMode = false;
+    calendarTabMode = true; gradebookMode = false; attendanceMode = false;
     activateMcaContainer('mca-calendar-content');
     renderCalendarTab();
-}
-function mca_renderClassPlan() {
-    classPlanMode = true; gradebookMode = false; attendanceMode = false; calendarTabMode = false;
-    activateMcaContainer('mca-classplan-content');
-    renderClassPlan();
 }
 
 // Override render() — route to whichever MCA mode is active
@@ -11111,7 +11071,6 @@ function render() {
     if      (gradebookMode)   renderGradebook();
     else if (attendanceMode)  renderAttendance();
     else if (calendarTabMode) renderCalendarTab();
-    else if (classPlanMode)   renderClassPlan();
     // else: a friend's tab is active — nothing to do
 }
 
