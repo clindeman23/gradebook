@@ -3299,6 +3299,34 @@
             saveRotationPlansData(data);
         }
 
+        // Rotation plans are keyed by SUBJECT, not by individual period — so if you teach
+        // the same class (e.g. "Algebra II Honors") in both P1 and P4, you type the plan
+        // once and it applies to whichever periods are assigned that subject in Settings.
+        // Periods with no label typed in yet each keep their own independent key so they
+        // don't accidentally get grouped together.
+        function getSubjectKeyForPeriod(period) {
+            const label = getPeriodLabel(period);
+            return label ? label.trim().toLowerCase() : ('period-' + period);
+        }
+
+        function getRotationPlannerSubjects() {
+            const groups = {};
+            ['1','2','3','4','5','6','7'].forEach(p => {
+                const key = getSubjectKeyForPeriod(p);
+                if (!groups[key]) {
+                    groups[key] = { key, displayName: getPeriodLabel(p) || `Period ${p}`, periods: [], type: getPeriodType(p) };
+                }
+                groups[key].periods.push(p);
+            });
+            return Object.values(groups).sort((a, b) => parseInt(a.periods[0]) - parseInt(b.periods[0]));
+        }
+
+        // Safely embed arbitrary text (a class name may contain quotes/apostrophes) inside
+        // a single-quoted inline onclick attribute.
+        function _jsAttrEscape(str) {
+            return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+
         function getRotationDateRangeLabel(quarter, rotationNum) {
             const rot = getRotationCalendar(quarter).find(r => r.rotation === rotationNum);
             if (!rot || !rot.days.length) return '';
@@ -3329,7 +3357,7 @@
 
             let html = `<div class="p-1">
                 <h3 class="text-xl font-bold mb-1">🔁 Rotation Planner</h3>
-                <p class="text-xs text-gray-400 mb-4">Type a lesson plan once per rotation and period — it fills into every date that rotation covers on the Pacing Guide. If you've typed a specific note for an individual day there, that always takes priority over this.</p>
+                <p class="text-xs text-gray-400 mb-4">Type a lesson plan once per rotation and subject — it applies to every period teaching that subject (set in Settings → My Period Schedule) and fills into every date that rotation covers on the Pacing Guide. If you've typed a specific note for an individual day there, that always takes priority over this.</p>
                 <div class="flex gap-2 mb-4 flex-wrap">`;
             quarters.forEach(q => {
                 const active = q === _rotPlannerQuarter;
@@ -3377,29 +3405,30 @@
                         <span style="font-size:11px;color:#999">${escHtml(dateLabel)}</span>
                     </button>
                     <div class="rotation-row-body ${isCurrent ? '' : 'hidden'}" style="padding:12px 14px;background:white">
-                        ${renderRotationPeriodFields(quarter, rot.rotation)}
+                        ${renderRotationSubjectFields(quarter, rot.rotation)}
                     </div>
                 </div>`;
             }).join('') + `</div>`;
         }
 
-        function renderRotationPeriodFields(quarter, rotationNum) {
-            return ['1','2','3','4','5','6','7'].map(p => {
-                const label = getPeriodLabel(p);
-                const type = getPeriodType(p);
-                const plan = getRotationPlan(quarter, rotationNum, p) || {};
-                const typeTag = type === 'plan' ? 'Planning' : type === 'duty' ? 'Duty' : 'Class';
+        function renderRotationSubjectFields(quarter, rotationNum) {
+            const subjects = getRotationPlannerSubjects();
+            return subjects.map(subj => {
+                const plan = getRotationPlan(quarter, rotationNum, subj.key) || {};
+                const typeTag = subj.type === 'plan' ? 'Planning' : subj.type === 'duty' ? 'Duty' : 'Class';
+                const periodsLabel = subj.periods.map(p => 'P' + p).join(', ');
+                const keyAttr = _jsAttrEscape(subj.key);
                 return `<div class="mb-3 pb-3 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
                     <div class="flex items-center gap-2 mb-1.5">
-                        <span style="font-size:11px;font-weight:800;color:#5A2D0C">P${p}</span>
-                        ${label ? `<span style="font-size:11px;font-weight:600;color:#4A4540">${escHtml(label)}</span>` : `<span style="font-size:11px;color:#ccc;font-style:italic">No class set</span>`}
+                        <span style="font-size:11px;font-weight:800;color:#5A2D0C">${escHtml(subj.displayName)}</span>
+                        <span style="font-size:10px;color:#999">${escHtml(periodsLabel)}</span>
                         <span style="font-size:9px;font-weight:700;color:#999;text-transform:uppercase;margin-left:auto">${typeTag}</span>
                     </div>
                     <input type="text" value="${escHtml(plan.notes || '')}" placeholder="Lesson focus / activity for this rotation..."
-                        oninput="saveRotationPlanField('${quarter}',${rotationNum},'${p}','notes',this.value)"
+                        oninput="saveRotationPlanField('${quarter}',${rotationNum},'${keyAttr}','notes',this.value)"
                         style="width:100%;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;margin-bottom:4px;box-sizing:border-box">
                     <input type="text" value="${escHtml(plan.type || '')}" placeholder="Materials / resources..."
-                        oninput="saveRotationPlanField('${quarter}',${rotationNum},'${p}','type',this.value)"
+                        oninput="saveRotationPlanField('${quarter}',${rotationNum},'${keyAttr}','type',this.value)"
                         style="width:100%;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;outline:none;color:#888;box-sizing:border-box">
                 </div>`;
             }).join('');
@@ -3580,7 +3609,7 @@
                     // that rotation touches).
                     const hasDaySpecific = !!(saved.notes || saved.type);
                     const rotInfo = getRotationForDatePeriod(day.dateStr, periodNum);
-                    const rotPlan = (!hasDaySpecific && rotInfo) ? getRotationPlan(rotInfo.quarter, rotInfo.rotation, periodNum) : null;
+                    const rotPlan = (!hasDaySpecific && rotInfo) ? getRotationPlan(rotInfo.quarter, rotInfo.rotation, getSubjectKeyForPeriod(periodNum)) : null;
                     const effectiveNotes = hasDaySpecific ? saved.notes : (rotPlan?.notes || '');
                     const effectiveType  = hasDaySpecific ? saved.type  : (rotPlan?.type  || '');
                     const fromRotation = !hasDaySpecific && !!(rotPlan && (rotPlan.notes || rotPlan.type));
@@ -5439,6 +5468,7 @@
             loadFromStorage();
             _migrateClassPlanNotesToSchedule();
             _migrateRotationDataToMcaKeys();
+            _migrateRotationPlansToSubjectKeys();
 
             document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', {
                 weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
@@ -7085,6 +7115,38 @@ function _migrateRotationDataToMcaKeys() {
     saveToStorage();
   } catch(e) { /* best-effort migration — never block boot on it */ }
   localStorage.setItem('mca-rotation-migrated-v1', '1');
+}
+
+// One-time migration: rotation plans were originally keyed by individual period number
+// (e.g. rotationPlans.Q1.3['1']). Now they're keyed by SUBJECT — the period's class name,
+// lowercased/trimmed — so the same plan applies automatically to every period teaching
+// that subject. Re-key any existing period-numbered entries to their current subject key,
+// merging into an existing subject entry (filling in only missing fields) rather than
+// overwriting, in case two periods already share a subject.
+function _migrateRotationPlansToSubjectKeys() {
+  if (localStorage.getItem('mca-rotation-subject-migrated-v1')) return;
+  try {
+    const data = getRotationPlansData();
+    const migrated = {};
+    for (const [quarter, rotations] of Object.entries(data)) {
+      migrated[quarter] = {};
+      for (const [rotNum, keyMap] of Object.entries(rotations)) {
+        migrated[quarter][rotNum] = {};
+        for (const [oldKey, plan] of Object.entries(keyMap)) {
+          const isBarePeriodNumber = /^[1-7]$/.test(oldKey);
+          const newKey = isBarePeriodNumber ? getSubjectKeyForPeriod(oldKey) : oldKey;
+          if (!migrated[quarter][rotNum][newKey]) {
+            migrated[quarter][rotNum][newKey] = { ...plan };
+          } else {
+            if (!migrated[quarter][rotNum][newKey].notes && plan.notes) migrated[quarter][rotNum][newKey].notes = plan.notes;
+            if (!migrated[quarter][rotNum][newKey].type && plan.type) migrated[quarter][rotNum][newKey].type = plan.type;
+          }
+        }
+      }
+    }
+    saveRotationPlansData(migrated);
+  } catch(e) { /* best-effort migration — never block boot on it */ }
+  localStorage.setItem('mca-rotation-subject-migrated-v1', '1');
 }
 
 // ════════════════════════════════════════════════════════
