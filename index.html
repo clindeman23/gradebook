@@ -2534,9 +2534,7 @@
             navOrder: null,
             navHidden: [],
             counselorColorMap: {},
-            homeroomColorMap: {},
-            rotationPlans: {},
-            rotationCalendarExtra: {}
+            homeroomColorMap: {}
         };
 
         // Navigation state for schedule dates
@@ -2870,8 +2868,6 @@
             if (state.dashboardPinned === undefined) state.dashboardPinned = null;
             if (!state.counselorColorMap) state.counselorColorMap = {};
             if (!state.homeroomColorMap) state.homeroomColorMap = {};
-            if (!state.rotationPlans) state.rotationPlans = {};
-            if (!state.rotationCalendarExtra) state.rotationCalendarExtra = {};
 
             // Safe translation of old static keys to new dynamic references
             state.students.forEach(s => {
@@ -3221,15 +3217,36 @@
             ],
         };
 
+        // Rotation plans + any user-pasted extra calendar data live in their own mca-*
+        // localStorage keys (not inside the main state blob) so they ride along with the
+        // existing GitHub Gist sync that already covers the gradebook/attendance/schedule —
+        // rather than only the separate kvdb.io Cloud Sync in Settings.
+        function getRotationPlansData() {
+            try { return JSON.parse(localStorage.getItem('mca-rotation-plans') || '{}'); }
+            catch(e) { return {}; }
+        }
+        function saveRotationPlansData(data) {
+            localStorage.setItem('mca-rotation-plans', JSON.stringify(data));
+            _scheduleSync();
+        }
+        function getRotationCalendarExtraData() {
+            try { return JSON.parse(localStorage.getItem('mca-rotation-calendar-extra') || '{}'); }
+            catch(e) { return {}; }
+        }
+        function saveRotationCalendarExtraData(data) {
+            localStorage.setItem('mca-rotation-calendar-extra', JSON.stringify(data));
+            _scheduleSync();
+        }
+
         function getRotationCalendar(quarterKey) {
             const base = ROTATION_CALENDAR_DEFAULT[quarterKey] || [];
-            const extra = (state.rotationCalendarExtra && state.rotationCalendarExtra[quarterKey]) || [];
+            const extra = getRotationCalendarExtraData()[quarterKey] || [];
             return [...base, ...extra];
         }
 
         function getAllQuarterKeys() {
             const keys = new Set(Object.keys(ROTATION_CALENDAR_DEFAULT));
-            Object.keys(state.rotationCalendarExtra || {}).forEach(k => keys.add(k));
+            Object.keys(getRotationCalendarExtraData()).forEach(k => keys.add(k));
             return [...keys].sort();
         }
 
@@ -3269,16 +3286,17 @@
         }
 
         function getRotationPlan(quarter, rotation, period) {
-            return (((state.rotationPlans || {})[quarter] || {})[rotation] || {})[period] || null;
+            const data = getRotationPlansData();
+            return (((data[quarter] || {})[rotation] || {})[period] || null);
         }
 
         function saveRotationPlanField(quarter, rotation, period, field, value) {
-            if (!state.rotationPlans) state.rotationPlans = {};
-            if (!state.rotationPlans[quarter]) state.rotationPlans[quarter] = {};
-            if (!state.rotationPlans[quarter][rotation]) state.rotationPlans[quarter][rotation] = {};
-            if (!state.rotationPlans[quarter][rotation][period]) state.rotationPlans[quarter][rotation][period] = {};
-            state.rotationPlans[quarter][rotation][period][field] = value;
-            saveToStorage();
+            const data = getRotationPlansData();
+            if (!data[quarter]) data[quarter] = {};
+            if (!data[quarter][rotation]) data[quarter][rotation] = {};
+            if (!data[quarter][rotation][period]) data[quarter][rotation][period] = {};
+            data[quarter][rotation][period][field] = value;
+            saveRotationPlansData(data);
         }
 
         function getRotationDateRangeLabel(quarter, rotationNum) {
@@ -3439,10 +3457,10 @@
                 return;
             }
 
-            if (!state.rotationCalendarExtra) state.rotationCalendarExtra = {};
-            if (!state.rotationCalendarExtra[quarterKey]) state.rotationCalendarExtra[quarterKey] = [];
-            state.rotationCalendarExtra[quarterKey].push(...parsedRotations);
-            saveToStorage();
+            const extraData = getRotationCalendarExtraData();
+            if (!extraData[quarterKey]) extraData[quarterKey] = [];
+            extraData[quarterKey].push(...parsedRotations);
+            saveRotationCalendarExtraData(extraData);
 
             const successMsg = `✓ Added ${parsedRotations.length} rotation${parsedRotations.length === 1 ? '' : 's'} to ${quarterKey}${errorLines > 0 ? ` (${errorLines} line(s) couldn't be parsed)` : ''}.`;
 
@@ -5420,6 +5438,7 @@
         window.onload = function () {
             loadFromStorage();
             _migrateClassPlanNotesToSchedule();
+            _migrateRotationDataToMcaKeys();
 
             document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', {
                 weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
@@ -7045,6 +7064,27 @@ function _migrateClassPlanNotesToSchedule() {
     saveToStorage();
   } catch(e) { /* best-effort migration — never block boot on it */ }
   localStorage.setItem('mca-classplan-migrated-v1', '1');
+}
+
+// One-time migration: the Rotation Planner's data (state.rotationPlans /
+// state.rotationCalendarExtra) was originally stored inside the main
+// geo_teacher_planner_db blob, which only syncs via the separate kvdb.io
+// Cloud Sync (Settings). Moving it to its own mca-* keys so it rides along
+// with the GitHub Gist sync everything else in the gradebook/schedule uses.
+function _migrateRotationDataToMcaKeys() {
+  if (localStorage.getItem('mca-rotation-migrated-v1')) return;
+  try {
+    if (state.rotationPlans && Object.keys(state.rotationPlans).length && !localStorage.getItem('mca-rotation-plans')) {
+      localStorage.setItem('mca-rotation-plans', JSON.stringify(state.rotationPlans));
+    }
+    if (state.rotationCalendarExtra && Object.keys(state.rotationCalendarExtra).length && !localStorage.getItem('mca-rotation-calendar-extra')) {
+      localStorage.setItem('mca-rotation-calendar-extra', JSON.stringify(state.rotationCalendarExtra));
+    }
+    delete state.rotationPlans;
+    delete state.rotationCalendarExtra;
+    saveToStorage();
+  } catch(e) { /* best-effort migration — never block boot on it */ }
+  localStorage.setItem('mca-rotation-migrated-v1', '1');
 }
 
 // ════════════════════════════════════════════════════════
