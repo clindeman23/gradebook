@@ -765,7 +765,10 @@
                     <!-- Populated via Javascript -->
                 </div>
                 <div class="mt-6 flex justify-between items-center border-t pt-4">
-                    <button class="px-4 py-2 bg-[#EAF7F8] text-[#1E5C62] text-xs font-bold rounded-xl hover:opacity-90 transition" onclick="autoPopulateFromCalendarRotations()">🔄 Auto-populate from Rotation</button>
+                    <div class="flex gap-2">
+                        <button class="px-4 py-2 bg-[#EAF7F8] text-[#1E5C62] text-xs font-bold rounded-xl hover:opacity-90 transition" onclick="autoPopulateFromCalendarRotations()">🔄 Auto-populate from Rotation</button>
+                        <button class="px-4 py-2 bg-[#5A2D0C] text-white text-xs font-bold rounded-xl hover:opacity-90 transition" onclick="openRotationPlanner()">🔁 Manage Rotations</button>
+                    </div>
                     <button class="px-5 py-2 bg-[#FAF7F2] text-xs font-bold border rounded-xl hover:bg-gray-100 transition" onclick="clearSchedule()">Clear Lesson Plans</button>
                 </div>
             </div>
@@ -2531,7 +2534,9 @@
             navOrder: null,
             navHidden: [],
             counselorColorMap: {},
-            homeroomColorMap: {}
+            homeroomColorMap: {},
+            rotationPlans: {},
+            rotationCalendarExtra: {}
         };
 
         // Navigation state for schedule dates
@@ -2865,6 +2870,8 @@
             if (state.dashboardPinned === undefined) state.dashboardPinned = null;
             if (!state.counselorColorMap) state.counselorColorMap = {};
             if (!state.homeroomColorMap) state.homeroomColorMap = {};
+            if (!state.rotationPlans) state.rotationPlans = {};
+            if (!state.rotationCalendarExtra) state.rotationCalendarExtra = {};
 
             // Safe translation of old static keys to new dynamic references
             state.students.forEach(s => {
@@ -3154,6 +3161,305 @@
             return arr;
         }
 
+        // ══════════════════════════════════════════════════════════════
+        //  ROTATION CALENDAR — MCA's non-standard period rotation
+        //  A "Rotation" is one complete pass through all 7 periods (each
+        //  meeting exactly once), spanning 1-3 real calendar days since only
+        //  4 of 7 periods meet per day. This can't be calculated from a
+        //  formula (holidays/breaks shift it unpredictably) — it has to come
+        //  from the school's own published calendar, so it's stored as data.
+        // ══════════════════════════════════════════════════════════════
+        function _rd(dateStr, periodsStr) {
+            return { date: dateStr, periods: periodsStr.split(',').map(s => s.trim()) };
+        }
+        function _rot(num, ...days) { return { rotation: num, days }; }
+
+        const ROTATION_CALENDAR_DEFAULT = {
+            Q1: [
+                _rot(1,  _rd('2026-08-13','1,2,3'), _rd('2026-08-14','4,5,6,7')),
+                _rot(2,  _rd('2026-08-17','1,2,3,4'), _rd('2026-08-18','5,6,7')),
+                _rot(3,  _rd('2026-08-18','1'), _rd('2026-08-19','2,3,4,5'), _rd('2026-08-20','6,7')),
+                _rot(4,  _rd('2026-08-20','1,2'), _rd('2026-08-21','3,4,5,6'), _rd('2026-08-24','7')),
+                _rot(5,  _rd('2026-08-24','1,2,3'), _rd('2026-08-25','4,5,6,7')),
+                _rot(6,  _rd('2026-08-26','1,2,3,4'), _rd('2026-08-27','5,6,7')),
+                _rot(7,  _rd('2026-08-27','1'), _rd('2026-08-28','2,3,4,5'), _rd('2026-08-31','6,7')),
+                _rot(8,  _rd('2026-08-31','1,2'), _rd('2026-09-01','3,4,5,6'), _rd('2026-09-02','7')),
+                _rot(9,  _rd('2026-09-02','1,2,3'), _rd('2026-09-03','4,5,6,7')),
+                _rot(10, _rd('2026-09-04','1,2'), _rd('2026-09-08','3,4,5,6'), _rd('2026-09-09','7')),
+                _rot(11, _rd('2026-09-09','1,2,3'), _rd('2026-09-10','4,5,6,7')),
+                _rot(12, _rd('2026-09-11','1,2,3'), _rd('2026-09-14','4,5,6,7')),
+                _rot(13, _rd('2026-09-15','1,2,3,4'), _rd('2026-09-16','5,6,7')),
+                _rot(14, _rd('2026-09-16','1'), _rd('2026-09-17','2,3,4,5'), _rd('2026-09-18','6,7')),
+                _rot(15, _rd('2026-09-18','1,2'), _rd('2026-09-21','3,4,5,6'), _rd('2026-09-22','7')),
+                _rot(16, _rd('2026-09-22','1,2,3'), _rd('2026-09-23','4,5,6,7')),
+                _rot(17, _rd('2026-09-24','1,2,3,4')),
+                _rot(18, _rd('2026-09-28','2,3,4,5'), _rd('2026-09-29','6,7,1')),
+                _rot(19, _rd('2026-09-29','2'), _rd('2026-09-30','3,4,5,6'), _rd('2026-10-01','7,1')),
+                _rot(20, _rd('2026-10-01','2,3'), _rd('2026-10-02','4,5,6,7'), _rd('2026-10-05','1')),
+            ],
+            Q2: [
+                _rot(1,  _rd('2026-10-13','5,6,7,1'), _rd('2026-10-14','2,3,4')),
+                _rot(2,  _rd('2026-10-15','5,6,7,1'), _rd('2026-10-16','2,3,4')),
+                _rot(3,  _rd('2026-10-16','5'), _rd('2026-10-19','6,7,1,2'), _rd('2026-10-20','3,4')),
+                _rot(4,  _rd('2026-10-20','5,6'), _rd('2026-10-21','7,1,2,3'), _rd('2026-10-22','4')),
+                _rot(5,  _rd('2026-10-22','5,6,7'), _rd('2026-10-23','1,2,3'), _rd('2026-10-26','4')),
+                _rot(6,  _rd('2026-10-26','5,6,7'), _rd('2026-10-27','1,2,3,4')),
+                _rot(7,  _rd('2026-10-28','5,6,7,1'), _rd('2026-10-29','2,3,4')),
+                _rot(8,  _rd('2026-10-29','5'), _rd('2026-10-30','6,7,1,2'), _rd('2026-11-02','3,4')),
+                _rot(9,  _rd('2026-11-02','5,6'), _rd('2026-11-03','7,1,2,3'), _rd('2026-11-04','4')),
+                _rot(10, _rd('2026-11-04','5,6,7'), _rd('2026-11-05','1,2,3,4')),
+                _rot(11, _rd('2026-11-06','5,6,7,1'), _rd('2026-11-09','2,3,4')),
+                _rot(12, _rd('2026-11-09','5'), _rd('2026-11-10','6,7,1,2'), _rd('2026-11-11','3,4')),
+                _rot(13, _rd('2026-11-11','5,6'), _rd('2026-11-12','7,1,2,3'), _rd('2026-11-13','4')),
+                _rot(14, _rd('2026-11-13','5,6'), _rd('2026-11-16','7,1,2,3'), _rd('2026-11-17','4')),
+                _rot(15, _rd('2026-11-17','5,6,7'), _rd('2026-11-18','1,2,3,4')),
+                _rot(16, _rd('2026-11-19','5,6,7,1'), _rd('2026-11-20','2,3'), _rd('2026-11-30','4')),
+                _rot(17, _rd('2026-11-30','5,6,7'), _rd('2026-12-01','1,2,3,4')),
+                _rot(18, _rd('2026-12-02','5,6,7,1'), _rd('2026-12-03','2,3,4')),
+                _rot(19, _rd('2026-12-03','5'), _rd('2026-12-04','6,7,1'), _rd('2026-12-07','2,3,4')),
+                _rot(20, _rd('2026-12-07','5'), _rd('2026-12-08','6,7')),
+            ],
+        };
+
+        function getRotationCalendar(quarterKey) {
+            const base = ROTATION_CALENDAR_DEFAULT[quarterKey] || [];
+            const extra = (state.rotationCalendarExtra && state.rotationCalendarExtra[quarterKey]) || [];
+            return [...base, ...extra];
+        }
+
+        function getAllQuarterKeys() {
+            const keys = new Set(Object.keys(ROTATION_CALENDAR_DEFAULT));
+            Object.keys(state.rotationCalendarExtra || {}).forEach(k => keys.add(k));
+            return [...keys].sort();
+        }
+
+        // Small dataset (~40 rotations max) — safe to rebuild on every lookup rather than cache
+        function _buildRotationDateIndex() {
+            const index = {};
+            getAllQuarterKeys().forEach(qKey => {
+                getRotationCalendar(qKey).forEach(rot => {
+                    rot.days.forEach(day => {
+                        if (!index[day.date]) index[day.date] = {};
+                        day.periods.forEach(p => {
+                            index[day.date][p] = { quarter: qKey, rotation: rot.rotation };
+                        });
+                    });
+                });
+            });
+            return index;
+        }
+
+        // A single calendar day's periods can belong to two different rotations (the tail
+        // of one + the start of the next) — but any ONE period on that date belongs to
+        // exactly one rotation, so this lookup is always unambiguous.
+        function getRotationForDatePeriod(dateStr, period) {
+            const index = _buildRotationDateIndex();
+            const dayEntry = index[dateStr];
+            if (!dayEntry) return null;
+            return dayEntry[String(period)] || null;
+        }
+
+        function getCurrentRotationInfo() {
+            const todayStr = formatSimpleDate(new Date());
+            for (const p of ['1','2','3','4','5','6','7']) {
+                const info = getRotationForDatePeriod(todayStr, p);
+                if (info) return info;
+            }
+            return null;
+        }
+
+        function getRotationPlan(quarter, rotation, period) {
+            return (((state.rotationPlans || {})[quarter] || {})[rotation] || {})[period] || null;
+        }
+
+        function saveRotationPlanField(quarter, rotation, period, field, value) {
+            if (!state.rotationPlans) state.rotationPlans = {};
+            if (!state.rotationPlans[quarter]) state.rotationPlans[quarter] = {};
+            if (!state.rotationPlans[quarter][rotation]) state.rotationPlans[quarter][rotation] = {};
+            if (!state.rotationPlans[quarter][rotation][period]) state.rotationPlans[quarter][rotation][period] = {};
+            state.rotationPlans[quarter][rotation][period][field] = value;
+            saveToStorage();
+        }
+
+        function getRotationDateRangeLabel(quarter, rotationNum) {
+            const rot = getRotationCalendar(quarter).find(r => r.rotation === rotationNum);
+            if (!rot || !rot.days.length) return '';
+            const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const fmt = (iso) => { const [y,m,d] = iso.split('-'); return `${MONTHS[+m-1]} ${+d}`; };
+            const first = fmt(rot.days[0].date);
+            const last = fmt(rot.days[rot.days.length - 1].date);
+            return first === last ? first : `${first}–${last}`;
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        //  ROTATION PLANNER — type a plan once per rotation+period, it
+        //  applies to every date that rotation touches on the Pacing Guide
+        // ══════════════════════════════════════════════════════════════
+        let _rotPlannerQuarter = null;
+
+        function openRotationPlanner() {
+            if (!_rotPlannerQuarter) {
+                const current = getCurrentRotationInfo();
+                _rotPlannerQuarter = current ? current.quarter : (getAllQuarterKeys()[0] || 'Q1');
+            }
+            showModal(renderRotationPlannerHtml(), 'max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar');
+        }
+
+        function renderRotationPlannerHtml() {
+            const quarters = getAllQuarterKeys();
+            const current = getCurrentRotationInfo();
+
+            let html = `<div class="p-1">
+                <h3 class="text-xl font-bold mb-1">🔁 Rotation Planner</h3>
+                <p class="text-xs text-gray-400 mb-4">Type a lesson plan once per rotation and period — it fills into every date that rotation covers on the Pacing Guide. If you've typed a specific note for an individual day there, that always takes priority over this.</p>
+                <div class="flex gap-2 mb-4 flex-wrap">`;
+            quarters.forEach(q => {
+                const active = q === _rotPlannerQuarter;
+                html += `<button onclick="switchRotationPlannerQuarter('${escHtml(q)}')" style="padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;border:2px solid;cursor:pointer;
+                    ${active ? 'background:#5A2D0C;color:white;border-color:#5A2D0C' : 'background:white;color:#666;border-color:#e5e7eb'}">${escHtml(q)}</button>`;
+            });
+            html += `</div>
+                <div id="rotation-planner-list">
+                    ${renderRotationListHtml(_rotPlannerQuarter, current)}
+                </div>
+                <div class="mt-5 pt-4 border-t">
+                    <button onclick="toggleAddRotationDataForm()" class="text-xs font-bold text-gray-500 hover:text-gray-700 underline">➕ Add more rotation data (Q3/Q4 or updates)</button>
+                    <div id="add-rotation-data-form" class="hidden mt-3 p-3 bg-gray-50 rounded-lg">
+                        <p class="text-[11px] text-gray-500 mb-2">Paste lines in the same format MCA's calendar uses, one rotation per line:</p>
+                        <textarea id="newRotPasteArea" rows="5" placeholder="Rotation 21: Jan 5 (P1,2,3,4) + Jan 6 (P5,6,7)&#10;Rotation 22: Jan 7 (P1,2,3) + Jan 8 (P4,5,6,7)" class="w-full border p-2.5 rounded-lg text-xs outline-none font-mono"></textarea>
+                        <div class="flex items-center gap-2 mt-2 flex-wrap">
+                            <label class="text-xs text-gray-500">Quarter label:</label>
+                            <input id="newRotQuarter" type="text" value="${escHtml(quarters.includes('Q3') ? 'Q4' : 'Q3')}" placeholder="e.g. Q3" class="border p-1.5 rounded-lg text-xs outline-none w-20">
+                            <label class="text-xs text-gray-500">Year:</label>
+                            <input id="newRotYear" type="number" value="${new Date().getFullYear()}" class="border p-1.5 rounded-lg text-xs outline-none w-20">
+                            <button onclick="parseAndAddRotationData()" class="px-4 py-2 bg-[#82BDC3] text-white text-xs font-bold rounded-lg hover:opacity-90">Parse & Add</button>
+                        </div>
+                        <p id="add-rotation-data-status" class="text-xs mt-2"></p>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="w-full mt-4 py-2.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-200">Close</button>
+            </div>`;
+            return html;
+        }
+
+        function switchRotationPlannerQuarter(q) {
+            _rotPlannerQuarter = q;
+            document.getElementById('modalContent').innerHTML = renderRotationPlannerHtml();
+        }
+
+        function renderRotationListHtml(quarter, current) {
+            const rotations = getRotationCalendar(quarter);
+            if (!rotations.length) return `<p class="text-xs text-gray-400 text-center py-8">No rotation data yet for ${escHtml(quarter)}. Add some below.</p>`;
+            return `<div style="max-height:50vh;overflow-y:auto">` + rotations.map(rot => {
+                const isCurrent = !!(current && current.quarter === quarter && current.rotation === rot.rotation);
+                const dateLabel = getRotationDateRangeLabel(quarter, rot.rotation);
+                return `<div class="border rounded-xl mb-2 overflow-hidden" style="border-color:${isCurrent ? '#82BDC3' : '#e5e7eb'}">
+                    <button onclick="toggleRotationRow(this)" style="width:100%;text-align:left;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;background:${isCurrent ? '#EAF7F8' : '#FAF7F2'};border:none;cursor:pointer">
+                        <span style="font-size:13px;font-weight:800;color:#5A2D0C">Rotation ${rot.rotation}${isCurrent ? ` <span style="color:#1E5C62;font-size:10px;font-weight:800;background:white;padding:1px 8px;border-radius:10px;margin-left:6px">CURRENT</span>` : ''}</span>
+                        <span style="font-size:11px;color:#999">${escHtml(dateLabel)}</span>
+                    </button>
+                    <div class="rotation-row-body ${isCurrent ? '' : 'hidden'}" style="padding:12px 14px;background:white">
+                        ${renderRotationPeriodFields(quarter, rot.rotation)}
+                    </div>
+                </div>`;
+            }).join('') + `</div>`;
+        }
+
+        function renderRotationPeriodFields(quarter, rotationNum) {
+            return ['1','2','3','4','5','6','7'].map(p => {
+                const label = getPeriodLabel(p);
+                const type = getPeriodType(p);
+                const plan = getRotationPlan(quarter, rotationNum, p) || {};
+                const typeTag = type === 'plan' ? 'Planning' : type === 'duty' ? 'Duty' : 'Class';
+                return `<div class="mb-3 pb-3 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
+                    <div class="flex items-center gap-2 mb-1.5">
+                        <span style="font-size:11px;font-weight:800;color:#5A2D0C">P${p}</span>
+                        ${label ? `<span style="font-size:11px;font-weight:600;color:#4A4540">${escHtml(label)}</span>` : `<span style="font-size:11px;color:#ccc;font-style:italic">No class set</span>`}
+                        <span style="font-size:9px;font-weight:700;color:#999;text-transform:uppercase;margin-left:auto">${typeTag}</span>
+                    </div>
+                    <input type="text" value="${escHtml(plan.notes || '')}" placeholder="Lesson focus / activity for this rotation..."
+                        oninput="saveRotationPlanField('${quarter}',${rotationNum},'${p}','notes',this.value)"
+                        style="width:100%;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;outline:none;margin-bottom:4px;box-sizing:border-box">
+                    <input type="text" value="${escHtml(plan.type || '')}" placeholder="Materials / resources..."
+                        oninput="saveRotationPlanField('${quarter}',${rotationNum},'${p}','type',this.value)"
+                        style="width:100%;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;outline:none;color:#888;box-sizing:border-box">
+                </div>`;
+            }).join('');
+        }
+
+        function toggleRotationRow(btn) {
+            const body = btn.nextElementSibling;
+            body.classList.toggle('hidden');
+        }
+
+        function toggleAddRotationDataForm() {
+            document.getElementById('add-rotation-data-form')?.classList.toggle('hidden');
+        }
+
+        function parseAndAddRotationData() {
+            const quarterKey = document.getElementById('newRotQuarter').value.trim();
+            const year = document.getElementById('newRotYear').value.trim();
+            const text = document.getElementById('newRotPasteArea').value.trim();
+            const statusEl = document.getElementById('add-rotation-data-status');
+
+            if (!quarterKey || !year || !text) {
+                statusEl.textContent = 'Fill in a quarter label, year, and paste some rotation lines first.';
+                statusEl.style.color = '#dc2626';
+                return;
+            }
+
+            const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+            const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+            const parsedRotations = [];
+            let errorLines = 0;
+
+            lines.forEach(line => {
+                // "Rotation 21: Aug 13 (P1,2,3) + Aug 14 (P4,5,6,7)"
+                const m = line.match(/rotation\s+(\d+)\s*:\s*(.+)/i);
+                if (!m) { errorLines++; return; }
+                const rotNum = parseInt(m[1]);
+                const dayParts = m[2].split('+').map(s => s.trim());
+                const days = [];
+                dayParts.forEach(part => {
+                    const dm = part.match(/([A-Za-z]{3,})\s+(\d{1,2})\s*\(\s*P?\s*([\d,\s]+)\)/i);
+                    if (!dm) { errorLines++; return; }
+                    const monthNum = MONTHS[dm[1].slice(0,3).toLowerCase()];
+                    if (!monthNum) { errorLines++; return; }
+                    const day = parseInt(dm[2]);
+                    const dateStr = `${year}-${String(monthNum).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                    const periods = dm[3].split(',').map(s => s.trim()).filter(Boolean);
+                    days.push({ date: dateStr, periods });
+                });
+                if (days.length) parsedRotations.push({ rotation: rotNum, days });
+            });
+
+            if (parsedRotations.length === 0) {
+                statusEl.textContent = 'Could not parse any rotation lines. Check the format matches the example.';
+                statusEl.style.color = '#dc2626';
+                return;
+            }
+
+            if (!state.rotationCalendarExtra) state.rotationCalendarExtra = {};
+            if (!state.rotationCalendarExtra[quarterKey]) state.rotationCalendarExtra[quarterKey] = [];
+            state.rotationCalendarExtra[quarterKey].push(...parsedRotations);
+            saveToStorage();
+
+            const successMsg = `✓ Added ${parsedRotations.length} rotation${parsedRotations.length === 1 ? '' : 's'} to ${quarterKey}${errorLines > 0 ? ` (${errorLines} line(s) couldn't be parsed)` : ''}.`;
+
+            _rotPlannerQuarter = quarterKey;
+            document.getElementById('modalContent').innerHTML = renderRotationPlannerHtml();
+            // The line above rebuilds the whole modal (so the new quarter's tab/list show up),
+            // which replaces statusEl with a fresh, empty element — so the success message has
+            // to be set on the NEW element after rebuilding, and the form re-opened since the
+            // fresh render defaults it to collapsed.
+            document.getElementById('add-rotation-data-form')?.classList.remove('hidden');
+            const freshStatusEl = document.getElementById('add-rotation-data-status');
+            if (freshStatusEl) {
+                freshStatusEl.textContent = successMsg;
+                freshStatusEl.style.color = '#16a34a';
+            }
+        }
+
         function renderBlockSchedule() {
             const grid = document.getElementById('blockGrid');
             if (!grid) return;
@@ -3251,6 +3557,17 @@
                     const pType = getPeriodType(periodNum);
                     const slotLabel = day.hasRotation ? `Block ${slotIdx + 1}` : `P${periodNum}`;
 
+                    // A day-specific note always wins; otherwise fall back to that day's
+                    // rotation plan (typed once in the Rotation Planner, applies everywhere
+                    // that rotation touches).
+                    const hasDaySpecific = !!(saved.notes || saved.type);
+                    const rotInfo = getRotationForDatePeriod(day.dateStr, periodNum);
+                    const rotPlan = (!hasDaySpecific && rotInfo) ? getRotationPlan(rotInfo.quarter, rotInfo.rotation, periodNum) : null;
+                    const effectiveNotes = hasDaySpecific ? saved.notes : (rotPlan?.notes || '');
+                    const effectiveType  = hasDaySpecific ? saved.type  : (rotPlan?.type  || '');
+                    const fromRotation = !hasDaySpecific && !!(rotPlan && (rotPlan.notes || rotPlan.type));
+                    const rotationTag = fromRotation ? `<div style="font-size:8px;font-weight:700;color:#7c9885;margin-top:3px">🔁 Rotation ${rotInfo.rotation}</div>` : '';
+
                     const cell = document.createElement('div');
                     cell.style.cssText = 'border-radius:9px;padding:9px 11px;cursor:pointer;border:1.5px solid;min-height:62px;transition:border-color .15s,background .15s;';
 
@@ -3258,18 +3575,21 @@
                         cell.style.cssText += 'background:#f0f9ff;border-color:#bae6fd;';
                         cell.innerHTML = `<div style="font-size:9px;font-weight:800;color:#0284c7;text-transform:uppercase;letter-spacing:.05em">${slotLabel} · Planning</div>
                             <div style="font-size:11px;font-weight:600;color:#38bdf8;margin-top:4px">${className || 'Planning Period'}</div>
-                            ${saved.notes ? `<div style="font-size:10px;color:#7dd3fc;margin-top:3px;line-height:1.3">${saved.notes}</div>` : ''}`;
+                            ${effectiveNotes ? `<div style="font-size:10px;color:#7dd3fc;margin-top:3px;line-height:1.3">${escHtml(effectiveNotes)}</div>` : ''}
+                            ${rotationTag}`;
                     } else if (pType === 'duty') {
                         cell.style.cssText += 'background:#faf5ff;border-color:#e9d5ff;';
                         cell.innerHTML = `<div style="font-size:9px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em">${slotLabel} · Duty</div>
                             <div style="font-size:11px;font-weight:600;color:#c4b5fd;margin-top:4px">${className || 'Duty / Advisory'}</div>
-                            ${saved.notes ? `<div style="font-size:10px;color:#c4b5fd;margin-top:3px;line-height:1.3">${saved.notes}</div>` : ''}`;
-                    } else if (saved.notes || saved.type) {
+                            ${effectiveNotes ? `<div style="font-size:10px;color:#c4b5fd;margin-top:3px;line-height:1.3">${escHtml(effectiveNotes)}</div>` : ''}
+                            ${rotationTag}`;
+                    } else if (effectiveNotes || effectiveType) {
                         cell.style.cssText += 'background:rgba(130,189,195,0.12);border-color:#82BDC3;';
                         cell.innerHTML = `<div style="font-size:9px;font-weight:800;color:#82BDC3;text-transform:uppercase;letter-spacing:.05em">${slotLabel}</div>
                             <div style="font-size:11px;font-weight:700;color:#4A4540;margin-top:3px">P${periodNum}${className ? ' · ' + className : ''}</div>
-                            ${saved.notes ? `<div style="font-size:10px;color:#9A958C;margin-top:3px;line-height:1.3">${saved.notes}</div>` : ''}
-                            ${saved.type ? `<div style="font-size:9px;color:#bbb;margin-top:2px">${saved.type}</div>` : ''}`;
+                            ${effectiveNotes ? `<div style="font-size:10px;color:#9A958C;margin-top:3px;line-height:1.3">${escHtml(effectiveNotes)}</div>` : ''}
+                            ${effectiveType ? `<div style="font-size:9px;color:#bbb;margin-top:2px">${escHtml(effectiveType)}</div>` : ''}
+                            ${rotationTag}`;
                     } else if (className) {
                         cell.style.cssText += 'background:#fff;border-color:#e5e7eb;';
                         cell.innerHTML = `<div style="font-size:9px;font-weight:800;color:#ccc;text-transform:uppercase;letter-spacing:.05em">${slotLabel}</div>
