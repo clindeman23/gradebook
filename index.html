@@ -11014,9 +11014,7 @@ function renderAttendance() {
     html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 14px;border-radius:12px;background:#fffbeb;border:2px solid #f59e0b">
       <span style="font-size:13px">📋</span>
       <span style="font-size:12px;font-weight:700;color:#92400e;flex:1">In progress: <strong>${_fmtDateLong(activeDate)}</strong>
-        ${a>0?`&nbsp;·&nbsp;<span style="color:#dc2626">${a} absent</span>`:''}
-        ${t>0?`&nbsp;·&nbsp;<span style="color:#d97706">${t} tardy</span>`:''}
-        ${a===0&&t===0?'&nbsp;·&nbsp;<span style="color:#15803d">All present</span>':''}
+        <span id="att-banner-summary">${_attBannerSummaryHtml(a, t)}</span>
       </span>
       <button onclick="attToggleTestDay('${cls.id}','${activeDate}')"
         style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;border:1.5px solid;cursor:pointer;
@@ -11092,11 +11090,12 @@ function renderAttendance() {
 
   // Legend — condensed to one compact line
   html += `<div style="display:flex;gap:10px;align-items:center;margin-top:6px;font-size:10px;color:var(--c-text-muted);flex-wrap:wrap;padding:0 2px">
+    <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#f0fdf4;border:1.5px solid #86efac;font-size:8px;font-weight:800;color:#16a34a;text-align:center;line-height:14px">P</span>Present (default)</span>
     <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#fee2e2;border:1.5px solid #fca5a5;font-size:8px;font-weight:800;color:#dc2626;text-align:center;line-height:14px">A</span>Absent</span>
     <span style="display:inline-flex;align-items:center;gap:3px"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#fef9c3;border:1.5px solid #fde68a;font-size:8px;font-weight:800;color:#d97706;text-align:center;line-height:14px">T</span>Tardy</span>
     <span style="display:inline-flex;align-items:center;gap:3px"><span style="font-size:8px;color:#7c3aed">●</span>Missed test</span>
     <span style="display:inline-flex;align-items:center;gap:3px"><span style="opacity:.6">✓</span>Submitted</span>
-    <span style="margin-left:auto;opacity:.75">Click a cell to mark · click a date header to toggle Test Day · ✕ on a header deletes that day</span>
+    <span style="margin-left:auto;opacity:.75">Everyone starts Present — click a cell to cycle P → A → T · click a date header to toggle Test Day · ✕ deletes that day</span>
   </div>`;
 
   html += '</div>';
@@ -11328,14 +11327,16 @@ function attExportPrint(classId) {
 }
 
 function _attCell(classId, stuId, dateStr, status, missedTest, isToday) {
-  const isEmpty = !status;
-  const bg = status==='A' ? '#fee2e2' : status==='T' ? '#fef9c3' : (isToday ? '#f0fdf4' : 'transparent');
-  const border = status==='A' ? '1.5px solid #fca5a5' : status==='T' ? '1.5px solid #fde68a' : (isToday ? '1.5px solid #86efac' : '1.5px solid transparent');
-  const color = status==='A' ? '#dc2626' : status==='T' ? '#d97706' : '#d1d5db';
-  const label = status==='A' ? 'A' : status==='T' ? 'T' : (isToday ? '·' : '');
+  // A blank/missing status has always meant "Present" (see attExportCsv's status||'P'
+  // fallback) — this just makes that visible instead of rendering as an empty box, so
+  // everyone shows up confidently marked present and you only click the exceptions.
+  const bg = status==='A' ? '#fee2e2' : status==='T' ? '#fef9c3' : '#f0fdf4';
+  const border = status==='A' ? '1.5px solid #fca5a5' : status==='T' ? '1.5px solid #fde68a' : '1.5px solid #86efac';
+  const color = status==='A' ? '#dc2626' : status==='T' ? '#d97706' : '#16a34a';
+  const label = status==='A' ? 'A' : status==='T' ? 'T' : 'P';
   const mtDot = missedTest ? '<span style="position:absolute;top:1px;right:1px;width:5px;height:5px;border-radius:50%;background:#7c3aed"></span>' : '';
   return `<td id="att-cell-${stuId}-${dateStr}" style="padding:3px 2px;text-align:center;border-bottom:1px solid #f0ece6;border-left:1px solid #f0ece6">
-    <div onclick="attCellClick('${classId}','${stuId}','${dateStr}')"
+    <div onclick="attCellClick('${classId}','${stuId}','${dateStr}')" title="Click to cycle: Present → Absent → Tardy"
       style="position:relative;width:36px;height:26px;border-radius:6px;margin:0 auto;cursor:pointer;background:${bg};border:${border};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${color};transition:all .1s;user-select:none"
       onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">${label}${mtDot}</div>
   </td>`;
@@ -11365,8 +11366,9 @@ function attCellClick(classId, stuId, dateStr) {
     const isToday = dateStr === _todayStr();
     cellEl.outerHTML = _attCell(classId, stuId, dateStr, rec.status||'', rec.missedTest||false, isToday);
   }
-  // Patch totals row cell
+  // Patch totals row cell + the "In progress" banner summary (if this is that day)
   _attRefreshTotals(classId, dateStr, data);
+  _attRefreshBanner(dateStr, data);
 }
 
 function attToggleTestDay(classId, dateStr) {
@@ -11377,6 +11379,25 @@ function attToggleTestDay(classId, dateStr) {
   Object.values(data[dateStr].records || {}).forEach(r => { if (r.status==='A'||r.status==='T') r.missedTest = td; });
   saveAttData(classId, data);
   renderAttendance(); // header re-render needed for 📝 indicator
+}
+
+function _attBannerSummaryHtml(a, t) {
+  if (a === 0 && t === 0) return `&nbsp;·&nbsp;<span style="color:#15803d">All present</span>`;
+  return `${a>0?`&nbsp;·&nbsp;<span style="color:#dc2626">${a} absent</span>`:''}${t>0?`&nbsp;·&nbsp;<span style="color:#d97706">${t} tardy</span>`:''}`;
+}
+
+function _attRefreshBanner(dateStr, data) {
+  const el = document.getElementById('att-banner-summary');
+  if (!el) return;
+  // The banner only shows the first unsubmitted day — recompute which date that is the
+  // same way renderAttendance() does, and only patch if the clicked cell was on that day.
+  const dates = Object.keys(data).sort();
+  const activeDate = dates.find(d => !data[d].submitted);
+  if (dateStr !== activeDate) return;
+  const recs = Object.values((data[dateStr]||{}).records||{});
+  const a = recs.filter(r=>r.status==='A').length;
+  const t = recs.filter(r=>r.status==='T').length;
+  el.innerHTML = _attBannerSummaryHtml(a, t);
 }
 
 function _attRefreshTotals(classId, dateStr, data) {
