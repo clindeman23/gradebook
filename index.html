@@ -7854,10 +7854,41 @@ function gbSaveGradeColor(grade, hex) {
   localStorage.setItem('mca-grade-colors', JSON.stringify(c));
   _scheduleSync(); renderGradebook();
 }
+const GB_CAT_COLOR_PRESETS = [
+  { hex: '#782F40', label: 'FSU Garnet' },
+  { hex: '#CEB888', label: 'FSU Gold' },
+  { hex: '#177E89', label: 'FSU Teal Blue' },
+  { hex: '#5A2D0C', label: 'Brown' },
+  { hex: '#EA580C', label: 'Orange' },
+  { hex: '#EAB308', label: 'Yellow' },
+  { hex: '#DB2777', label: 'Pink' },
+  { hex: '#7C3AED', label: 'Purple' },
+];
+function gbCatColorPickerHtml(catId, currentColor) {
+  const cur = (currentColor || '#5A2D0C').toLowerCase();
+  const swatches = GB_CAT_COLOR_PRESETS.map(p => `
+    <button type="button" onclick="gbUpdateCatColor('${catId}','${p.hex}')" title="${p.label}" class="gb-cat-color-swatch" data-hex="${p.hex}"
+      style="width:16px;height:16px;border-radius:50%;background:${p.hex};border:2px solid ${cur===p.hex.toLowerCase()?'var(--c-text-primary)':'transparent'};box-shadow:0 0 0 1px var(--c-pale);cursor:pointer;padding:0;flex-shrink:0"></button>`
+  ).join('');
+  return `
+    <input type="color" value="${currentColor||'#5A2D0C'}" title="Custom category color" class="gb-cat-color-custom"
+      oninput="gbUpdateCatColor('${catId}',this.value)"
+      style="width:30px;height:30px;border-radius:8px;border:2px solid var(--c-pale);cursor:pointer;padding:1px;flex-shrink:0">
+    <div style="display:flex;gap:3px;flex-wrap:wrap;max-width:76px">${swatches}</div>`;
+}
 function gbUpdateCatColor(catId, hex) {
   const data = getGbData(); const cls = data.classes[gbClassIdx];
   const cat = (cls.categories||[]).find(c=>c.id===catId); if (cat) cat.color = hex;
   saveGbData(data); renderGradebook();
+  const row = document.getElementById('catrow-'+catId);
+  if (row) {
+    const customInput = row.querySelector('.gb-cat-color-custom');
+    if (customInput) customInput.value = hex;
+    row.querySelectorAll('.gb-cat-color-swatch').forEach(sw => {
+      const match = (sw.dataset.hex || '').toLowerCase() === hex.toLowerCase();
+      sw.style.border = match ? '2px solid var(--c-text-primary)' : '2px solid transparent';
+    });
+  }
 }
 
 function gradeColor(letter) {
@@ -8900,10 +8931,7 @@ function openGbSettings() {
   const catRows = cats.map(c=>`
     <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;padding:8px 10px;border-radius:10px;border:1.5px solid var(--c-pale);background:var(--c-surface)" id="catrow-${c.id}">
       <div style="display:flex;align-items:center;gap:8px">
-        <input type="color" value="${c.color||'#5A2D0C'}"
-          title="Category color"
-          oninput="gbUpdateCatColor('${c.id}',this.value)"
-          style="width:30px;height:30px;border-radius:8px;border:2px solid var(--c-pale);cursor:pointer;padding:1px;flex-shrink:0">
+        ${gbCatColorPickerHtml(c.id, c.color||'#5A2D0C')}
         <input value="${escHtml(c.name)}" placeholder="Category name"
           style="flex:1;padding:6px 10px;border-radius:8px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:13px;font-family:inherit"
           oninput="gbUpdateCatName('${c.id}',this.value)">
@@ -9105,9 +9133,7 @@ function gbAddCatRow() {
     const div = document.createElement('div');
     div.id = 'catrow-'+newCat.id;
     div.style = 'display:flex;align-items:center;gap:8px;margin-bottom:8px';
-    div.innerHTML = `<input type="color" value="#5A2D0C" title="Category color"
-        oninput="gbUpdateCatColor('${newCat.id}',this.value)"
-        style="width:30px;height:30px;border-radius:8px;border:2px solid var(--c-pale);cursor:pointer;padding:1px;flex-shrink:0">
+    div.innerHTML = `${gbCatColorPickerHtml(newCat.id, '#5A2D0C')}
       <input value="" placeholder="Category name"
         style="flex:1;padding:6px 10px;border-radius:8px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:13px;font-family:inherit"
         oninput="gbUpdateCatName('${newCat.id}',this.value)">
