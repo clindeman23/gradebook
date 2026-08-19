@@ -437,6 +437,15 @@
             border-style: dashed; color: var(--c-light); background: transparent; box-shadow: none;
         }
         .gbx-class-chip.add:hover { color: var(--c-brown); border-color: var(--c-brown); transform: none; }
+        .gbx-class-chip-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
+        .gbx-chip-color {
+            position: absolute; top: -3px; right: -3px; width: 13px; height: 13px;
+            border-radius: 50%; border: 2px solid var(--c-surface); padding: 0; margin: 0;
+            cursor: pointer; overflow: hidden; -webkit-appearance: none; appearance: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,.25);
+        }
+        .gbx-chip-color::-webkit-color-swatch-wrapper { padding: 0; }
+        .gbx-chip-color::-webkit-color-swatch { border: none; border-radius: 50%; }
 
         .gbx-toolbar {
             display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -484,7 +493,7 @@
 
         .gbx-menu-wrap { position: relative; flex-shrink: 0; }
         .gbx-menu {
-            display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 50;
+            display: none; position: fixed; z-index: 9999;
             min-width: 200px; background: var(--c-surface);
             border: 1px solid var(--c-pale); border-radius: 14px;
             box-shadow: 0 8px 28px rgba(0,0,0,.14); padding: 6px; overflow: hidden;
@@ -8049,6 +8058,14 @@ function toggleGradebook() {
 }
 
 function gbSelectClass(idx) { gbClassIdx = idx; chartsClassIdx = idx; gbEditMode = false; renderGradebook(); }
+function gbSetChipColor(idx, color) {
+  const data = getGbData();
+  const c = data.classes[idx];
+  if (!c) return;
+  c.color = color;
+  saveGbData(data);
+  renderGradebook();
+}
 function gbSelectQuarter(q) { gbQuarter = q; localStorage.setItem('mca-last-quarter', q); renderGradebook(); }
 function toggleGbEditMode() { gbEditMode = !gbEditMode; renderGradebook(); }
 
@@ -8192,10 +8209,15 @@ function renderGradebook() {
     const active = i === gbClassIdx;
     const c = data.classes[i];
     const clr = c.color || 'var(--c-brown)';
-    html += `<button onclick="gbSelectClass(${i})" class="gbx-class-chip${active ? ' active' : ''}"
-      style="${active ? `background:${clr};box-shadow:0 3px 10px ${clr}45` : ''}">
-      ${active ? '' : `<span class="dot" style="background:${clr}"></span>`}${escHtml(c.name || `Class ${i+1}`)}
-    </button>`;
+    const hexClr = c.color || '#5A2D0C';
+    html += `<div class="gbx-class-chip-wrap">
+      <button onclick="gbSelectClass(${i})" class="gbx-class-chip${active ? ' active' : ''}"
+        style="${active ? `background:${clr};box-shadow:0 3px 10px ${clr}45` : ''}">
+        ${active ? '' : `<span class="dot" style="background:${clr}"></span>`}${escHtml(c.name || `Class ${i+1}`)}
+      </button>
+      <input type="color" class="gbx-chip-color" value="${hexClr}" title="Color-code this class's tab"
+        onclick="event.stopPropagation()" oninput="gbSetChipColor(${i},this.value)">
+    </div>`;
   }
   if (data.classes.length < 10) {
     html += `<button onclick="openGbAddClass()" class="gbx-class-chip add">+ Class</button>`;
@@ -8329,7 +8351,20 @@ function renderGradebook() {
 function toggleGbxMenu(ev) {
   ev.stopPropagation();
   const m = document.getElementById('gbx-menu');
-  if (m) m.classList.toggle('open');
+  if (!m) return;
+  const opening = !m.classList.contains('open');
+  m.classList.toggle('open');
+  if (opening) {
+    const btn = ev.currentTarget.closest('.gbx-menu-wrap') || ev.currentTarget;
+    const r = btn.getBoundingClientRect();
+    const menuW = m.offsetWidth || 200;
+    let left = r.right - menuW;
+    left = Math.max(8, Math.min(left, window.innerWidth - menuW - 8));
+    let top = r.bottom + 6;
+    if (top + m.offsetHeight > window.innerHeight - 8) top = r.top - m.offsetHeight - 6;
+    m.style.left = left + 'px';
+    m.style.top = top + 'px';
+  }
 }
 function closeGbxMenu() {
   const m = document.getElementById('gbx-menu');
@@ -8341,6 +8376,7 @@ document.addEventListener('click', (e) => {
     m.classList.remove('open');
   }
 });
+window.addEventListener('resize', closeGbxMenu);
 
 function gbRenderTable(cls, data) {
   const q = cls.quarters?.[gbQuarter] || {assignments:[],grades:{}};
