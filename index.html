@@ -8263,6 +8263,8 @@ function renderGradebook() {
       html += `<button onclick="openExamModal('${cls.id}','final')" class="gbx-btn exam-fin">📝 Final</button>`;
     }
 
+    html += `<button onclick="takeAttendanceFromGradebook()" class="gbx-btn" title="Take attendance for ${escHtml(cls.name || 'this class')} without leaving the gradebook">👥 Attendance</button>`;
+
     if (gbEditMode) {
       html += `<button onclick="openAddStudent()" class="gbx-btn">+ Student</button>`;
     }
@@ -11111,6 +11113,18 @@ function renderAttendance() {
   }
 }
 
+// Quick "👥 Attendance" button on the Gradebook toolbar — jumps to Attendance for
+// whichever class is currently open in the gradebook, and opens the date picker right
+// away so attendance can be taken without extra clicks back through the sidebar.
+function takeAttendanceFromGradebook() {
+  const data = getGbData();
+  const cls = data.classes[gbClassIdx];
+  if (!cls) { showToast('No class selected.'); return; }
+  attClassIdx = gbClassIdx; // keep the same class selected on the Attendance page
+  switchTab('attendance');
+  attTakeAttendance(cls.id);
+}
+
 function attTakeAttendance(classId) {
   const data = getAttData(classId);
   const today = _todayStr();
@@ -11122,7 +11136,7 @@ function attTakeAttendance(classId) {
     <label style="font-size:12px;font-weight:700;color:var(--c-text-secondary);display:block;margin-bottom:6px">Date</label>
     <input id="att-date-input" type="date" value="${today}"
       style="width:100%;padding:9px 12px;border-radius:10px;border:1.5px solid var(--c-pale);font-size:13px;outline:none;box-sizing:border-box">
-    <p id="att-date-err" style="display:none;color:#dc2626;font-size:11px;margin:6px 0 0">Attendance already recorded for that date.</p>
+    <p style="color:var(--c-text-muted);font-size:11px;margin:6px 0 0">Picking a date that already has attendance just opens it — nothing gets reset.</p>
     <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
       <button onclick="this.closest('.att-ta-modal').remove()" style="padding:8px 16px;border-radius:10px;border:1.5px solid var(--c-pale);background:white;font-size:13px;font-weight:700;cursor:pointer">Cancel</button>
       <button onclick="attConfirmTakeAttendance('${classId}')" style="padding:8px 18px;border-radius:10px;background:var(--c-brown);color:white;font-size:13px;font-weight:700;border:none;cursor:pointer">Start</button>
@@ -11139,13 +11153,12 @@ function attConfirmTakeAttendance(classId) {
   const dateStr = input?.value?.trim();
   if (!dateStr) return;
   const data = getAttData(classId);
-  const errEl = document.getElementById('att-date-err');
-  if (data[dateStr]) {
-    if (errEl) errEl.style.display = '';
-    return;
+  // If this date already has attendance (in progress or submitted), just open it —
+  // re-picking today's date to resume/check on it should never be blocked as an "error".
+  if (!data[dateStr]) {
+    data[dateStr] = { testDay: false, submitted: false, records: {} };
+    saveAttData(classId, data);
   }
-  data[dateStr] = { testDay: false, submitted: false, records: {} };
-  saveAttData(classId, data);
   document.querySelector('.att-ta-modal')?.remove();
   renderAttendance();
 }
