@@ -979,12 +979,21 @@
 
         <!-- Tab: Students -->
         <section id="tab-students" class="tab-content hidden">
-            <div class="mb-8 flex justify-between items-center">
+            <div class="mb-8 flex justify-between items-center gap-4 flex-wrap">
                 <div>
                     <h3 class="text-2xl font-bold mb-1">👩‍🎓 Student Profiles & Accommodations</h3>
                     <p class="text-sm text-[#9A958C]">Manage dynamic learner directories and track strategic educational supports.</p>
                 </div>
-                <button onclick="openStudentModal()" class="px-5 py-2.5 bg-[#9F5F67] text-white text-xs font-bold rounded-xl shadow-sm hover:opacity-90 transition">+ Add Student Profile</button>
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">🔍</span>
+                        <input id="student-search-input" type="text" placeholder="Search all students…" oninput="filterStudentSearch(this.value)"
+                            class="pl-8 pr-8 py-2.5 border rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#9F5F67] w-56">
+                        <button id="student-search-clear" onclick="clearStudentSearch()" title="Clear search"
+                            class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold">✕</button>
+                    </div>
+                    <button onclick="openStudentModal()" class="px-5 py-2.5 bg-[#9F5F67] text-white text-xs font-bold rounded-xl shadow-sm hover:opacity-90 transition whitespace-nowrap">+ Add Student Profile</button>
+                </div>
             </div>
 
             <div class="flex gap-2 mb-6" id="student-tab-bar">
@@ -2779,7 +2788,7 @@
             if (tabId === 'gradebook') mca_renderGradebook();
             if (tabId === 'attendance') mca_renderAttendance();
             if (tabId === 'calendar') mca_renderCalendarTab();
-            if (tabId === 'students') renderStudents(state.sections[0]?.id || 'sec-1');
+            if (tabId === 'students') renderStudents(activeStudentSectionId);
             if (tabId === 'reflection') renderReflections();
 
             if (window.innerWidth < 1024) {
@@ -4705,11 +4714,23 @@
         /* --- STREAMING_CHUNK: Formatting student profiles grids... --> */
         /* --- STUDENT DIRECTORY --- */
         let activeStudentSectionId = 'sec-1';
+        let studentSearchQuery = '';
+        const ALL_STUDENTS_TAB_ID = '__all__';
 
         function renderStudentTabs() {
             const container = document.getElementById('student-tab-bar');
             if (!container) return;
             container.innerHTML = '';
+
+            const allBtn = document.createElement('button');
+            allBtn.className = `px-4 py-2 text-xs font-bold border rounded-lg shadow-sm transition ${activeStudentSectionId === ALL_STUDENTS_TAB_ID ? 'bg-white' : 'bg-[#FAF7F2]'}`;
+            allBtn.innerText = '👥 All Students';
+            allBtn.onclick = () => {
+                activeStudentSectionId = ALL_STUDENTS_TAB_ID;
+                renderStudentTabs();
+                renderStudents(ALL_STUDENTS_TAB_ID);
+            };
+            container.appendChild(allBtn);
 
             state.sections.forEach(sec => {
                 const btn = document.createElement('button');
@@ -4722,6 +4743,19 @@
                 };
                 container.appendChild(btn);
             });
+        }
+
+        function filterStudentSearch(query) {
+            studentSearchQuery = (query || '').trim().toLowerCase();
+            const clearBtn = document.getElementById('student-search-clear');
+            if (clearBtn) clearBtn.classList.toggle('hidden', !studentSearchQuery);
+            renderStudents(activeStudentSectionId);
+        }
+
+        function clearStudentSearch() {
+            const input = document.getElementById('student-search-input');
+            if (input) input.value = '';
+            filterStudentSearch('');
         }
 
         // Every counselor/homeroom gets its own color, guaranteed unique up to 20 of each —
@@ -4795,9 +4829,22 @@
             if (!container) return;
             container.innerHTML = '';
 
-            const matched = state.students.filter(s => s.period === sectionId);
+            const query = studentSearchQuery;
+            const showingAllSections = sectionId === ALL_STUDENTS_TAB_ID || !!query;
+            const sectionNameById = {};
+            (state.sections || []).forEach(sec => { sectionNameById[sec.id] = sec.name; });
+
+            let matched = state.students.filter(s => {
+                if (!showingAllSections && s.period !== sectionId) return false;
+                if (query && !s.name.toLowerCase().includes(query)) return false;
+                return true;
+            });
+            matched = matched.slice().sort((a, b) => a.name.localeCompare(b.name));
+
             if (matched.length === 0) {
-                container.innerHTML = '<div class="col-span-full text-center p-8 text-gray-400 font-bold">Add student profiles to roster.</div>';
+                container.innerHTML = query
+                    ? `<div class="col-span-full text-center p-8 text-gray-400 font-bold">No students match "${escHtml(query)}".</div>`
+                    : '<div class="col-span-full text-center p-8 text-gray-400 font-bold">Add student profiles to roster.</div>';
                 return;
             }
 
@@ -4805,6 +4852,7 @@
                 const counselorColor = _mcaCounselorColor(s.counselor);
                 const homeroomColor  = _mcaHomeroomColor(s.homeroom);
                 const accentColor = counselorColor ? counselorColor.text : '#D8D3C8';
+                const sectionName = sectionNameById[s.period];
 
                 const card = document.createElement('div');
                 card.className = 'student-card student-card-v2 bg-white p-5 rounded-2xl shadow-sm text-center border relative';
@@ -4813,6 +4861,9 @@
                     <button onclick="deleteStudent('${s.id}')" class="absolute top-3 right-3 text-gray-300 hover:text-red-500 text-xs">✕</button>
                     <h4 class="student-name-fun text-[#4A4540] mt-1">${escHtml(s.name)}</h4>
                     <div class="flex flex-wrap gap-1.5 justify-center mt-2.5">
+                        ${showingAllSections && sectionName
+                            ? `<span class="student-meta-badge" style="background:#F1EDE6;color:#7C7568">${escHtml(sectionName)}</span>`
+                            : ''}
                         ${counselorColor
                             ? `<span class="student-meta-badge" style="background:${counselorColor.bg};color:${counselorColor.text}">Counselor: ${escHtml(s.counselor)}</span>`
                             : `<span class="student-meta-badge empty">No counselor set</span>`}
@@ -11784,14 +11835,8 @@ function mca_syncStudents() {
         saveToStorage();
     }
 
-    // Update student-tab-bar to show MCA classes
-    const tabBar = document.getElementById('student-tab-bar');
-    if (tabBar) {
-        tabBar.innerHTML = newSections.map((sec, i) =>
-            `<button onclick="renderStudents('${sec.id}')"
-                class="px-4 py-2 text-xs font-bold border rounded-lg shadow-sm transition ${i===0?'bg-white':'bg-[#FAF7F2]'}">${sec.name}</button>`
-        ).join('');
-    }
+    // Keep the tab bar (incl. the "All Students" pin) in sync with the new sections
+    renderStudentTabs();
 }
 
 // ─── Catholic Daily Reflections ─────────────────────────────────────────────
