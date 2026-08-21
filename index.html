@@ -984,11 +984,11 @@
                     <h3 class="text-2xl font-bold mb-1">👩‍🎓 Student Profiles & Accommodations</h3>
                     <p class="text-sm text-[#9A958C]">Manage dynamic learner directories and track strategic educational supports.</p>
                 </div>
-                <div class="flex items-center gap-3">
-                    <div class="relative">
+                <div class="flex items-center gap-3 flex-wrap w-full sm:w-auto">
+                    <div class="relative flex-1 min-w-[160px] sm:flex-none sm:w-56">
                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">🔍</span>
                         <input id="student-search-input" type="text" placeholder="Search all students…" oninput="filterStudentSearch(this.value)"
-                            class="pl-8 pr-8 py-2.5 border rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#9F5F67] w-56">
+                            class="pl-8 pr-8 py-2.5 border rounded-xl text-xs outline-none focus:ring-1 focus:ring-[#9F5F67] w-full">
                         <button id="student-search-clear" onclick="clearStudentSearch()" title="Clear search"
                             class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold">✕</button>
                     </div>
@@ -7874,7 +7874,7 @@ function gbCatColorPickerHtml(catId, currentColor) {
     <input type="color" value="${currentColor||'#5A2D0C'}" title="Custom category color" class="gb-cat-color-custom"
       oninput="gbUpdateCatColor('${catId}',this.value)"
       style="width:30px;height:30px;border-radius:8px;border:2px solid var(--c-pale);cursor:pointer;padding:1px;flex-shrink:0">
-    <div style="display:flex;gap:3px;flex-wrap:wrap;max-width:76px">${swatches}</div>`;
+    <div style="display:flex;gap:3px;flex-wrap:wrap;width:38px;flex-shrink:0">${swatches}</div>`;
 }
 function gbUpdateCatColor(catId, hex) {
   const data = getGbData(); const cls = data.classes[gbClassIdx];
@@ -8930,10 +8930,10 @@ function openGbSettings() {
   const cats = cls.categories || [];
   const catRows = cats.map(c=>`
     <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;padding:8px 10px;border-radius:10px;border:1.5px solid var(--c-pale);background:var(--c-surface)" id="catrow-${c.id}">
-      <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         ${gbCatColorPickerHtml(c.id, c.color||'#5A2D0C')}
         <input value="${escHtml(c.name)}" placeholder="Category name"
-          style="flex:1;padding:6px 10px;border-radius:8px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:13px;font-family:inherit"
+          style="flex:1 1 100px;min-width:100px;padding:6px 10px;border-radius:8px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:13px;font-family:inherit"
           oninput="gbUpdateCatName('${c.id}',this.value)">
         <input type="number" value="${c.weight}" min="0" max="100" placeholder="%" style="width:60px;padding:6px 8px;border-radius:8px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:13px;font-family:inherit;text-align:center"
           oninput="gbUpdateCatWeight('${c.id}',this.value)">
@@ -9132,10 +9132,10 @@ function gbAddCatRow() {
   if (list) {
     const div = document.createElement('div');
     div.id = 'catrow-'+newCat.id;
-    div.style = 'display:flex;align-items:center;gap:8px;margin-bottom:8px';
+    div.style = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px';
     div.innerHTML = `${gbCatColorPickerHtml(newCat.id, '#5A2D0C')}
       <input value="" placeholder="Category name"
-        style="flex:1;padding:6px 10px;border-radius:8px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:13px;font-family:inherit"
+        style="flex:1 1 100px;min-width:100px;padding:6px 10px;border-radius:8px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:13px;font-family:inherit"
         oninput="gbUpdateCatName('${newCat.id}',this.value)">
       <input type="number" value="0" min="0" max="100" placeholder="%" style="width:60px;padding:6px 8px;border-radius:8px;border:1.5px solid var(--c-pale);background:var(--c-cream);font-size:13px;font-family:inherit;text-align:center"
         oninput="gbUpdateCatWeight('${newCat.id}',this.value)">
