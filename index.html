@@ -1320,7 +1320,9 @@
                             <button onclick="saveSyncSettings()" class="px-5 py-2.5 bg-[#82BDC3] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">🔑 Save Gist Credentials</button>
                             <button onclick="_syncToSheets(false)" class="px-5 py-2.5 bg-[#E67F76] text-white text-xs font-bold rounded-lg hover:opacity-90 transition">☁ Push Now</button>
                             <button onclick="_syncFromSheets(false)" class="px-5 py-2.5 bg-white border text-xs font-bold rounded-lg hover:bg-gray-50 transition">⬇ Pull Now</button>
+                            <button onclick="restoreLastLocalBackup()" class="px-5 py-2.5 bg-white border text-xs font-bold rounded-lg hover:bg-gray-50 transition" title="Restore the automatic local backup saved on this device before its last sync">↺ Restore Last Backup</button>
                         </div>
+                        <p class="text-xs text-gray-400 mt-2 leading-relaxed">Every time this device pulls or absorbs cloud data, it first saves a backup of what was here. "Restore Last Backup" brings that back if a sync ever loads the wrong thing.</p>
                     </div>
                 </div>
             </div>
@@ -7331,7 +7333,7 @@ async function _fetchIcs(icsUrl) {
 
 // ── Sync (whole-app) ─────────────────────
 // Keys never synced (device-specific or ephemeral)
-const _SYNC_SKIP = new Set(['mca-sync-url','mca-sheets-backup-url','mca-gist-token','mca-gist-id','mca-canvas-ics-url','mca-school-ics-url','mca-todo-height','mca-last-push-ts']);
+const _SYNC_SKIP = new Set(['mca-sync-url','mca-sheets-backup-url','mca-gist-token','mca-gist-id','mca-canvas-ics-url','mca-school-ics-url','mca-todo-height','mca-last-push-ts','mca-backup-1','mca-backup-2']);
 
 function getSyncUrl() { return localStorage.getItem('mca-sync-url') || ''; }
 function setSyncUrl(url) {
@@ -7394,6 +7396,7 @@ function _bundleIsEmpty(bundle) {
 
 function _restoreSyncBundle(bundle) {
   if (_bundleIsEmpty(bundle)) return false;
+  _snapshotLocalMcaData();
 
   // ── Merge custom todos by ID so items from either device are preserved ──
   // Union: keep any todo that exists locally OR in the bundle, preferring the
@@ -7428,6 +7431,78 @@ function _restoreSyncBundle(bundle) {
     }
   }
   return true;
+}
+
+// ── Local safety net ────────────────────────────────────────────────────────
+// Snapshot current mca-* data before any destructive restore, so a bad sync
+// (wrong device, wrong direction) is never truly unrecoverable — the last
+// couple of pre-restore snapshots stay in localStorage regardless of what
+// GitHub/the other device says.
+function _snapshotLocalMcaData() {
+  const current = _buildSyncBundle();
+  if (_bundleIsEmpty(current)) return; // nothing here worth backing up
+  const prev = localStorage.getItem('mca-backup-1');
+  if (prev) localStorage.setItem('mca-backup-2', prev);
+  localStorage.setItem('mca-backup-1', JSON.stringify(current));
+}
+
+// Rough size of a gradebook (students + assignments) — used only to sanity-check
+// whether an incoming sync looks like a big step backward, not as a real diff.
+function _gradebookSize(source) {
+  try {
+    let gb;
+    if (source == null) gb = JSON.parse(localStorage.getItem('mca-gradebook') || '{"classes":[]}');
+    else if (Array.isArray(source.classes)) gb = source; // legacy bundle shape
+    else gb = JSON.parse(source['mca-gradebook'] || '{"classes":[]}');
+    let n = 0;
+    (gb.classes || []).forEach(c => {
+      n += (c.students || []).length;
+      Object.values(c.quarters || {}).forEach(q => { n += (q.assignments || []).length; });
+    });
+    return n;
+  } catch(e) { return 0; }
+}
+// Only flags it when there's real local data and the incoming copy is a steep
+// drop — losing a couple of items is normal drift, losing most of it isn't.
+function _looksLikeDataLoss(incomingBundle) {
+  const localSize = _gradebookSize(null);
+  const incomingSize = _gradebookSize(incomingBundle);
+  return localSize >= 3 && incomingSize < localSize * 0.5;
+}
+
+function _showSyncConflictBanner(remoteBundle, remoteTs) {
+  if (document.getElementById('_conflict-banner')) return;
+  const b = document.createElement('div');
+  b.id = '_conflict-banner';
+  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#b91c1c;color:white;text-align:center;padding:10px 16px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.2)';
+  b.innerHTML = '⚠ The cloud copy looks very different from what\'s on this device — nothing changed automatically.'
+    + '<button onclick="_forceRestoreFromConflictBanner()" style="background:white;color:#b91c1c;border:none;border-radius:8px;padding:5px 14px;font-size:12px;font-weight:800;cursor:pointer">Load cloud version anyway</button>'
+    + '<button onclick="this.parentElement.remove()" style="background:transparent;color:white;border:1px solid white;border-radius:8px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer">Keep what\'s on this device</button>';
+  document.body.prepend(b);
+  window._pendingConflictBundle = remoteBundle;
+  window._pendingConflictTs = remoteTs;
+}
+function _forceRestoreFromConflictBanner() {
+  document.getElementById('_conflict-banner')?.remove();
+  if (!window._pendingConflictBundle) return;
+  _restoreSyncBundle(window._pendingConflictBundle);
+  localStorage.setItem('mca-last-push-ts', String(window._pendingConflictTs || Date.now()));
+  location.reload();
+}
+
+// Self-service recovery: bring back whatever this device had right before its
+// last sync restore, no GitHub access needed.
+function restoreLastLocalBackup() {
+  const raw = localStorage.getItem('mca-backup-1');
+  if (!raw) { showToast('No local backup found on this device.'); return; }
+  let backup;
+  try { backup = JSON.parse(raw); } catch(e) { showToast('That backup is corrupted.'); return; }
+  const size = _gradebookSize(backup);
+  customConfirm(`Restore this device's last local backup (~${size} student/assignment entries)? This replaces what's currently loaded here — today's data is snapshotted too before restoring.`, () => {
+    _restoreSyncBundle(backup);
+    showToast('✓ Restored from local backup — reloading…');
+    setTimeout(() => location.reload(), 900);
+  });
 }
 
 let _syncBusy = false;
@@ -7499,6 +7574,15 @@ async function _syncToSheets(silent=true) {
         const remoteTs = remote._syncTs || 0;
         const myLastKnown = parseInt(localStorage.getItem('mca-last-push-ts') || '0', 10);
         if (remoteTs > 0 && remoteTs !== myLastKnown && !_bundleIsEmpty(remote)) {
+          if (_looksLikeDataLoss(remote)) {
+            // The cloud copy is a big step backward from what's on this device —
+            // don't touch anything automatically in either direction. This device's
+            // data is left alone (untouched, not pushed either) and the user gets
+            // an explicit choice instead of a silent overwrite.
+            _setSyncUI('ok');
+            _showSyncConflictBanner(remote, remoteTs);
+            return;
+          }
           _restoreSyncBundle(remote);
           localStorage.setItem('mca-last-push-ts', String(remoteTs));
           _setSyncUI('ok');
@@ -7595,7 +7679,13 @@ async function _syncFromSheets(silent=false) {
       _setSyncUI('ok'); return;
     }
 
+    if (_looksLikeDataLoss(isLegacy ? bundle : bundle)) {
+      const proceed = confirm('⚠ The cloud copy has significantly less data than what\'s on this device right now.\n\nLoading it will replace your current data with the smaller cloud copy. (A backup of what\'s here now is kept either way.)\n\nLoad it anyway?');
+      if (!proceed) { _setSyncUI('ok'); return; }
+    }
+
     if (isLegacy) {
+      _snapshotLocalMcaData();
       localStorage.setItem('mca-gradebook', JSON.stringify(bundle));
     } else {
       _restoreSyncBundle(bundle);
