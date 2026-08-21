@@ -7487,6 +7487,28 @@ async function _syncToSheets(silent=true) {
   if (_syncBusy) return;
   _syncBusy = true; _setSyncUI('syncing');
   try {
+    // Safety check: never push over data this device hasn't caught up on. A device
+    // that's been idle a long time (a stale iPad, a browser that hasn't opened this
+    // in months) could otherwise silently overwrite everyone else's current data with
+    // whatever old snapshot it has sitting in local storage. So before pushing, check
+    // whether the cloud copy has moved since the last time THIS device pushed or
+    // pulled — if so, absorb that newer copy instead of clobbering it.
+    if (getGistToken()) {
+      try {
+        const remote = await _gistPull();
+        const remoteTs = remote._syncTs || 0;
+        const myLastKnown = parseInt(localStorage.getItem('mca-last-push-ts') || '0', 10);
+        if (remoteTs > 0 && remoteTs !== myLastKnown && !_bundleIsEmpty(remote)) {
+          _restoreSyncBundle(remote);
+          localStorage.setItem('mca-last-push-ts', String(remoteTs));
+          _setSyncUI('ok');
+          _showSyncToast('⚠ This device had out-of-date data — loaded the latest from the cloud instead of overwriting it. Please redo any change you just made.');
+          setTimeout(() => location.reload(), 1500);
+          return;
+        }
+      } catch(e) { /* couldn't verify (offline, etc.) — fall through and push best-effort */ }
+    }
+
     const bundle = _buildSyncBundle();
     localStorage.setItem('mca-last-push-ts', String(bundle._syncTs));
     const body = JSON.stringify(bundle);
