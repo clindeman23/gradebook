@@ -702,6 +702,15 @@
                     </div>
                 </div>
 
+                <!-- CARD: Rotation Planner -->
+                <div id="dash-card-rotation" data-card-id="rotation" class="card p-6 accent-sage">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-xs font-bold uppercase text-gray-400 tracking-wider">🔁 Rotation Planner</h4>
+                        <button onclick="switchTab('rotationplanner')" class="text-[10px] font-bold text-[#99A59A] hover:text-[#4A4540] uppercase">Open →</button>
+                    </div>
+                    <div id="dash-rotation-content"><!-- Populated via renderRotationDashboardCard() --></div>
+                </div>
+
                 <!-- CARD: Remediation Blueprint -->
                 <div id="dash-card-remediation" data-card-id="remediation" class="card p-6 accent-teal">
                     <h4 class="text-xs font-bold mb-6 uppercase text-gray-400 tracking-wider">Remediation Blueprint</h4>
@@ -782,6 +791,11 @@
                     <button class="px-5 py-2 bg-[#FAF7F2] text-xs font-bold border rounded-xl hover:bg-gray-100 transition" onclick="clearSchedule()">Clear Lesson Plans</button>
                 </div>
             </div>
+        </section>
+
+        <!-- Tab: Rotation Planner -->
+        <section id="tab-rotationplanner" class="tab-content hidden">
+            <div id="rotation-planner-page"><!-- Populated via renderRotationPlannerPage() --></div>
         </section>
 
         <!-- Tab: Unit Planner -->
@@ -2666,6 +2680,7 @@
         // Dashboard + Settings are pinned outside this list and can't be reordered or hidden.
         const NAV_ITEMS = [
             { key: 'schedule',   icon: '🗓️', label: 'Pacing Guide' },
+            { key: 'rotationplanner', icon: '🔁', label: 'Rotation Planner' },
             { key: 'unit',       icon: '📋', label: 'Unit Planner' },
             { key: 'lessons',    icon: '📚', label: 'Lesson Plans' },
             { key: 'standards',  icon: '🎯', label: 'Standards Tracker' },
@@ -2784,6 +2799,7 @@
 
             if (tabId === 'dashboard') refreshDashboard();
             if (tabId === 'schedule') renderBlockSchedule();
+            if (tabId === 'rotationplanner') renderRotationPlannerPage();
             if (tabId === 'unit') renderUnits();
             if (tabId === 'lessons') showLessonList();
             if (tabId === 'standards') { renderStdSubjectTabs(); renderStandards(); }
@@ -3008,8 +3024,56 @@
             updateSchoolDayCounter();
             renderDashTodo();
             renderDashTodaySchedule();
+            renderRotationDashboardCard();
             syncCharts();
             updateCloudSyncWidgets();
+        }
+
+        function renderRotationDashboardCard() {
+            const el = document.getElementById('dash-rotation-content');
+            if (!el) return;
+            const current = getCurrentRotationInfo();
+            if (!current) {
+                el.innerHTML = `<p class="text-xs text-gray-400">No rotation for today — check the full planner for what's coming up.</p>`;
+                return;
+            }
+            const { quarter, rotation } = current;
+            const dateLabel = getRotationDateRangeLabel(quarter, rotation);
+            const typeMap = Object.fromEntries(ROTATION_ITEM_TYPES.map(t => [t.key, t]));
+            const classes = (getGbData().classes || []);
+
+            // Gather not-done items across the current rotation and the next couple, nearest first
+            const allRotations = getRotationCalendar(quarter);
+            const idx = allRotations.findIndex(r => r.rotation === rotation);
+            const upcomingRotNums = allRotations.slice(Math.max(idx, 0), idx + 3).map(r => r.rotation);
+            const upcomingItems = [];
+            upcomingRotNums.forEach(rNum => {
+                getRotationItems(quarter, rNum).filter(it => !it.done).forEach(it => upcomingItems.push({ ...it, rotation: rNum }));
+            });
+
+            const events = getSchoolEventsForRotation(quarter, rotation);
+
+            let html = `<p class="text-sm font-bold" style="color:#4A4540">Rotation ${rotation} <span class="text-xs text-gray-400 font-medium">(${escHtml(dateLabel)})</span></p>`;
+            if (events.length) {
+                html += `<div class="flex flex-wrap gap-1.5 mt-2">${events.map(e =>
+                    `<span style="background:#fef9ec;color:#92400e;border:1px solid #fde68a;border-radius:20px;padding:1px 9px;font-size:10px;font-weight:700">📌 ${escHtml(e.title)}</span>`
+                ).join('')}</div>`;
+            }
+            if (upcomingItems.length) {
+                html += `<div class="mt-3 space-y-1.5">` + upcomingItems.slice(0, 4).map(it => {
+                    const type = typeMap[it.type] || ROTATION_ITEM_TYPES[0];
+                    const cls = classes.find(c => c.id === it.classId);
+                    return `<div class="flex items-center gap-1.5 text-xs">
+                        <span>${type.icon}</span>
+                        <span class="text-gray-400 font-bold" style="font-size:10px">R${it.rotation}</span>
+                        ${cls ? `<span class="font-bold" style="color:${cls.color || 'var(--c-brown)'}">${escHtml(cls.name)}:</span>` : ''}
+                        <span class="text-gray-600 truncate">${escHtml(it.text)}</span>
+                    </div>`;
+                }).join('') + `</div>`;
+            } else {
+                html += `<p class="text-xs text-gray-400 mt-3">Nothing logged yet for this rotation or the next couple.</p>`;
+            }
+            el.innerHTML = html;
         }
 
         function updateSchoolDayCounter() {
@@ -3209,10 +3273,10 @@
                 _rot(14, _rd('2026-09-16','1'), _rd('2026-09-17','2,3,4,5'), _rd('2026-09-18','6,7')),
                 _rot(15, _rd('2026-09-18','1,2'), _rd('2026-09-21','3,4,5,6'), _rd('2026-09-22','7')),
                 _rot(16, _rd('2026-09-22','1,2,3'), _rd('2026-09-23','4,5,6,7')),
-                _rot(17, _rd('2026-09-24','1,2,3,4')),
-                _rot(18, _rd('2026-09-28','2,3,4,5'), _rd('2026-09-29','6,7,1')),
-                _rot(19, _rd('2026-09-29','2'), _rd('2026-09-30','3,4,5,6'), _rd('2026-10-01','7,1')),
-                _rot(20, _rd('2026-10-01','2,3'), _rd('2026-10-02','4,5,6,7'), _rd('2026-10-05','1')),
+                _rot(17, _rd('2026-09-24','1,2,3,4'), _rd('2026-09-25','5,6,7')),
+                _rot(18, _rd('2026-09-25','1'), _rd('2026-09-28','2,3,4,5'), _rd('2026-09-29','6,7')),
+                _rot(19, _rd('2026-09-29','1,2'), _rd('2026-09-30','3,4,5,6'), _rd('2026-10-01','7')),
+                _rot(20, _rd('2026-10-01','1,2,3'), _rd('2026-10-02','4,5,6,7')),
             ],
             Q2: [
                 _rot(1,  _rd('2026-10-13','5,6,7,1'), _rd('2026-10-14','2,3,4')),
@@ -3356,6 +3420,81 @@
             const first = fmt(rot.days[0].date);
             const last = fmt(rot.days[rot.days.length - 1].date);
             return first === last ? first : `${first}–${last}`;
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        //  ROTATION LOG — quick tests/quizzes/due-dates tagged to a
+        //  rotation number, plus a look at what MCA calendar events fall
+        //  inside that rotation's date range. Lives in its own top-level
+        //  Rotation Planner section (separate from the per-subject lesson
+        //  planner below), synced via the same mca-* GitHub Gist bundle.
+        // ══════════════════════════════════════════════════════════════
+        function getRotationItemsData() {
+            try { return JSON.parse(localStorage.getItem('mca-rotation-items') || '{}'); }
+            catch(e) { return {}; }
+        }
+        function saveRotationItemsData(data) {
+            localStorage.setItem('mca-rotation-items', JSON.stringify(data));
+            _scheduleSync();
+        }
+        function getRotationItems(quarter, rotationNum) {
+            const data = getRotationItemsData();
+            return ((data[quarter] || {})[rotationNum] || []);
+        }
+        function addRotationItem(quarter, rotationNum, item) {
+            const data = getRotationItemsData();
+            if (!data[quarter]) data[quarter] = {};
+            if (!data[quarter][rotationNum]) data[quarter][rotationNum] = [];
+            data[quarter][rotationNum].push({ id: 'ri_' + Date.now() + '_' + Math.floor(Math.random()*10000), done: false, ...item });
+            saveRotationItemsData(data);
+        }
+        function removeRotationItem(quarter, rotationNum, itemId) {
+            const data = getRotationItemsData();
+            if (!data[quarter] || !data[quarter][rotationNum]) return;
+            data[quarter][rotationNum] = data[quarter][rotationNum].filter(i => i.id !== itemId);
+            saveRotationItemsData(data);
+        }
+        function toggleRotationItemDone(quarter, rotationNum, itemId) {
+            const data = getRotationItemsData();
+            const list = (data[quarter] || {})[rotationNum];
+            if (!list) return;
+            const item = list.find(i => i.id === itemId);
+            if (item) item.done = !item.done;
+            saveRotationItemsData(data);
+        }
+
+        // Any school-calendar events (holidays, half days, Mass, progress reports,
+        // report cards, etc.) that fall within a rotation's date range — pulled
+        // live from the school ICS feed, excluding the "Classes: 1,2,3" entries
+        // that just encode the rotation itself (those are shown separately).
+        function getSchoolEventsForRotation(quarter, rotationNum) {
+            const rot = getRotationCalendar(quarter).find(r => r.rotation === rotationNum);
+            if (!rot || !rot.days.length) return [];
+            const evts = (typeof schoolEvents !== 'undefined') ? schoolEvents : [];
+            const dateSet = new Set(rot.days.map(d => d.date));
+            return evts.filter(e => {
+                if (/^classes:/i.test((e.title || '').trim())) return false;
+                const d = new Date(e.dueDate);
+                const iso = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+                return dateSet.has(iso);
+            });
+        }
+
+        // Soft verification: compare the hardcoded periods for a date against the
+        // live "Classes: ..." event from the school calendar feed, if one exists.
+        // Returns null when there's nothing to compare (no live event for that date).
+        function getLiveClassesMismatch(dateISO, expectedPeriods) {
+            const evts = (typeof schoolEvents !== 'undefined') ? schoolEvents : [];
+            const [y, m, d] = dateISO.split('-').map(Number);
+            const rotEv = evts.find(e => {
+                const ed = new Date(e.dueDate);
+                return ed.getUTCFullYear() === y && ed.getUTCMonth() === m - 1 && ed.getUTCDate() === d && /^classes:/i.test((e.title || '').trim());
+            });
+            if (!rotEv) return null;
+            const m2 = rotEv.title.match(/classes:\s*(.+)/i);
+            const livePeriods = m2 ? m2[1].split(',').map(s => s.trim()).filter(Boolean) : [];
+            const same = livePeriods.length === expectedPeriods.length && livePeriods.every(p => expectedPeriods.includes(p));
+            return same ? null : livePeriods;
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -3526,6 +3665,156 @@
                 freshStatusEl.textContent = successMsg;
                 freshStatusEl.style.color = '#16a34a';
             }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        //  ROTATION PLANNER PAGE — its own top-level section. A quick
+        //  place to log tests/quizzes/due dates against a Rotation number,
+        //  see the real dates/periods each rotation covers, and see any
+        //  MCA calendar events (half days, Mass, progress reports, report
+        //  cards, etc.) that land inside that window. Separate from the
+        //  per-subject lesson-focus planner above (that's reachable from
+        //  here too, via the "Plan Lesson Focus" button).
+        // ══════════════════════════════════════════════════════════════
+        let _rpQuarter = null;
+        const ROTATION_ITEM_TYPES = [
+            { key: 'test',  icon: '🧪', label: 'Test' },
+            { key: 'quiz',  icon: '📝', label: 'Quiz' },
+            { key: 'due',   icon: '📌', label: 'Due Date' },
+        ];
+
+        function renderRotationPlannerPage() {
+            const container = document.getElementById('rotation-planner-page');
+            if (!container) return;
+            if (!_rpQuarter) {
+                const current = getCurrentRotationInfo();
+                _rpQuarter = current ? current.quarter : (getAllQuarterKeys()[0] || 'Q1');
+            }
+            const quarters = getAllQuarterKeys();
+            const current = getCurrentRotationInfo();
+
+            let html = `<div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-2xl font-bold mb-1">🔁 Rotation Planner</h3>
+                    <p class="text-sm text-[#9A958C]">Log tests, quizzes, and due dates against a Rotation number — see the real dates/periods it covers and any MCA events that land in that window.</p>
+                </div>
+                <button onclick="openRotationPlanner()" class="px-4 py-2.5 bg-white border text-xs font-bold rounded-xl hover:bg-gray-50 transition shrink-0 self-start md:self-auto">✏️ Plan Lesson Focus by Subject</button>
+            </div>
+            <div class="flex gap-2 mb-6 flex-wrap">`;
+            quarters.forEach(q => {
+                const active = q === _rpQuarter;
+                html += `<button onclick="switchRotationPageQuarter('${escHtml(q)}')" class="px-4 py-2 rounded-full text-xs font-bold border-2 transition"
+                    style="${active ? 'background:#5A2D0C;color:white;border-color:#5A2D0C' : 'background:white;color:#666;border-color:#e5e7eb'}">${escHtml(q)}</button>`;
+            });
+            html += `</div><div id="rotation-page-list">${renderRotationPageList(_rpQuarter, current)}</div>`;
+            container.innerHTML = html;
+        }
+
+        function switchRotationPageQuarter(q) {
+            _rpQuarter = q;
+            renderRotationPlannerPage();
+        }
+
+        function renderRotationPageList(quarter, current) {
+            const rotations = getRotationCalendar(quarter);
+            if (!rotations.length) return `<p class="text-sm text-gray-400 text-center py-10">No rotation data yet for ${escHtml(quarter)}. Use "✏️ Plan Lesson Focus by Subject" → "Add more rotation data" to paste some in.</p>`;
+            const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return rotations.map(rot => {
+                const isCurrent = !!(current && current.quarter === quarter && current.rotation === rot.rotation);
+                const dateLabel = getRotationDateRangeLabel(quarter, rot.rotation);
+                const dayLine = rot.days.map(d => {
+                    const [y, m, dd] = d.date.split('-');
+                    const label = `${MONTHS[+m - 1]} ${+dd}`;
+                    const mismatch = getLiveClassesMismatch(d.date, d.periods);
+                    const periodsLabel = d.periods.map(p => 'P' + p).join(',');
+                    const warn = mismatch ? ` <span title="MCA's live calendar shows periods ${escHtml(mismatch.join(','))} for this date instead" style="color:#b45309;font-weight:800">⚠</span>` : '';
+                    return `<span style="white-space:nowrap">${label}: ${periodsLabel}${warn}</span>`;
+                }).join(' <span style="color:#ccc">·</span> ');
+                const events = getSchoolEventsForRotation(quarter, rot.rotation);
+                const eventsHtml = events.length ? `<div class="flex flex-wrap gap-1.5 mt-2">${events.map(e =>
+                    `<span style="background:#fef9ec;color:#92400e;border:1px solid #fde68a;border-radius:20px;padding:2px 10px;font-size:10.5px;font-weight:700">📌 ${escHtml(e.title)}</span>`
+                ).join('')}</div>` : '';
+
+                return `<div class="border rounded-2xl mb-3 overflow-hidden bg-white" style="border-color:${isCurrent ? '#82BDC3' : '#e5e7eb'}">
+                    <div style="padding:14px 18px;background:${isCurrent ? '#EAF7F8' : '#FAF7F2'}">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <div class="flex items-center gap-2">
+                                <span style="font-size:15px;font-weight:800;color:#5A2D0C">Rotation ${rot.rotation}</span>
+                                ${isCurrent ? `<span style="color:#1E5C62;font-size:10px;font-weight:800;background:white;padding:2px 9px;border-radius:10px">CURRENT</span>` : ''}
+                            </div>
+                            <span style="font-size:11px;color:#999;font-weight:700">${escHtml(dateLabel)}</span>
+                        </div>
+                        <div style="font-size:11.5px;color:#8a8378;margin-top:4px">${dayLine}</div>
+                        ${eventsHtml}
+                    </div>
+                    <div id="rp-items-${quarter}-${rot.rotation}" style="padding:14px 18px">
+                        ${renderRotationItemsHtml(quarter, rot.rotation)}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderRotationItemsHtml(quarter, rotationNum) {
+            const items = getRotationItems(quarter, rotationNum);
+            const classes = (getGbData().classes || []);
+            const typeMap = Object.fromEntries(ROTATION_ITEM_TYPES.map(t => [t.key, t]));
+
+            let html = '';
+            if (items.length) {
+                html += `<div class="flex flex-col gap-1.5 mb-3">` + items.map(it => {
+                    const type = typeMap[it.type] || ROTATION_ITEM_TYPES[0];
+                    const cls = classes.find(c => c.id === it.classId);
+                    return `<div class="flex items-center gap-2" style="padding:6px 10px;border-radius:9px;background:#FAF7F2;${it.done ? 'opacity:.5' : ''}">
+                        <input type="checkbox" ${it.done ? 'checked' : ''} onchange="rpToggleDone('${escHtml(quarter)}',${rotationNum},'${it.id}')" style="cursor:pointer">
+                        <span style="font-size:13px">${type.icon}</span>
+                        ${cls ? `<span style="font-size:10px;font-weight:800;color:white;background:${cls.color || 'var(--c-brown)'};padding:1px 8px;border-radius:8px">${escHtml(cls.name)}</span>` : ''}
+                        <span style="font-size:12.5px;font-weight:600;color:#4A4540;flex:1;${it.done ? 'text-decoration:line-through' : ''}">${escHtml(it.text)}</span>
+                        <button onclick="rpRemoveItem('${escHtml(quarter)}',${rotationNum},'${it.id}')" style="color:#dc2626;font-weight:700;font-size:13px;background:none;border:none;cursor:pointer;padding:0 4px">✕</button>
+                    </div>`;
+                }).join('') + `</div>`;
+            }
+
+            const rowId = `${quarter}-${rotationNum}`;
+            html += `<div class="flex items-center gap-2 flex-wrap">
+                <select id="rp-type-${rowId}" style="padding:6px 8px;border-radius:8px;border:1.5px solid #e5e7eb;background:#fff;font-size:12px;font-weight:700">
+                    ${ROTATION_ITEM_TYPES.map(t => `<option value="${t.key}">${t.icon} ${t.label}</option>`).join('')}
+                </select>
+                <select id="rp-class-${rowId}" style="padding:6px 8px;border-radius:8px;border:1.5px solid #e5e7eb;background:#fff;font-size:12px;font-weight:700;max-width:140px">
+                    <option value="">General</option>
+                    ${classes.map(c => `<option value="${escHtml(c.id)}">${escHtml(c.name)}</option>`).join('')}
+                </select>
+                <input id="rp-text-${rowId}" type="text" placeholder="Type quick — e.g. Ch. 4 Vocab Quiz" onkeydown="if(event.key==='Enter')rpAddItem('${escHtml(quarter)}',${rotationNum})"
+                    style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:1.5px solid #e5e7eb;font-size:12.5px">
+                <button onclick="rpAddItem('${escHtml(quarter)}',${rotationNum})" style="padding:6px 16px;background:#5A2D0C;color:white;font-size:12px;font-weight:800;border-radius:8px;border:none;cursor:pointer">+ Add</button>
+            </div>`;
+            return html;
+        }
+
+        function _rpRefreshRow(quarter, rotationNum) {
+            const el = document.getElementById(`rp-items-${quarter}-${rotationNum}`);
+            if (el) el.innerHTML = renderRotationItemsHtml(quarter, rotationNum);
+            renderRotationDashboardCard();
+        }
+
+        function rpAddItem(quarter, rotationNum) {
+            const rowId = `${quarter}-${rotationNum}`;
+            const type = document.getElementById(`rp-type-${rowId}`)?.value || 'test';
+            const classId = document.getElementById(`rp-class-${rowId}`)?.value || '';
+            const textEl = document.getElementById(`rp-text-${rowId}`);
+            const text = textEl?.value?.trim();
+            if (!text) return;
+            addRotationItem(quarter, rotationNum, { type, classId, text });
+            _rpRefreshRow(quarter, rotationNum);
+        }
+
+        function rpRemoveItem(quarter, rotationNum, itemId) {
+            removeRotationItem(quarter, rotationNum, itemId);
+            _rpRefreshRow(quarter, rotationNum);
+        }
+
+        function rpToggleDone(quarter, rotationNum, itemId) {
+            toggleRotationItemDone(quarter, rotationNum, itemId);
+            _rpRefreshRow(quarter, rotationNum);
         }
 
         function renderBlockSchedule() {
@@ -12187,6 +12476,7 @@ const DASH_CARDS = [
     { id: 'tasks',       label: '✅ Task Management',              colSpan: 1, pinnable: true },
     { id: 'analytics',   label: '📊 Class Performance Analytics',  colSpan: 2 },
     { id: 'pacing',      label: '📈 Dynamic Pacing Metrics',       colSpan: 1 },
+    { id: 'rotation',    label: '🔁 Rotation Planner',             colSpan: 1, pinnable: true },
     { id: 'remediation', label: '🔄 Remediation Blueprint',        colSpan: 1 },
     { id: 'quickpad',    label: '📝 Quick Pad',                    colSpan: 2, pinnable: true },
 ];
