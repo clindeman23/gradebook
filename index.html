@@ -9048,6 +9048,7 @@ function gbRenderTable(cls, data) {
     const stu = students[si];
     const rowBg = si % 2 === 0 ? 'var(--c-surface)' : 'var(--c-cream)';
     const grades = q.grades?.[stu.id] || {};
+    const flags = q.gradeFlags?.[stu.id] || {};
     const result = calcStudentGrade(cls, gbQuarter, stu.id);
 
     const _initials = stu.name.trim().split(/\s+/).map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
@@ -9096,6 +9097,8 @@ function gbRenderTable(cls, data) {
         // Check if floor60 is applied to this assignment's category
         const asnCat = cls.categories?.find(c => c.id === col.a.categoryId);
         const floorApplied = asnCat?.floor60 && numVal !== null && pts > 0 && numVal/pts < 0.6;
+        const flag = flags[col.a.id] || null; // 'absent' | 'late' | null — tracking only, doesn't affect grade math
+        const flagBg = flag === 'absent' ? '#fef9c3' : flag === 'late' ? '#fce7f3' : null;
 
         // Grade cell — always tappable for inline editing (Apple Pencil Scribble friendly)
         const gradeInputHtml = `<input type="text" inputmode="decimal"
@@ -9104,20 +9107,21 @@ function gbRenderTable(cls, data) {
               class="gb-grade-input"
               data-si="${si}" data-ai="${_ai_cur}"
               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-              style="width:52px;text-align:center;border:1px solid ${floorApplied?'#f59e0b':'var(--c-pale)'};border-radius:6px;padding:3px 5px;font-size:12px;background:${floorApplied?'#fef3c7':'white'};color:var(--c-text-primary);font-family:inherit"
+              style="width:44px;text-align:center;border:1px solid ${floorApplied?'#f59e0b':'var(--c-pale)'};border-radius:6px;padding:3px 4px;font-size:12px;background:${floorApplied?'#fef3c7':'white'};color:var(--c-text-primary);font-family:inherit"
               oninput="gbSaveGradeQuiet('${stu.id}','${col.a.id}',this.value)"
               onblur="gbSaveGradeAndRefresh('${stu.id}','${col.a.id}',this.value)"
               onkeydown="gbGradeKeyNav(event,${si},${_ai_cur})">`;
         if (gbEditMode) {
-          t += `<td style="${tdBase};text-align:center;border-left:1px solid var(--c-pale);${floorApplied?'background:#fef3c7;':''}">
-            ${gradeInputHtml}
+          t += `<td style="${tdBase};text-align:center;border-left:1px solid var(--c-pale);${flagBg?`background:${flagBg};`:floorApplied?'background:#fef3c7;':''}">
+            <div style="display:inline-flex;align-items:center;gap:2px">${gradeInputHtml}${gbFlagButtonsHtml(stu.id, col.a.id, flag)}</div>
             ${floorApplied?`<div style="font-size:8px;font-weight:800;color:#92400e;margin-top:1px">↑60%</div>`:''}
           </td>`;
         } else {
           // Read-only view — tap or write with Pencil to edit inline
-          t += `<td style="${tdBase};text-align:center;border-left:1px solid var(--c-pale);background:${floorApplied?'#fef3c7':gradeBg(cellPct)};cursor:pointer"
-              title="Tap to edit"
+          t += `<td style="${tdBase};text-align:center;border-left:1px solid var(--c-pale);background:${flagBg || (floorApplied?'#fef3c7':gradeBg(cellPct))};cursor:pointer;position:relative"
+              title="Tap to edit${flag?` — marked ${flag}`:''}"
               onclick="gbActivateInlineCell(this, '${stu.id}','${col.a.id}',${si},${_ai_cur},${pts},${floorApplied})">
+            ${flag?`<span style="position:absolute;top:1px;right:3px;font-size:8px;font-weight:900;color:${flag==='absent'?'#a16207':'#be185d'}">${flag==='absent'?'A':'L'}</span>`:''}
             <span class="gb-grade-display" style="font-weight:${numVal!==null?'700':'400'};color:${numVal!==null?'var(--c-text-primary)':'var(--c-text-muted)'}">
               ${numVal !== null ? numVal : '—'}
             </span>
@@ -9202,6 +9206,34 @@ function gbRenderTable(cls, data) {
   return t;
 }
 
+// Tiny "A" (absent) / "L" (late) toggle buttons shown next to a grade input.
+// Tracking only — doesn't touch the grade value or affect calculations, just
+// tags the cell so it stands out (yellow = absent, pink = late) at a glance.
+function gbFlagButtonsHtml(stuId, asgnId, flag) {
+  // mousedown+preventDefault (not onclick) so clicking this never steals focus from the
+  // grade input next to it — stealing focus would fire the input's blur handler first,
+  // which re-renders the table and destroys this button before its own click completes.
+  const btn = (key, letter, activeBg, activeBorder, activeColor, title) => `<button type="button"
+    onmousedown="event.preventDefault();event.stopPropagation();_gbNavMoving=true;gbSetFlag('${stuId}','${asgnId}','${key}');_gbNavMoving=false;" title="${title}"
+    style="width:14px;height:14px;line-height:12px;font-size:8px;font-weight:800;border-radius:3px;padding:0;cursor:pointer;
+    border:1px solid ${flag===key?activeBorder:'var(--c-pale)'};background:${flag===key?activeBg:'#fff'};color:${flag===key?activeColor:'#bbb'}">${letter}</button>`;
+  return `<span style="display:inline-flex;flex-direction:column;gap:1px">
+    ${btn('absent','A','#facc15','#ca8a04','#78350f','Mark absent')}
+    ${btn('late','L','#f472b6','#db2777','#831843','Mark late')}
+  </span>`;
+}
+function gbSetFlag(stuId, asgnId, flag) {
+  const data = getGbData();
+  const cls = data.classes[gbClassIdx]; if (!cls) return;
+  const q = cls.quarters[gbQuarter];
+  if (!q.gradeFlags) q.gradeFlags = {};
+  if (!q.gradeFlags[stuId]) q.gradeFlags[stuId] = {};
+  if (q.gradeFlags[stuId][asgnId] === flag) delete q.gradeFlags[stuId][asgnId]; // click active flag again to clear
+  else q.gradeFlags[stuId][asgnId] = flag;
+  saveGbData(data);
+  renderGradebook();
+}
+
 // Inline cell editing — tap a grade cell in read-only mode to edit it (Apple Pencil Scribble friendly)
 function gbActivateInlineCell(td, stuId, asgnId, si, ai, pts, floorApplied) {
   // Get current value
@@ -9211,19 +9243,23 @@ function gbActivateInlineCell(td, stuId, asgnId, si, ai, pts, floorApplied) {
     const g = cls.quarters[q]?.grades?.[stuId]?.[asgnId];
     if (g !== undefined && g !== null && g !== '') { curVal = g; break; }
   }
+  const curFlag = cls.quarters[gbQuarter]?.gradeFlags?.[stuId]?.[asgnId] || null;
   // Replace cell content with an input
   td.onclick = null;
   td.style.padding = '2px';
-  td.innerHTML = `<input type="text" inputmode="decimal"
-    value="${curVal !== null && curVal !== undefined ? curVal : ''}"
-    placeholder="—"
-    class="gb-grade-input"
-    data-si="${si}" data-ai="${ai}"
-    autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-    style="width:52px;text-align:center;border:1.5px solid var(--c-brown);border-radius:6px;padding:3px 5px;font-size:12px;background:${floorApplied?'#fef3c7':'white'};color:var(--c-text-primary);font-family:inherit;outline:none"
-    oninput="gbSaveGradeQuiet('${stuId}','${asgnId}',this.value)"
-    onblur="gbSaveGradeAndRefresh('${stuId}','${asgnId}',this.value)"
-    onkeydown="gbGradeKeyNav(event,${si},${ai})">`;
+  td.innerHTML = `<div style="display:inline-flex;align-items:center;gap:2px">
+    <input type="text" inputmode="decimal"
+      value="${curVal !== null && curVal !== undefined ? curVal : ''}"
+      placeholder="—"
+      class="gb-grade-input"
+      data-si="${si}" data-ai="${ai}"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+      style="width:44px;text-align:center;border:1.5px solid var(--c-brown);border-radius:6px;padding:3px 4px;font-size:12px;background:${floorApplied?'#fef3c7':'white'};color:var(--c-text-primary);font-family:inherit;outline:none"
+      oninput="gbSaveGradeQuiet('${stuId}','${asgnId}',this.value)"
+      onblur="gbSaveGradeAndRefresh('${stuId}','${asgnId}',this.value)"
+      onkeydown="gbGradeKeyNav(event,${si},${ai})">
+    ${gbFlagButtonsHtml(stuId, asgnId, curFlag)}
+  </div>`;
   const inp = td.querySelector('input');
   inp.focus();
   inp.select();
