@@ -8268,7 +8268,7 @@ function getLetterGrade(pct) {
 }
 
 // ── Grade color system ─────────────────────────────────
-const _DEFAULT_GRADE_COLORS = {A:'#166534',B:'#1e40af',C:'#92400e',D:'#b91c1c',F:'#6b1a1a'};
+const _DEFAULT_GRADE_COLORS = {A:'#166534',B:'#1e40af',C:'#92400e',D:'#b91c1c',F:'#1d4ed8'};
 function _getGradeColors() {
   try { return Object.assign({},_DEFAULT_GRADE_COLORS,JSON.parse(localStorage.getItem('mca-grade-colors')||'{}')); }
   catch(e) { return Object.assign({},_DEFAULT_GRADE_COLORS); }
