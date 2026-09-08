@@ -100,7 +100,21 @@
 
         .sidebar {
             background-color: var(--light-beige);
-            transition: all 0.3s ease;
+            transition: all 0.3s ease, width 0.2s ease;
+        }
+
+        /* Collapsed sidebar — icon-only rail, toggled via toggleSidebarCollapse() */
+        #sidebar.collapsed { width: 76px; padding-left: 12px; padding-right: 12px; }
+        #sidebar.collapsed #sidebar-header { flex-direction: column; gap: 8px; }
+        #sidebar.collapsed .sidebar-brand-text,
+        #sidebar.collapsed .nav-label,
+        #sidebar.collapsed .nav-section-label,
+        #sidebar.collapsed #sidebar-aesthetic-quote { display: none; }
+        #sidebar.collapsed .nav-item { justify-content: center; padding-left: 8px; padding-right: 8px; }
+        #sidebar.collapsed .nav-item:hover { transform: none; }
+        #sidebar.collapsed #sidebar-collapse-btn { transform: rotate(180deg); }
+        @media (min-width: 1024px) {
+            #sidebar.collapsed + main { margin-left: 76px; }
         }
 
         .nav-item {
@@ -543,24 +557,26 @@
 <body class="min-h-screen flex theme-earthy" id="planner-body">
     <!-- Sidebar Navigation -->
     <aside id="sidebar" class="sidebar fixed inset-y-0 left-0 w-64 p-6 flex flex-col gap-2 overflow-y-auto custom-scrollbar shadow-md z-45">
-        <div class="mb-8 px-2 flex justify-between items-center">
+        <div id="sidebar-header" class="mb-8 px-2 flex justify-between items-center">
             <h1 class="text-2xl font-bold text-[#4A4540] flex items-center gap-2">
-                <span class="text-3xl">🐾</span> MCA Planner.
+                <span class="text-3xl">🐾</span> <span class="sidebar-brand-text">MCA Planner.</span>
             </h1>
             <button onclick="toggleSidebar()" class="lg:hidden text-2xl font-bold">✕</button>
+            <button onclick="toggleSidebarCollapse()" id="sidebar-collapse-btn" title="Collapse sidebar"
+                class="hidden lg:flex items-center justify-center w-7 h-7 rounded-lg hover:bg-black/5 text-[#9A958C] hover:text-[#4A4540] transition flex-shrink-0">◀</button>
         </div>
 
         <nav class="flex-1 space-y-1">
-            <div class="text-[10px] uppercase tracking-wider font-extrabold text-[#9A958C] mb-2 px-4">NAVIGATION</div>
-            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-item active w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
-                <span>🏠</span> Dashboard
+            <div class="nav-section-label text-[10px] uppercase tracking-wider font-extrabold text-[#9A958C] mb-2 px-4">NAVIGATION</div>
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" title="Dashboard" class="nav-item active w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
+                <span>🏠</span><span class="nav-label">Dashboard</span>
             </button>
             <div id="nav-dynamic-items" class="space-y-1"><!-- Rendered via JS: renderSidebarNav() --></div>
         </nav>
 
         <div class="mt-auto pt-4 border-t border-gray-200/60 space-y-1">
-            <button onclick="switchTab('settings')" id="btn-settings" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
-                <span>⚙️</span> Planner Settings
+            <button onclick="switchTab('settings')" id="btn-settings" title="Planner Settings" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
+                <span>⚙️</span><span class="nav-label">Planner Settings</span>
             </button>
             <div id="sidebar-aesthetic-quote" class="p-3 bg-white/40 rounded-xl mt-4 text-[11px] leading-relaxed text-[#4A4540]/80 italic">
                 "Every day is a fresh opportunity to spark curiosity and inspire discovery." 🌟
@@ -2711,8 +2727,8 @@
                 .filter(key => !hidden.has(key) && byKey[key])
                 .map(key => {
                     const item = byKey[key];
-                    return `<button onclick="switchTab('${item.key}')" id="btn-${item.key}" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
-                        <span>${item.icon}</span> ${escHtml(item.label)}
+                    return `<button onclick="switchTab('${item.key}')" id="btn-${item.key}" title="${escHtml(item.label)}" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left text-sm font-medium">
+                        <span>${item.icon}</span><span class="nav-label">${escHtml(item.label)}</span>
                     </button>`;
                 }).join('');
         }
@@ -2816,6 +2832,24 @@
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        // Desktop-only icon-rail minimize — separate from toggleSidebar() (the mobile
+        // open/close drawer). Remembered across visits via localStorage.
+        function toggleSidebarCollapse() {
+            const sb = document.getElementById('sidebar');
+            if (!sb) return;
+            const collapsed = sb.classList.toggle('collapsed');
+            localStorage.setItem('mca-sidebar-collapsed', collapsed ? '1' : '0');
+            const btn = document.getElementById('sidebar-collapse-btn');
+            if (btn) btn.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+        }
+        function applySidebarCollapsedState() {
+            if (localStorage.getItem('mca-sidebar-collapsed') === '1') {
+                document.getElementById('sidebar')?.classList.add('collapsed');
+                const btn = document.getElementById('sidebar-collapse-btn');
+                if (btn) btn.title = 'Expand sidebar';
+            }
         }
 
         /* --- CONFIRMATION CUSTOM BRIDGE --- */
@@ -5871,6 +5905,7 @@
 
             // Render section selectors & dynamic elements
             renderSidebarNav();
+            applySidebarCollapsedState();
             renderSettingsSections();
             populatePeriodLabelSettings();
             populateProfileSettings();
