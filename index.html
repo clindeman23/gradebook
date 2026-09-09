@@ -4823,8 +4823,8 @@
                 });
 
                 const averagePercentage = possiblePoints > 0 ? (earnedPoints / possiblePoints) * 100 : null;
-                const roundedPercentage = averagePercentage !== null ? Math.round(averagePercentage * 10) / 10 : null;
-                const letter = roundedPercentage !== null ? getLetterGrade(Math.round(roundedPercentage)) : '—';
+                const roundedPercentage = averagePercentage !== null ? Math.round(averagePercentage * 100) / 100 : null;
+                const letter = roundedPercentage !== null ? getLetterGrade(roundedPercentage) : '—';
                 const textColor = roundedPercentage !== null ? getGradeBadgeColor(letter) : 'text-gray-400';
 
                 tbodyHtml += `
@@ -8562,7 +8562,10 @@ function calcStudentGrade(cls, quarter, studentId) {
       const e = _earn(a);
       if (e !== null) { earned += e; total += a.points || 0; }
     }
-    const pct = total > 0 ? Math.round((earned/total)*1000)/10 : null;
+    // Round to 2 decimals (not 1) before computing the letter grade — rounding to 1
+    // decimal first can nudge a value like 87.47 up to 87.5, which then rounds again
+    // to 88 and wrongly bumps a B up to a B+.
+    const pct = total > 0 ? Math.round((earned/total)*10000)/100 : null;
     return {pct, letter: getLetterGrade(pct), earned, total};
   } else {
     const cats = cls.categories || [];
@@ -8580,10 +8583,10 @@ function calcStudentGrade(cls, quarter, studentId) {
         }
       }
       const catPct = total > 0 ? earned/total : null;
-      catResults[cat.id] = {pct: catPct !== null ? Math.round(catPct*1000)/10 : null, earned, total};
+      catResults[cat.id] = {pct: catPct !== null ? Math.round(catPct*10000)/100 : null, earned, total};
       if (catPct !== null) { weightedSum += catPct*(cat.weight/100); totalWeight += cat.weight/100; }
     }
-    const pct = totalWeight > 0 ? Math.round((weightedSum/totalWeight)*1000)/10 : null;
+    const pct = totalWeight > 0 ? Math.round((weightedSum/totalWeight)*10000)/100 : null;
     return {pct, letter: getLetterGrade(pct), catResults};
   }
 }
@@ -8660,7 +8663,7 @@ function openTopStudentModal() {
       qPcts[q] = r.pct;
       if (r.pct !== null && r.pct !== undefined) allPcts.push(r.pct);
     }
-    const yearAvg = allPcts.length ? Math.round(allPcts.reduce((a,b)=>a+b,0)/allPcts.length*10)/10 : null;
+    const yearAvg = allPcts.length ? Math.round(allPcts.reduce((a,b)=>a+b,0)/allPcts.length*100)/100 : null;
     return { stu, qPcts, yearAvg, quartersWithData: allPcts.length };
   }).filter(s => s.quartersWithData > 0);
 
@@ -8694,7 +8697,7 @@ function openTopStudentModal() {
       ${hasData
         ? `<div style="text-align:right">
             <span style="font-size:16px;font-weight:900;color:${gradeColor(ltr)}">${ltr}</span>
-            <span style="font-size:11px;color:var(--c-text-muted);margin-left:6px">${pct}%</span>
+            <span style="font-size:11px;color:var(--c-text-muted);margin-left:6px">${pct.toFixed(2)}%</span>
           </div>`
         : `<span style="font-size:11px;color:var(--c-text-muted)">No grades yet</span>`}
     </div>`;
@@ -8804,7 +8807,7 @@ function renderGradebook() {
     const _stuCount = (cls.students || []).length;
     const _asgnCount = (_q.assignments || []).length;
     const _avgPcts0 = (cls.students||[]).map(s=>calcStudentGrade(cls,gbQuarter,s.id).pct).filter(p=>p!==null&&p!==undefined);
-    const _avg0 = _avgPcts0.length ? Math.round(_avgPcts0.reduce((a,b)=>a+b,0)/_avgPcts0.length*10)/10 : null;
+    const _avg0 = _avgPcts0.length ? Math.round(_avgPcts0.reduce((a,b)=>a+b,0)/_avgPcts0.length*100)/100 : null;
     const _avgL0 = _avg0 !== null ? getLetterGrade(_avg0) : null;
 
     html += `<div class="gbx-toolbar">
@@ -9100,7 +9103,7 @@ function gbRenderTable(cls, data) {
         ${result.pct !== null
           ? `<span style="display:inline-flex;flex-direction:column;align-items:center;gap:1px;min-width:44px;padding:3px 8px;border-radius:9px;background:${gradeColor(result.letter)}14">
               <span style="font-weight:900;font-size:13px;line-height:1;color:${gradeColor(result.letter)}">${result.letter}</span>
-              <span style="font-size:9px;font-weight:600;color:var(--c-text-muted)">${result.pct}%</span>
+              <span style="font-size:9px;font-weight:600;color:var(--c-text-muted)">${result.pct.toFixed(2)}%</span>
             </span>`
           : '<span style="color:var(--c-text-muted)">—</span>'}
       </td>`;
@@ -9169,7 +9172,7 @@ function gbRenderTable(cls, data) {
         const p = cr?.pct;
         t += `<td style="${tdBase};text-align:center;border-left:1px solid var(--c-medium);background:var(--c-cream)">
           ${p !== null && p !== undefined
-            ? `<div style="font-weight:900;font-size:13px;color:${gradeColor(getLetterGrade(p))}">${getLetterGrade(p)}</div><div style="font-size:9px;color:var(--c-text-muted)">${p}%</div>`
+            ? `<div style="font-weight:900;font-size:13px;color:${gradeColor(getLetterGrade(p))}">${getLetterGrade(p)}</div><div style="font-size:9px;color:var(--c-text-muted)">${p.toFixed(2)}%</div>`
             : '<span style="color:var(--c-text-muted)">—</span>'}
         </td>`;
       } else if (col.type === 'exam') {
@@ -9180,7 +9183,7 @@ function gbRenderTable(cls, data) {
         const _ep  = _epc ? _feGetPct(_epc.parts, _epc.scores, stu.id) : null;
         t += `<td style="${tdBase};text-align:center;border-left:2px solid var(--c-pale);background:${_eb}">
           ${_eg
-            ? `<div style="font-weight:900;font-size:13px;color:${gradeColor(_eg)}">${_eg}</div><div style="font-size:9px;color:var(--c-text-muted)">${_ep !== null ? _ep.toFixed(1)+'%' : ''}</div>`
+            ? `<div style="font-weight:900;font-size:13px;color:${gradeColor(_eg)}">${_eg}</div><div style="font-size:9px;color:var(--c-text-muted)">${_ep !== null ? _ep.toFixed(2)+'%' : ''}</div>`
             : '<span style="color:var(--c-text-muted);font-size:11px">—</span>'}
         </td>`;
       }
@@ -9193,10 +9196,10 @@ function gbRenderTable(cls, data) {
     t += `<tr style="background:var(--c-pale);border-top:2px solid var(--c-medium)">
       <td style="${tdBase};${stickyStyle};background:var(--c-pale);font-weight:800;color:var(--c-brown);border-right:2px solid var(--c-pale)">Class Avg</td>`;
     const _avgPcts = students.map(s=>calcStudentGrade(cls,gbQuarter,s.id).pct).filter(p=>p!==null&&p!==undefined);
-    const _avgGrade = _avgPcts.length ? Math.round(_avgPcts.reduce((a,b)=>a+b,0)/_avgPcts.length*10)/10 : null;
+    const _avgGrade = _avgPcts.length ? Math.round(_avgPcts.reduce((a,b)=>a+b,0)/_avgPcts.length*100)/100 : null;
     const _avgLetter = getLetterGrade(_avgGrade);
     t += `<td style="${tdBase};${stickyStyle2};background:var(--c-pale);text-align:center;border-right:2px solid var(--c-medium)">
-      ${_avgGrade!==null?`<div style="font-weight:900;font-size:13px;color:${gradeColor(_avgLetter)}">${_avgLetter}</div><div style="font-size:10px;color:var(--c-text-muted)">${_avgGrade}%</div>`:'—'}
+      ${_avgGrade!==null?`<div style="font-weight:900;font-size:13px;color:${gradeColor(_avgLetter)}">${_avgLetter}</div><div style="font-size:10px;color:var(--c-text-muted)">${_avgGrade.toFixed(2)}%</div>`:'—'}
     </td>`;
     for (const col of cols) {
       if (col.type === 'asgn') {
@@ -9220,18 +9223,18 @@ function gbRenderTable(cls, data) {
         }
       } else if (col.type === 'cat') {
         const pcts = students.map(s=>calcStudentGrade(cls,gbQuarter,s.id).catResults?.[col.cat.id]?.pct).filter(p=>p!==null&&p!==undefined);
-        const avg = pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length*10)/10 : null;
+        const avg = pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length*100)/100 : null;
         t += `<td style="${tdBase};text-align:center;border-left:1px solid var(--c-medium);background:var(--c-cream)">
-          ${avg!==null ? `<div style="font-weight:900;font-size:12px;color:var(--c-brown)">${getLetterGrade(avg)}</div><div style="font-size:9px;color:var(--c-text-muted)">${avg}%</div>` : '—'}
+          ${avg!==null ? `<div style="font-weight:900;font-size:12px;color:var(--c-brown)">${getLetterGrade(avg)}</div><div style="font-size:9px;color:var(--c-text-muted)">${avg.toFixed(2)}%</div>` : '—'}
         </td>`;
       } else if (col.type === 'exam') {
         const _ea  = col.examType==='midterm'?'#1d4ed8':'#9f1239';
         const _eb  = col.examType==='midterm'?'#eff6ff':'#fff1f2';
         const _epc = _examPctCache[col.examType];
         const _eps = _epc ? students.map(s=>_feGetPct(_epc.parts,_epc.scores,s.id)).filter(p=>p!==null) : [];
-        const _eavg = _eps.length ? Math.round(_eps.reduce((a,b)=>a+b,0)/_eps.length*10)/10 : null;
+        const _eavg = _eps.length ? Math.round(_eps.reduce((a,b)=>a+b,0)/_eps.length*100)/100 : null;
         t += `<td style="${tdBase};text-align:center;border-left:2px solid var(--c-pale);background:${_eb}">
-          ${_eavg !== null ? `<div style="font-weight:900;font-size:12px;color:${_ea}">${getLetterGrade(_eavg)}</div><div style="font-size:9px;color:var(--c-text-muted)">${_eavg}%</div>` : '—'}
+          ${_eavg !== null ? `<div style="font-weight:900;font-size:12px;color:${_ea}">${getLetterGrade(_eavg)}</div><div style="font-size:9px;color:var(--c-text-muted)">${_eavg.toFixed(2)}%</div>` : '—'}
         </td>`;
       }
     }
@@ -10184,7 +10187,7 @@ function _feRefreshRow(classId, examType, stuId, parts, scores) {
   if (!el) return;
   if (pct === null) { el.innerHTML = '<span style="color:#9ca3af;font-size:11px">—</span>'; return; }
   const letter = getLetterGrade(pct);
-  el.innerHTML = `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(letter)};background:${gradeLetterBg(letter)};padding:2px 8px;border-radius:6px">${letter}</span><br><span style="font-size:10px;color:var(--c-text-muted)">${pct.toFixed(1)}%</span>`;
+  el.innerHTML = `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(letter)};background:${gradeLetterBg(letter)};padding:2px 8px;border-radius:6px">${letter}</span><br><span style="font-size:10px;color:var(--c-text-muted)">${pct.toFixed(2)}%</span>`;
   const totEl = document.getElementById('fe-total-'+stuId);
   if (totEl) {
     const basePts = parts.filter(p=>!p.extra).reduce((s,p)=>s+(parseFloat(p.points)||0),0);
@@ -10216,7 +10219,7 @@ function _examSummaryBodyHtml(cls, examType) {
 
   const gradedRows = rows.filter(r => r.pct !== null);
   const avgPct = gradedRows.length
-    ? Math.round(gradedRows.reduce((s, r) => s + r.pct, 0) / gradedRows.length * 10) / 10
+    ? Math.round(gradedRows.reduce((s, r) => s + r.pct, 0) / gradedRows.length * 100) / 100
     : null;
   const avgLetter = avgPct !== null ? getLetterGrade(avgPct) : null;
 
@@ -10235,7 +10238,7 @@ function _examSummaryBodyHtml(cls, examType) {
       <div style="flex:1;height:9px;background:var(--c-pale);border-radius:5px;overflow:hidden;min-width:60px">
         <div style="height:100%;width:${barW}%;background:${clr};border-radius:5px;transition:width .4s ease"></div>
       </div>
-      <div style="font-size:11px;color:var(--c-text-muted);width:42px;text-align:right;flex-shrink:0">${r.pct !== null ? r.pct.toFixed(1) + '%' : '<span style="opacity:.4">—</span>'}</div>
+      <div style="font-size:11px;color:var(--c-text-muted);width:42px;text-align:right;flex-shrink:0">${r.pct !== null ? r.pct.toFixed(2) + '%' : '<span style="opacity:.4">—</span>'}</div>
       <div style="width:46px;text-align:center;flex-shrink:0">
         ${r.letter
           ? `<span style="font-weight:900;font-size:13px;color:${clr};background:${bg};padding:2px 8px;border-radius:6px">${r.letter}</span>`
@@ -10355,7 +10358,7 @@ function _examEntryBodyHtml(cls, examType) {
     const letter = pct !== null ? getLetterGrade(pct) : null;
     let earned = 0; for (const p of parts) { const v = parseFloat(stuScores[p.id]); if (!isNaN(v)) earned += v; }
     const gradeHtml = letter
-      ? `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(letter)};background:${gradeLetterBg(letter)};padding:2px 8px;border-radius:6px">${letter}</span><br><span style="font-size:10px;color:var(--c-text-muted)">${pct.toFixed(1)}%</span>`
+      ? `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(letter)};background:${gradeLetterBg(letter)};padding:2px 8px;border-radius:6px">${letter}</span><br><span style="font-size:10px;color:var(--c-text-muted)">${pct.toFixed(2)}%</span>`
       : '<span style="color:#9ca3af;font-size:11px">—</span>';
     return `<tr style="border-bottom:1px solid var(--c-pale)" onmouseover="this.style.background='var(--c-cream)'" onmouseout="this.style.background=''">
       <td style="padding:7px 14px;font-size:12px;font-weight:700;color:var(--c-text-primary);position:sticky;left:0;background:var(--c-surface);white-space:nowrap;min-width:140px">${escHtml(stu.name)}</td>
@@ -10393,7 +10396,7 @@ function _examEntryBodyHtml(cls, examType) {
         <div style="margin:3px auto 0;width:52px;height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden">
           <div style="height:100%;width:${Math.min(100,pct).toFixed(0)}%;background:${barClr};border-radius:2px"></div>
         </div>
-        <div style="font-size:9px;color:var(--c-text-muted);margin-top:2px">${pct.toFixed(1)}%</div>`
+        <div style="font-size:9px;color:var(--c-text-muted);margin-top:2px">${pct.toFixed(2)}%</div>`
       : '<span style="color:#9ca3af;font-size:11px">—</span>'}
     </td>`;
   }).join('');
@@ -10411,7 +10414,7 @@ function _examEntryBodyHtml(cls, examType) {
         </td>
         <td style="padding:6px 10px;text-align:center;background:${accentBg};border-top:2px solid ${borderColor}">
           ${avgLetter
-            ? `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(avgLetter)};background:${gradeLetterBg(avgLetter)};padding:2px 8px;border-radius:6px">${avgLetter}</span><br><span style="font-size:10px;color:var(--c-text-muted)">${avgPct.toFixed(1)}%</span>`
+            ? `<span style="font-weight:900;font-size:13px;color:${gradeLetterColor(avgLetter)};background:${gradeLetterBg(avgLetter)};padding:2px 8px;border-radius:6px">${avgLetter}</span><br><span style="font-size:10px;color:var(--c-text-muted)">${avgPct.toFixed(2)}%</span>`
             : '<span style="color:#9ca3af;font-size:11px">—</span>'}
         </td>
       </tr>
@@ -10865,7 +10868,7 @@ function _exportQtrRows(cls, quarter) {
           const v = grades[stu.id]?.[a.id];
           row.push(v !== undefined && v !== null && v !== '' ? v : '');
         }
-        if (ca.length) row.push(result?.catResults?.[cat.id]?.pct !== undefined && result.catResults[cat.id].pct !== null ? result.catResults[cat.id].pct.toFixed(1)+'%' : '');
+        if (ca.length) row.push(result?.catResults?.[cat.id]?.pct !== undefined && result.catResults[cat.id].pct !== null ? result.catResults[cat.id].pct.toFixed(2)+'%' : '');
       }
       const uncat = assignments.filter(a => !cats.find(c => c.id === a.categoryId));
       for (const a of uncat) {
